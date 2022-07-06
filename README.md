@@ -103,23 +103,23 @@ The benchmark provides a number of baselines systems for baseline evaluations. T
 
 `>>> python3 baseline_majority.py`
 
-Each of the baseline system requires a number of configurable parameters. There is a separate configuration file each systems and is placed inside (`LSCDBenchmark/config/`) directory. A brief description of those parameters is given in [Section 4.2](#4.2-configuration-files)
+Each of the baseline system requires a number of configurable parameters. There is a separate configuration file for each system and is placed inside (`LSCDBenchmark/config/`) directory. A brief description of those parameters is given in [Section 4.2](#4.2-configuration-files)
 
 At this stage, the baselines are adapted to the 'DWUG' datasets, and the systems expect a directory called `usage-graph-data` inside the `LSCDBenchmark` directory containing the datasets. It also means that the `usage-graph-data` directory has a directory (e.g. `dwug_en` for English) containing DWUG dataset of the language for which the baseline is to be run. Running any of the baselines systems from command line (e.g. `python3 baseline_bert.py`) will compute the results and store them at the path given in the `path_results` parameter in the configuration file. For `bert` and `xlmr` baseline systems, two types of scores are computed and are stored inside the `/cos/` and `/apd/` within the `path_results` directory. These results correspond to the cosine similarity and average pair-wise distance between the vectors of a given target word from two time spans. The results of random and majority baseline systems are stored in `rand/` and `/majority/` directories respectively within the `path_results` directory.
 
 ## 4.2 Quick Start
 1. Download (and unzip) or clone the repository.
 2. Go into the  `/LSCDBenchmark/baselines/` directory.
-2. Make sure the required libraries are installed (requirements.txt).
+2. Make sure the required libraries are installed (requirements.txt). The systems have been test on MacOS with Python 3.9.10.
 3. Make adjustments in the configuration file (see [Section 4.3](#4.3-configuration-files) for details on various configuration parameters) for the baseline system that you are interested to run.
 4. Create a directory called `usage-graph-data` inside the 'LSCDBenchmark' directory and download <a href=https://www.ims.uni-stuttgart.de/en/research/resources/experiment-data/wugs/> dwug dataset</a> for the language that you are interested in.
-5. Create a file named `target_words.txt` which contains the list of target words (one word per line) and put it at the path mentioned in the `path_targets` configuration parameter.  
-6. Run the baseline script (e.g. `>>> python3 baseline_majority.py.`).
-7. The results will be stored at the    `path_results`given in the configuration file.  
+5. Create a file named `target_words_[language].txt` (with a trailing language code e.g. `target_words_en.txt` for English) which contains the list of target words (one word per line) and put it at the path mentioned in the `path_targets` configuration parameter.  
+6. Run the baseline script (e.g. `>>> python3 baseline_bert.py.`).
+7. The results will be stored at  `path_results` given in the configuration file.  
 
 ### 4.3 Configuration Files
 
-#### 4.3.1 Bert-Baseline
+#### 4.3.1 Bert-Baseline (baseline_bert.yaml)
 
 + language: The language code (e.g. 'en', 'sv'). The code is used to load data and save results in files with a trailing language code in the file names.
 + type_sentences: The preprocessing type (either 'lemma' or 'toklem'). In case of 'lemma' the lemmatized version of the context sentence is used before computing the embeddins, while in the case of 'toklem' the tokenized version of the context and lemmatized version of the target word is used.  
@@ -132,7 +132,7 @@ At this stage, the baselines are adapted to the 'DWUG' datasets, and the systems
 + path_results: Path to the diretor where results are to be stored (e.g. `./results/`)
 + path_targets: Path to the directory where target words are to be found (e.g. `./targets/`)
 
-#### 4.3.2 XMLR-Baseline
+#### 4.3.2 XMLR-Baseline (baseline_xlmr.yaml)
 
 + language: The language code (e.g. 'en', 'sv')
 + type_sentences: i.e. lemma
@@ -147,14 +147,14 @@ At this stage, the baselines are adapted to the 'DWUG' datasets, and the systems
 
 Based on the above listed parameters, the script loads usages (from two different time-spans) of a list of target words using the load_data function, computes their bert/xlm vectors, compute cos/apd distances between vectors from two time spans. The distances then are converted to binary labels using a threshold. The final results are stored at the `path_results`.
 
-#### 4.3.3 Random-Baseline
+#### 4.3.3 Random-Baseline (baseline_random.yaml)
 
 + language: The language code (e.g. 'en', 'sv')
 + path_results: Path to the diretor where results are to be stored (e.g. `./results/`)
 + path_targets: Path to the directory whrer target words are to be found (e.g. `./targets/`)
 + is_rel:
 
-#### 4.3.4 Majority Calass Baseline
+#### 4.3.4 Majority Calass Baseline (baseline_majority.yaml)
 
 + language: The language code (e.g. 'en', 'sv')
 + path_results: Path to the diretor where results are to be stored (e.g. `./results/`)

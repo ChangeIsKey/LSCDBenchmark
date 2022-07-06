@@ -31,10 +31,10 @@ six==1.13.0
 sklearn==0.0
 stanfordcorenlp==3.9.1.1
 threadpoolctl==3.1.0
-tokenizers==0.12.1
+tokenizers==0.10.3
 torch==1.10.2
 tqdm==4.64.0
-transformers==4.18.0
+transformers==4.3.2
 typing_extensions==4.1.1
 urllib3==1.25.8
 zipp==3.6.0
