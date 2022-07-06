@@ -110,7 +110,7 @@ At this stage, the baselines are adapted to the 'DWUG' datasets, and the systems
 ## 4.2 Quick Start
 1. Download (and unzip) or clone the repository.
 2. Go into the  `/LSCDBenchmark/baselines/` directory.
-2. Make sure the required libraries are installed (requirements.txt). The systems have been test on MacOS with Python 3.9.10.
+2. Make sure the required libraries are installed (requirements.txt). The systems have been test on MacOS with Python 3.6.8.
 3. Make adjustments in the configuration file (see [Section 4.3](#4.3-configuration-files) for details on various configuration parameters) for the baseline system that you are interested to run.
 4. Create a directory called `usage-graph-data` inside the 'LSCDBenchmark' directory and download <a href=https://www.ims.uni-stuttgart.de/en/research/resources/experiment-data/wugs/> dwug dataset</a> for the language that you are interested in.
 5. Create a file named `target_words_[language].txt` (with a trailing language code e.g. `target_words_en.txt` for English) which contains the list of target words (one word per line) and put it at the path mentioned in the `path_targets` configuration parameter.  
