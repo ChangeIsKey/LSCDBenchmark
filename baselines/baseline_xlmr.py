@@ -12,9 +12,9 @@ import random
 from scipy.spatial.distance import cosine as cosine_distance
 
 from load_data import *
-from cos2 import *
-from binary2 import *
-from apd2 import *
+from cos import *
+from binary import *
+from apd import *
 from xlmr import *
 #from bert2 import *
 

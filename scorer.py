@@ -33,10 +33,11 @@ def compute_score(gold,predictions,evaltype,filter_type,filter_threshold):
     results['threshold'] = filter_threshold
     if evaltype == 'change_graded':
         #results[evaltype] = [('spearmanr',str(stats.spearmanr(gold,predictions)).strip('SpearmanrResult'))]
+        print(stats.spearmanr(gold,predictions))
         spr_result = re.findall("\d+\.\d+", str(stats.spearmanr(gold,predictions)))
         #corelation,pvalue = str(stats.spearmanr(gold,predictions)).strip('SpearmanrResult')
-        results['spearmanr_correlation'] = round(spr_result[0],2)
-        results['spearmanr_pvalue'] = round(spr_result[1],2)
+        results['spearmanr_correlation'] = round(float(spr_result[0]),2)
+        results['spearmanr_pvalue'] = round(float(spr_result[1]),2)
         results['f1'] = '--'
         results['accuracy'] = '--'
         results['precision'] = '--'
@@ -88,20 +89,20 @@ def plot_precision_recall(filtered_pred,y_test,pred_score_path,fl,thr):
 # load golde
 golddata = pd.read_csv(gold_file,delimiter='\t',quoting=csv.QUOTE_NONE)
 golddata['lemma'] = golddata['lemma'].str.replace('_(\w+)','',regex=True) # remove trailing pos tag with target words
+golddata = golddata.sort_values(by=['lemma'])
 #print(golddata['lemma'])
 
 # load predictions
 preddata = pd.read_csv(predictions_file,delimiter='\t',quoting=csv.QUOTE_NONE)
 preddata['lemma'] = preddata['lemma'].str.replace('_(\w+)','',regex=True) # remove trailing pos tag with target words
-##print(preddata['lemma'],preddata['change_graded'])
+preddata = preddata.sort_values(by=['lemma'])
 
 
-assert os.path.exists('scorer.yaml')
-#config_dict = {l.strip().split('\t')[0]:l.strip().split('\t')[1:] for l in open('scorer.conf').readlines()}
-#print(config_dict)
-with open("scorer.yaml", 'r') as config:
+
+assert os.path.exists('./config/scorer.yaml')
+
+with open("./config/scorer.yaml", 'r') as config:
     configurations = yaml.safe_load(config)
-#print(configurations)
 config_dict = configurations['dwug_format']
 print(config_dict)
 
@@ -135,7 +136,7 @@ for evaltype in evaltypes: # iterate for every evaluation type
     else: # no filtering
         gold = golddata.get([evaltype])
         pred = preddata.get([evaltype])
-        print(len(gold),len(pred))
+        #print(len(gold),len(pred))
         score = compute_score(gold,pred,evaltype,'no-cleaning','no-cleaning')
         computed_scores.append(score)
         if evaltype in ['change_binary'] and config_dict['plot'] == 'True':

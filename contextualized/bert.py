@@ -13,17 +13,18 @@ from utils_ import Space
 def bert(test_sentences,l,language,type_sentences,layers,is_len,path_output):
     word = l.split('.')[0]
 
-
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    logging.info("Computing Bert Vectors".upper())
     logging.info(__file__.upper())
     start_time = time.time()
 
     # Load pre-trained model tokenizer (vocabulary) and model (weights)
     model_language = {
-        'en': 'bert-base-uncased',
+        'en': 'bert-base-cased',
         'de': 'bert-base-german-cased',
+        'es': 'dccuchile/bert-base-spanish-wwm-cased',
         'sv': 'KB/bert-base-swedish-cased',
-        'multi': 'bert-base-multilingual-uncased'
+        'multi': 'bert-base-multilingual-cased'
         }
 
     tokenizer = BertTokenizer.from_pretrained(model_language[language])
@@ -34,7 +35,6 @@ def bert(test_sentences,l,language,type_sentences,layers,is_len,path_output):
     else:
         type_ = type_sentences
 
-    #print(len(test_sentences))
     # Load sentences
     context_vector_list = []
     for i in range(0, len(test_sentences)):
@@ -51,6 +51,8 @@ def bert(test_sentences,l,language,type_sentences,layers,is_len,path_output):
                         clean_target_word = test_sentences[i]["lemma"]
                     target_words.append(tokenizer.tokenize(clean_target_word))
                 target_words = target_words[0]
+                #print('target_word: ',target_words)
+
 
                 # Tokenize text
                 text = test_sentences[i]["sentence_"+type_]
@@ -58,7 +60,6 @@ def bert(test_sentences,l,language,type_sentences,layers,is_len,path_output):
                     text = text.replace(target_word, original_word)
                 marked_text = "[CLS] " + text + " [SEP]"
                 tokenized_text = tokenizer.tokenize(marked_text)
-
 
                 # Search the indices of the tokenized target word in the tokenized text
                 target_word_indices = []
@@ -90,7 +91,6 @@ def bert(test_sentences,l,language,type_sentences,layers,is_len,path_output):
                 indexed_tokens = tokenizer.convert_tokens_to_ids(tokenized_text)
                 segments_ids = [1] * len(tokenized_text)
                 tokens_tensor = torch.tensor([indexed_tokens])
-
                 segments_tensors = torch.tensor([segments_ids])
                 model.eval()
                 with torch.no_grad():
@@ -117,7 +117,6 @@ def bert(test_sentences,l,language,type_sentences,layers,is_len,path_output):
     # Normalize vectors in length
     if is_len == 'True':
         context_vector_list = preprocessing.normalize(context_vector_list, norm='l2')
-
     # Save contextVectorList_sparse matrix
     outSpace = Space(matrix=context_vector_list, rows=" ", columns=" ")
     outSpace.save(path_output)

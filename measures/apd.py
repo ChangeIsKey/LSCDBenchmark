@@ -28,7 +28,7 @@ def apd(path_matrix1,path_matrix2):
 
     vectors1 = space1.matrix.toarray()
     vectors2 = space2.matrix.toarray()
-
+    '''
     # Get number of rows/vectors
     samples_corpus1 = []
     samples_corpus2 = []
@@ -48,12 +48,13 @@ def apd(path_matrix1,path_matrix2):
         randoms = random.sample(range(max_), min_)
         for i in randoms:
             samples_corpus2.append(vectors2[i])
-
+    '''
     # Compute the average pairwise cosine distance
     apds = []
-    for i in range(0, min_):
-        for j in range(0, min_):
-            apd=cosine_distance(samples_corpus1[i], samples_corpus2[j])
+    for i in range(0, len(vectors1)):
+        for j in range(0, len(vectors1)):
+            apd=cosine_distance(vectors1[i], vectors2[j])
+            #apd=cosine_distance(samples_corpus1[i], samples_corpus2[j])
             apds.append(apd)
     apd = np.mean(apds, axis=0)
 

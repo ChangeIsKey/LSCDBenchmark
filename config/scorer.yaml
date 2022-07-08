@@ -1,10 +1,6 @@
 dwug_format:
     filter_threshold:
-      - 0.1
-      - 0.2
     filter_label:
-      - kri_full
-      - kri2_full
     evaluation_type:
-      - change_binary
+      - change_graded
     plot: 'False'

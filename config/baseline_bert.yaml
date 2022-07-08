@@ -1,6 +1,6 @@
 bert:
-  language: en
-  type_sentences: toklem
+  language: de
+  type_sentences: lemma
   layers: 1+12
   is_len: False
   path_output1: ../output/vectors_bert_corpus1/

@@ -12,7 +12,7 @@ def load_data(data_path=None,lemma=None,preprocessing=None):
     assert data_path != None, 'Data path is required'
 
     if lemma != None:
-        print(lemma)
+        #print(lemma)
         lemmas = [l for l in os.listdir(data_path+'/data') if l.split('_')[0] == lemma]
     else:
         #print(os.listdir(data_path+'/data'))
@@ -30,9 +30,5 @@ def load_data(data_path=None,lemma=None,preprocessing=None):
     return(data)
 
 if __name__ == "__main__":
-    #data = load_data(lemma='attack',data_path='./usage-graph-data/dwug_en/')
-    #data = load_data(lemma='attack',data_path='./usage-graph-data/dwug_en/',preprocessing='context_tokenized')
     data = load_data(data_path='./usage-graph-data/dwug_en/',preprocessing=None)
-    #data = load_data(data_path='./usage-graph-data/dwug_en/',preprocessing='context_pos')
-    #data = load_data(preprocessing='context_tokenized')
-    print(data[0])
+    
