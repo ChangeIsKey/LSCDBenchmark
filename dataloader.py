@@ -5,35 +5,14 @@ import requests
 import csv
 import zipfile
 import pandas as pd
-import numpy as np
 
-from typing import Tuple, Dict, List, Callable
+from typing import List, Callable
 from pathlib import Path
 from pandas import DataFrame, Series
 from tqdm import tqdm
 from itertools import combinations
 from dataclasses import dataclass, InitVar
 
-
-@dataclass
-class Use:
-    identifier: str
-    pos: str
-    context: str
-    grouping: int
-    date: int
-    description: str
-    indexes_target_token: Tuple[int]
-    indexes_target_sentence: Tuple[int]
-
-
-# @dataclass
-# class Judgment:
-#     identifier1: str
-#     identifier2: str
-#     annotator: str
-#     judgement: int
-#     comment: str
 
 @dataclass
 class Target:
