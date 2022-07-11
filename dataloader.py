@@ -5,13 +5,14 @@ import requests
 import csv
 import zipfile
 import pandas as pd
-from typing import Tuple, Dict, List
-from pathlib import Path
-from tqdm import tqdm
-from collections import defaultdict
-from dataclasses import dataclass
+import numpy as np
 
-PROJECT = Path(__file__).parent
+from typing import Tuple, Dict, List, Callable
+from pathlib import Path
+from pandas import DataFrame, Series
+from tqdm import tqdm
+from itertools import combinations
+from dataclasses import dataclass, InitVar
 
 
 @dataclass
@@ -22,32 +23,67 @@ class Use:
     grouping: int
     date: int
     description: str
-    indexes_target_token: Tuple[int, int]
-    indexes_target_sentence: Tuple[int, int]
+    indexes_target_token: Tuple[int]
+    indexes_target_sentence: Tuple[int]
 
 
-@dataclass
-class Judgement:
-    identifier1: str
-    identifier2: str
-    annotator: str
-    judgement: int
-    comment: str
-
+# @dataclass
+# class Judgment:
+#     identifier1: str
+#     identifier2: str
+#     annotator: str
+#     judgement: int
+#     comment: str
 
 @dataclass
 class Target:
     lemma: str
-    uses: List[Use]
-    labels: Dict[Tuple[int, int], Dict[str, float]]
-    judgements: List[Judgement]
+    uses: DataFrame
+    labels: DataFrame
+    judgments: DataFrame
+    preprocessing: InitVar[str | Callable[[str], str]]
 
+    def __post_init__(self, preprocessing):
+        self.preprocess(how=preprocessing)
+        self.uses = self.uses[self.uses.columns[self.uses.columns.isin([
+            "pos", "date", "grouping", "identifier", "description", "context",
+            "indexes_target_token", "indexes_target_sentence", "lemma",
+            "context_preprocessed"
+        ])]]
+        self.judgments = self.judgments[self.judgments.columns[self.judgments.columns != "lemma"]]
 
-Dataset = Dict[str, Target]
+    def preprocess(self, how: str | Callable[[str], str] = None):
+        if how is None:
+            self.uses["context_preprocessed"] = self.uses.context
+            return self.uses
+        elif isinstance(how, str):
+            match how:
+                case "lemmatization":
+                    self.uses["context_preprocessed"] = self.uses.context_lemmatized
+                case "toklem":
+                    raise NotImplementedError("toklem preprocessing not implemented")
+                case default:
+                    raise NotImplementedError(f"unknown preprocessing type '{default}'")
+        elif isinstance(how, Callable):
+            contexts = Series([how(row.context) for _, row in self.uses.iterrows()])
+            assert contexts.apply(lambda txt: isinstance(txt, str)).all(), f"Invalid return type for preprocessing " \
+                                                                           f"function '{how.__name__}' "
+            self.uses["context_preprocessed"] = contexts
+            return self.uses
+        else:
+            raise TypeError("preprocessing parameter type is invalid")
+
+    def sample_pairs_uses(self, n: int):
+        samples = []
+        for _ in range(n):
+            contexts = tuple(self.uses.groupby(self.uses.grouping).context_preprocessed.sample(n=1))
+            samples.extend(combinations(contexts, r=2))
+        return samples
 
 
 # TODO ask nikolai how to avoid name space problems in pytorch
 class DataLoader:
+    PROJECT = Path(__file__).parent
 
     DATASETS = {
         "dwug_de": "https://zenodo.org/record/5796871/files/dwug_de.zip",
@@ -64,25 +100,25 @@ class DataLoader:
         # "http://www.dianamccarthy.co.uk/downloads/WordMeaningAnno2012/cl-meaningincontext.tgz"
     }
 
-    column_mapping = [
-        ("graded_jsd", "change_graded", float),
-        ("binary_change", "change_binary", bool),
-        ("binary_loss", "change_binary_loss", bool),
-        ("binary_gain", "change_binary_gain", bool),
-        ("graded_compare", "COMPARE", float)
-    ]
+    LABELS = {
+        "change_graded": "graded_jsd",
+        "change_binary": "binary_change",
+        "change_binary_loss": "binary_loss",
+        "change_binary_gain": "binary_gain",
+        "COMPARE": "graded_compare"
+    }
 
-    # TODO: PREPROCESSING (lemmatization, toklem)
-    def __init__(self, dataset: str, group_comparisons: List[str] = "all", lemmas: List[str] = None, preprocessing=None):
+    def __init__(self, dataset: str, targets: List[str] = None,
+                 preprocessing: str | Callable[[str], str] = None):
+
         self.dataset = dataset.lower()
         assert self.dataset in self.DATASETS.keys(), f"Unknown dataset. Should be one of {list(self.DATASETS.keys())}"
 
-        self.lemmas = lemmas
+        self.lemmas = targets
         self.preprocessing = preprocessing
-        self.group_comparisons = group_comparisons
-        self.data_path = PROJECT.joinpath("wug", dataset)
+        self.data_path = self.PROJECT.joinpath("wug", dataset)
 
-        self.data_path.mkdir(parents=True, exist_ok=True)
+        self.data_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.data_path.exists() or len(os.listdir(self.data_path)) == 0:
             # TODO fix problem where the program tries to load data before everything is downloaded and unzipped
             self.download_dataset()
@@ -90,68 +126,35 @@ class DataLoader:
 
         self.stats = self.load_stats()
 
-    def load_stats(self):
+    def load_stats(self) -> DataFrame:
         path = self.data_path.joinpath("stats", "opt", "stats_groupings.tsv")
         if not path.exists():
             path = self.data_path.joinpath("stats", "stats_groupings.tsv")
-        return pd.read_csv(path, delimiter="\t", encoding="utf8")
+        df = pd.read_csv(path, delimiter="\t", encoding="utf8")
+        df.drop(columns=df.columns.difference({"lemma", "grouping", *self.LABELS.keys()}), inplace=True)
+        return df
 
     def load_lemma(self, lemma: str) -> Target:
-        uses = pd.read_csv(self.data_path.joinpath("data", lemma, "uses.tsv"), delimiter="\t", quoting=csv.QUOTE_NONE,
-                           encoding='utf8')
-        judgements = pd.read_csv(self.data_path.joinpath("data", lemma, "judgments.tsv"), delimiter="\t",
-                                 quoting=csv.QUOTE_NONE,
-                                 encoding='utf8')
+        uses = pd.read_csv(filepath_or_buffer=self.data_path.joinpath("data", lemma, "uses.tsv"),
+                           delimiter="\t", quoting=csv.QUOTE_NONE, encoding='utf8')
+        judgments = pd.read_csv(filepath_or_buffer=self.data_path.joinpath("data", lemma, "judgments.tsv"),
+                                delimiter="\t", quoting=csv.QUOTE_NONE, encoding='utf8')
+        labels = self.stats[self.stats.lemma == lemma] \
+            .set_index("grouping") \
+            .rename(columns={old: new for old, new in self.LABELS.items() if old in self.stats.columns})
 
-        target = Target(
-            lemma=lemma,
-            uses=[],
-            labels=defaultdict(dict),
-            judgements=[]
-        )
+        return Target(lemma=lemma, uses=uses, labels=labels, judgments=judgments, preprocessing=self.preprocessing)
 
-        target.uses.extend([
-            Use(
-                identifier=use.identifier,
-                pos=use.pos,
-                date=use.date,
-                grouping=use.grouping,
-                description=use.description,
-                context=use.context,
-                indexes_target_token=use.indexes_target_token,
-                indexes_target_sentence=use.indexes_target_sentence
-            )
-            for _, use in uses.iterrows()
-        ])
-
-        target.judgements.extend([
-            Judgement(
-                identifier1=j.identifier1,
-                identifier2=j.identifier2,
-                annotator=j.annotator,
-                judgement=j.judgment,
-                comment=j.comment
-            )
-            for _, j in judgements.iterrows()
-        ])
-
-        groupings = self.stats[self.stats.lemma == lemma].grouping.unique()
-        for g in groupings:
-            if g in self.group_comparisons or self.group_comparisons == "all":
-                row = self.stats[(self.stats.lemma == lemma) & (self.stats.grouping == g)]
-                g = tuple(map(int, g.split("_")))
-                for field, col, func in self.column_mapping:
-                    if col in row.columns:
-                        target.labels[g][field] = func(row[col].values)
-        return target
-
-    def load_dataset(self) -> Dataset:
+    def load_dataset(self) -> List[Target]:
         if self.lemmas is None:
-            return {l: self.load_lemma(l) for l in os.listdir(str(self.data_path.joinpath("data")))}
+            return [self.load_lemma(lemma)
+                    for lemma in os.listdir(str(self.data_path.joinpath("data")))]
         else:
-            return {l: self.load_lemma(l) for l in os.listdir(str(self.data_path.joinpath("data"))) if l in self.lemmas}
+            return [self.load_lemma(lemma)
+                    for lemma in os.listdir(str(self.data_path.joinpath("data")))
+                    if lemma in self.lemmas]
 
-    def download_dataset(self):
+    def download_dataset(self) -> None:
         r = requests.get(self.DATASETS[self.dataset], stream=True)
         filename = f"{self.dataset}.zip"
 
@@ -165,7 +168,7 @@ class DataLoader:
                     f.write(chunk)
             pbar.close()
 
-    def unzip_dataset(self):
+    def unzip_dataset(self) -> None:
         filename = f"{self.dataset}.zip"
         with zipfile.ZipFile(file=filename) as z:
             for f in z.namelist():
@@ -179,6 +182,5 @@ class DataLoader:
 
 
 if __name__ == "__main__":
-    dataloader = DataLoader(dataset="diawug", lemmas=["chamaco_pibe_chico"], group_comparisons=["0_1", "0_3"])
-    targets = dataloader.load_dataset()
-    print(targets)
+    dataloader = DataLoader(dataset="dwug_es", preprocessing=None)
+    target = dataloader.load_lemma("abundar")
