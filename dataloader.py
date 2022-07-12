@@ -12,6 +12,51 @@ from pandas import DataFrame, Series
 from tqdm import tqdm
 from itertools import combinations
 from dataclasses import dataclass, InitVar
+from enum import Enum
+
+import preprocessing
+
+
+# noinspection SpellCheckingInspection
+class Dataset(Enum):
+    dwug_de = "https://zenodo.org/record/5796871/files/dwug_de.zip"
+    dwug_la = "https://zenodo.org/record/5255228/files/dwug_la.zip"
+    dwug_en = "https://zenodo.org/record/5796878/files/dwug_en.zip"
+    dwug_sv = "https://zenodo.org/record/5090648/files/dwug_sv.zip"
+    dwug_es = "https://zenodo.org/record/6433667/files/dwug_es.zip"
+    discowug = "https://zenodo.org/record/5791125/files/discowug.zip"
+    refwug = "https://zenodo.org/record/5791269/files/refwug.zip"
+    diawug = "https://zenodo.org/record/5791193/files/diawug.zip"
+    surel = "https://zenodo.org/record/5784569/files/surel.zip"
+    durel = "https://zenodo.org/record/5784453/files/durel.zip"
+    DUPS_WUG = "https://zenodo.org/record/5500223/files/DUPS-WUG.zip"
+
+    def download(self) -> None:
+        r = requests.get(self.value, stream=True)
+        filename = f"{self.name}.zip"
+
+        with open(file=filename, mode='wb') as f:
+            pbar = tqdm(desc=f"Downloading dataset '{self.name}'", unit="B", unit_scale=True,
+                        unit_divisor=1024,
+                        total=int(r.headers['Content-Length']))
+            pbar.clear()  # clear 0% info
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:  # filter out keep-alive new chunks
+                    pbar.update(len(chunk))
+                    f.write(chunk)
+            pbar.close()
+
+    def unzip(self, output_dir: Path) -> None:
+        filename = f"{self.name}.zip"
+        with zipfile.ZipFile(file=filename) as z:
+            for f in z.namelist():
+                if not f.startswith(f"{self.name}/plots"):
+                    z.extract(f, path=output_dir)
+                    if f.endswith(".csv"):
+                        f = str(Path(output_dir).joinpath(f))
+                        f_new = f.replace(".csv", ".tsv")
+                        os.rename(f, f_new)
+        os.remove(filename)
 
 
 @dataclass
@@ -20,7 +65,7 @@ class Target:
     uses: DataFrame
     labels: DataFrame
     judgments: DataFrame
-    preprocessing: InitVar[str | Callable[[str], str]]
+    preprocessing: InitVar[Callable[[Series], str]]
 
     def __post_init__(self, preprocessing):
         self.preprocess(how=preprocessing)
@@ -31,53 +76,28 @@ class Target:
         ])]]
         self.judgments = self.judgments[self.judgments.columns[self.judgments.columns != "lemma"]]
 
-    def preprocess(self, how: str | Callable[[str], str] = None):
+    def preprocess(self, how: Callable[[Series], str] = None):
         if how is None:
             self.uses["context_preprocessed"] = self.uses.context
             return self.uses
-        elif isinstance(how, str):
-            match how:
-                case "lemmatization":
-                    self.uses["context_preprocessed"] = self.uses.context_lemmatized
-                case "toklem":
-                    raise NotImplementedError("toklem preprocessing not implemented")
-                case default:
-                    raise NotImplementedError(f"unknown preprocessing type '{default}'")
         elif isinstance(how, Callable):
-            contexts = Series([how(row.context) for _, row in self.uses.iterrows()])
-            assert contexts.apply(lambda txt: isinstance(txt, str)).all(), f"Invalid return type for preprocessing " \
-                                                                           f"function '{how.__name__}' "
-            self.uses["context_preprocessed"] = contexts
-            return self.uses
+            self.uses["context_preprocessed"] = self.uses.apply(how, axis=1)
+            assert self.uses.context_preprocessed.apply(lambda txt: isinstance(txt, str)).all(), \
+                f"Invalid return type for preprocessing function {how.__name__}"
         else:
             raise TypeError("preprocessing parameter type is invalid")
 
     def sample_pairs_uses(self, n: int):
         samples = []
+        contexts = self.uses.groupby(self.uses.grouping).context_preprocessed
         for _ in range(n):
-            contexts = tuple(self.uses.groupby(self.uses.grouping).context_preprocessed.sample(n=1))
-            samples.extend(combinations(contexts, r=2))
+            samples.extend(combinations(contexts.sample(n=1, replace=True), r=2))
         return samples
 
 
 # TODO ask nikolai how to avoid name space problems in pytorch
 class DataLoader:
     PROJECT = Path(__file__).parent
-
-    DATASETS = {
-        "dwug_de": "https://zenodo.org/record/5796871/files/dwug_de.zip",
-        "dwug_la": "https://zenodo.org/record/5255228/files/dwug_la.zip",
-        "dwug_en": "https://zenodo.org/record/5796878/files/dwug_en.zip",
-        "dwug_sv": "https://zenodo.org/record/5090648/files/dwug_sv.zip",
-        "dwug_es": "https://zenodo.org/record/6433667/files/dwug_es.zip",
-        "discowug": "https://zenodo.org/record/5791125/files/discowug.zip",
-        "refwug": "https://zenodo.org/record/5791269/files/refwug.zip",
-        "diawug": "https://zenodo.org/record/5791193/files/diawug.zip",
-        "surel": "https://zenodo.org/record/5784569/files/surel.zip",
-        "durel": "https://zenodo.org/record/5784453/files/durel.zip",
-        "dups-wug": "https://zenodo.org/record/5500223/files/DUPS-WUG.zip"
-        # "http://www.dianamccarthy.co.uk/downloads/WordMeaningAnno2012/cl-meaningincontext.tgz"
-    }
 
     LABELS = {
         "change_graded": "graded_jsd",
@@ -87,21 +107,21 @@ class DataLoader:
         "COMPARE": "graded_compare"
     }
 
-    def __init__(self, dataset: str, targets: List[str] = None,
-                 preprocessing: str | Callable[[str], str] = None):
+    def __init__(self, dataset: Dataset, targets: List[str] = None,
+                 preprocessing: Callable[[Series], str] = None):
 
-        self.dataset = dataset.lower()
-        assert self.dataset in self.DATASETS.keys(), f"Unknown dataset. Should be one of {list(self.DATASETS.keys())}"
-
-        self.lemmas = targets
+        # self.dataset = dataset.lower()
+        self.dataset = dataset
+        self.targets = targets
         self.preprocessing = preprocessing
-        self.data_path = self.PROJECT.joinpath("wug", dataset)
+        self.data_path = self.PROJECT.joinpath("wug", self.dataset.name.replace("_", "-")
+                                               if dataset == Dataset.DUPS_WUG else self.dataset.name)
 
         self.data_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.data_path.exists() or len(os.listdir(self.data_path)) == 0:
             # TODO fix problem where the program tries to load data before everything is downloaded and unzipped
-            self.download_dataset()
-            self.unzip_dataset()
+            self.dataset.download()
+            self.dataset.unzip(output_dir=self.data_path.parent)
 
         self.stats = self.load_stats()
 
@@ -125,41 +145,16 @@ class DataLoader:
         return Target(lemma=lemma, uses=uses, labels=labels, judgments=judgments, preprocessing=self.preprocessing)
 
     def load_dataset(self) -> List[Target]:
-        if self.lemmas is None:
+        if self.targets is None:
             return [self.load_lemma(lemma)
                     for lemma in os.listdir(str(self.data_path.joinpath("data")))]
         else:
             return [self.load_lemma(lemma)
                     for lemma in os.listdir(str(self.data_path.joinpath("data")))
-                    if lemma in self.lemmas]
-
-    def download_dataset(self) -> None:
-        r = requests.get(self.DATASETS[self.dataset], stream=True)
-        filename = f"{self.dataset}.zip"
-
-        with open(file=filename, mode='wb') as f:
-            pbar = tqdm(desc=f"Downloading dataset '{self.dataset}'", unit="B", unit_scale=True, unit_divisor=1024,
-                        total=int(r.headers['Content-Length']))
-            pbar.clear()  # clear 0% info
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk:  # filter out keep-alive new chunks
-                    pbar.update(len(chunk))
-                    f.write(chunk)
-            pbar.close()
-
-    def unzip_dataset(self) -> None:
-        filename = f"{self.dataset}.zip"
-        with zipfile.ZipFile(file=filename) as z:
-            for f in z.namelist():
-                if not f.startswith(f"{self.dataset}/plots"):
-                    z.extract(f, path=self.data_path.parent)
-                    if f.endswith(".csv"):
-                        f = str(Path(self.data_path.parent).joinpath(f))
-                        f_new = f.replace(".csv", ".tsv")
-                        os.rename(f, f_new)
-        os.remove(filename)
+                    if lemma in self.targets]
 
 
 if __name__ == "__main__":
-    dataloader = DataLoader(dataset="dwug_es", preprocessing=None)
+    dataloader = DataLoader(dataset=Dataset.dwug_es, preprocessing=preprocessing.lemmatize)
     target = dataloader.load_lemma("abundar")
+    print(target.sample_pairs_uses(n=1))
