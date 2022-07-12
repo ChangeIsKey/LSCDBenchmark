@@ -77,15 +77,14 @@ class Target:
         self.judgments = self.judgments[self.judgments.columns[self.judgments.columns != "lemma"]]
 
     def preprocess(self, how: Callable[[Series], str] = None):
+        assert how is None or callable(how), TypeError("preprocessing parameter type is invalid")
+
         if how is None:
             self.uses["context_preprocessed"] = self.uses.context
-            return self.uses
-        elif isinstance(how, Callable):
+        elif callable(how):
             self.uses["context_preprocessed"] = self.uses.apply(how, axis=1)
             assert self.uses.context_preprocessed.apply(lambda txt: isinstance(txt, str)).all(), \
                 f"Invalid return type for preprocessing function {how.__name__}"
-        else:
-            raise TypeError("preprocessing parameter type is invalid")
 
     def sample_pairs_uses(self, n: int):
         samples = []
@@ -119,7 +118,6 @@ class DataLoader:
 
         self.data_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.data_path.exists() or len(os.listdir(self.data_path)) == 0:
-            # TODO fix problem where the program tries to load data before everything is downloaded and unzipped
             self.dataset.download()
             self.dataset.unzip(output_dir=self.data_path.parent)
 
@@ -131,6 +129,7 @@ class DataLoader:
             path = self.data_path.joinpath("stats", "stats_groupings.tsv")
         df = pd.read_csv(path, delimiter="\t", encoding="utf8")
         df.drop(columns=df.columns.difference({"lemma", "grouping", *self.LABELS.keys()}), inplace=True)
+        df.set_index(["lemma", "grouping"], inplace=True)
         return df
 
     def load_lemma(self, lemma: str) -> Target:
@@ -138,9 +137,8 @@ class DataLoader:
                            delimiter="\t", quoting=csv.QUOTE_NONE, encoding='utf8')
         judgments = pd.read_csv(filepath_or_buffer=self.data_path.joinpath("data", lemma, "judgments.tsv"),
                                 delimiter="\t", quoting=csv.QUOTE_NONE, encoding='utf8')
-        labels = self.stats[self.stats.lemma == lemma] \
-            .set_index("grouping") \
-            .rename(columns={old: new for old, new in self.LABELS.items() if old in self.stats.columns})
+        labels = self.stats.loc[lemma].rename(columns={old: new for old, new in self.LABELS.items()
+                                                       if old in self.stats.columns})
 
         return Target(lemma=lemma, uses=uses, labels=labels, judgments=judgments, preprocessing=self.preprocessing)
 
