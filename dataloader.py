@@ -6,7 +6,7 @@ import csv
 import zipfile
 import pandas as pd
 
-from typing import List, Callable
+from typing import List, Callable, Tuple
 from pathlib import Path
 from pandas import DataFrame, Series
 from tqdm import tqdm
@@ -60,6 +60,13 @@ class Dataset(Enum):
 
 
 @dataclass
+class Use:
+    identifier: str
+    context_preprocessed: str
+    target_indices: Tuple[int]
+
+
+@dataclass
 class Target:
     lemma: str
     uses: DataFrame
@@ -86,12 +93,23 @@ class Target:
             assert self.uses.context_preprocessed.apply(lambda txt: isinstance(txt, str)).all(), \
                 f"Invalid return type for preprocessing function {how.__name__}"
 
-    def sample_pairs_uses(self, n: int):
+    def get_uses(self) -> List[Use]:
+        return self.uses.apply(lambda row: Use(row.identifier, row.context_preprocessed, row.indexes_target_token),
+                               axis=1).tolist()
+
+    def sample_pairs_use(self, n: int) -> (Tuple[str], List[str]):
         samples = []
-        contexts = self.uses.groupby(self.uses.grouping).context_preprocessed
+        ids = self.uses.groupby(self.uses.grouping).identifier
+        sampled_ids = []
         for _ in range(n):
-            samples.extend(combinations(contexts.sample(n=1, replace=True), r=2))
-        return samples
+            sample = ids.sample(n=1, replace=True)
+            samples.extend(combinations(sample, r=2))
+            sampled_ids.extend(sample)
+
+        return samples, sampled_ids
+
+    def get_pairs_use_judgments(self):
+        pass
 
 
 # TODO ask nikolai how to avoid name space problems in pytorch
