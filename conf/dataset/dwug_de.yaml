@@ -1,0 +1,9 @@
+task: lscd
+grouping_1: 1
+grouping_2: 2
+uses:
+  type: generated
+  n: 100
+  replacement: false
+#  type: "annotated"
+pairing: EARLIER # any of [EARLIER, LATER, COMPARE]

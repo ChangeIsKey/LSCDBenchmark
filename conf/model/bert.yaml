@@ -1,0 +1,4 @@
+name: bert
+layers: "1+12"
+measure: apd   # what we do with the vectors once we have them (apd, cos, cluster)
+cased: false
