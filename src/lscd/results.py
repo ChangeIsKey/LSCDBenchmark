@@ -1,9 +1,9 @@
 from typing import Dict
 
-from config import Config
+from src.config import Config
 
 
-class LSCDResults:
+class Results:
     def __init__(self, config: Config, results: Dict[str, float]):
         self.config = config
 

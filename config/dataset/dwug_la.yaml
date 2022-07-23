@@ -1,0 +1,19 @@
+name: dwug_la
+language: la
+task: lscd
+grouping_1: 1
+grouping_2: 2
+uses:
+  type: annotated # one of [all, sample, annotated]
+  #  params:
+  #    n: 100
+  #    replacement: true
+  pairing: EARLIER
+#  params:
+#    n: 100
+#    replacement: false
+preprocessing:
+  method: toklem
+  params:
+    cached: false
+#    save: true
