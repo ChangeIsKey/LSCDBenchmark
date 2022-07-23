@@ -12,17 +12,16 @@ from src.use import Use
 
 
 class Target:
-    def __init__(self, name: str, grouping_1: int, grouping_2: int, uses_1: DataFrame, uses_2: DataFrame,
+    def __init__(self, name: str, uses_1: DataFrame, uses_2: DataFrame,
                  labels: DataFrame, judgments: DataFrame, config: Config, nlp: spacy.Language):
         self.name = name
         self.uses_1 = uses_1
         self.uses_2 = uses_2
         self.labels = labels
         self.judgments = judgments
-        self.grouping_1 = grouping_1
-        self.grouping_2 = grouping_2
+        self.grouping_combination = config.dataset.groupings
         self.config = config
-        self.use_id_pairs, self.ids = self.get_use_id_pairs(uses=self.config.dataset.uses)
+        self._use_id_pairs, self._ids = None, None
 
         self.preprocess(how=getattr(preprocessing, self.config.dataset.preprocessing.method) if self.config.dataset.preprocessing.method is not None else None,
                         nlp=nlp,
@@ -69,52 +68,55 @@ class Target:
                 TypeError(f"Invalid return type for preprocessing function {how.__name__}")
 
     def get_uses(self) -> Tuple[Dict[str, Use], Dict[str, Use]]:
-        uses_1 = dict()
-        uses_2 = dict()
-        for _, use in self.uses_1.iterrows():
-            use = Use(use.identifier, use.context_preprocessed, use.begin_index_token_preprocessed, use.end_index_token_preprocessed)
-            uses_1[use.identifier] = use
-        for _, use in self.uses_2.iterrows():
-            use = Use(use.identifier, use.context_preprocessed, use.begin_index_token_preprocessed, use.end_index_token_preprocessed)
-            uses_2[use.identifier] = use
+        ids2uses = (dict(), dict())
+        for i, uses in enumerate([self.uses_1, self.uses_2]):
+            for _, use in uses.iterrows():
+                ids2uses[i][use.identifier] = Use(
+                    identifier=use.identifier,
+                    context_preprocessed=use.context_preprocessed,
+                    target_index_begin=use.begin_index_token_preprocessed,
+                    target_index_end=use.end_index_token_preprocessed
+                )
+        return ids2uses
 
-        return uses_1, uses_2
+    @property
+    def use_id_pairs(self) -> List[Tuple[str, str]]:
+        if self._ids is None and self._use_id_pairs is None:
+            ids_1 = self.uses_1.identifier.tolist()
+            ids_2 = self.uses_2.identifier.tolist()
 
-    def get_use_id_pairs(self, uses: Uses) -> (List[Tuple[str]], Set[str]):
-        ids_1 = self.uses_1.identifier.tolist()
-        ids_2 = self.uses_2.identifier.tolist()
+            if self.config.dataset.uses.pairing == "COMPARE":
+                pass
+            elif self.config.dataset.uses.pairing == "EARLIER":
+                ids_2 = ids_1
+            elif self.config.dataset.uses.pairing == "LATER":
+                ids_1 = ids_2
 
-        if uses.pairing == "COMPARE":
-            pass
-        elif uses.pairing == "EARLIER":
-            ids_2 = ids_1
-        elif uses.pairing == "LATER":
-            ids_1 = ids_2
-
-        if uses.type == "sampled":
-            pairs = []
-            for _ in range(uses.params.n):
-                id_1 = np.random.choice(ids_1, replace=uses.params.replacement)
-                id_2 = np.random.choice(ids_2, replace=uses.params.replacement)
-                pairs.append((id_1, id_2))
-        elif uses.type == "all":
-            if uses.pairing == "COMPARE":
-                pairs = [pair for pair in product(ids_1, ids_2)]
-            elif uses.pairing in ["EARLIER", "LATER"]:
-                pairs = combinations(ids_1, r=2)
+            if self.config.dataset.uses.type == "sampled":
+                pairs = []
+                for _ in range(self.config.dataset.uses.params.n):
+                    id_1 = np.random.choice(ids_1, replace=self.config.dataset.uses.params.replacement)
+                    id_2 = np.random.choice(ids_2, replace=self.config.dataset.uses.params.replacement)
+                    pairs.append((id_1, id_2))
+            elif self.config.dataset.uses.type == "all":
+                if self.config.dataset.uses.pairing == "COMPARE":
+                    pairs = [pair for pair in product(ids_1, ids_2)]
+                elif self.config.dataset.uses.pairing in ["EARLIER", "LATER"]:
+                    pairs = combinations(ids_1, r=2)
+                else:
+                    raise NotImplementedError
+            elif self.config.dataset.uses.type == "annotated":
+                ids_1 = self.judgments.identifier1
+                ids_2 = self.judgments.identifier2
+                # TODO implement pairing logic
+                pairs = list(zip(ids_1, ids_2))
             else:
                 raise NotImplementedError
-        elif uses.type == "annotated":
-            ids_1 = self.judgments.identifier1
-            ids_2 = self.judgments.identifier2
-            # TODO implement pairing logic
-            pairs = list(zip(ids_1, ids_2))
-        else:
-            raise NotImplementedError
 
-        sampled_ids = set()
-        for id1, id2 in pairs:
-            sampled_ids.add(id1)
-            sampled_ids.add(id2)
+            # sampled_ids = set()
+            # for id1, id2 in pairs:
+            #     sampled_ids.add(id1)
+            #     sampled_ids.add(id2)
 
-        return pairs, sampled_ids
+            self._use_id_pairs = pairs
+        return self._use_id_pairs

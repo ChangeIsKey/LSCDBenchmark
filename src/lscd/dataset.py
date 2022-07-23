@@ -32,8 +32,7 @@ class Dataset:
         self.judgments = judgments
         self.mask = mask
 
-        self.grouping_1 = self.config.dataset.grouping_1
-        self.grouping_2 = self.config.dataset.grouping_2
+        self.groupings = self.config.dataset.groupings
 
         self._targets = None
         self.name2target = {target.name: target for target in self.targets}
@@ -43,37 +42,29 @@ class Dataset:
 
     @property
     def targets(self) -> List[Target]:
-        if self._targets is not None:
-            return self._targets
+        if self._targets is None:
+            group_combination = "_".join(map(str, self.groupings))
+            target_names = [target.name for target in
+                            Path(__file__).parent.parent.parent.joinpath("wug", self.config.dataset.name, "data")
+                            .iterdir()]
 
-        group_combination = f"{self.grouping_1}_{self.grouping_2}"
-        target_names = [target.name for target in
-                        Path(__file__).parent.parent.parent.joinpath("wug", self.config.dataset.name, "data")
-                        .iterdir()]
+            if not self.config.dataset.preprocessing.params.get("cached"):
+                self.nlp = self.get_spacy_model()
 
-        if not self.config.dataset.preprocessing.params.get("cached"):
-            self.nlp = self.get_spacy_model()
-
-        self._targets = [
-            Target(
-                config=self.config,
-                name=target,
-                grouping_1=self.grouping_1,
-                grouping_2=self.grouping_2,
-                uses_1=self.uses[(self.uses.lemma == target) & (self.uses.grouping == self.grouping_1)].copy(),
-                uses_2=self.uses[(self.uses.lemma == target) & (self.uses.grouping == self.grouping_2)].copy(),
-                labels=self.labels[(self.labels.lemma == target) & (
-                            self.labels.grouping == group_combination)] if not self.mask else None,
-                judgments=self.judgments[self.judgments.lemma == target],
-                nlp=self.nlp,
-            )
-            for target in tqdm(target_names[:2], desc="Building targets")
-        ]
+            self._targets = [
+                Target(
+                    config=self.config,
+                    name=target,
+                    uses_1=self.uses[(self.uses.lemma == target) & (self.uses.grouping == self.groupings[0])].copy(),
+                    uses_2=self.uses[(self.uses.lemma == target) & (self.uses.grouping == self.groupings[1])].copy(),
+                    labels=self.labels[(self.labels.lemma == target) & (
+                                self.labels.grouping == group_combination)] if not self.mask else None,
+                    judgments=self.judgments[self.judgments.lemma == target],
+                    nlp=self.nlp,
+                )
+                for target in tqdm(target_names[:2], desc="Building targets")
+            ]
         return self._targets
-
-    @targets.setter
-    def targets(self, targets: List[Target]) -> None:
-        self._targets = targets
 
     def get_use_id_pairs(self):
         pairs = []

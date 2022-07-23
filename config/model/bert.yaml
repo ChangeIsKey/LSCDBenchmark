@@ -1,5 +1,8 @@
 name: bert
 model: bert-base-cased
 layers: [1, -1]
+measures:
+  - apd
+  - cos
 subword_aggregation: average # one of [first, average]
 #measure: apd   # what we do with the vectors once we have them (apd, cos, cluster)

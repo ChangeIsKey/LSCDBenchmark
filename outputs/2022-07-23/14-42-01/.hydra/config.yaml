@@ -1,0 +1,21 @@
+dataset:
+  name: dwug_es
+  language: es
+  task: lscd
+  grouping_1: 1
+  grouping_2: 2
+  uses:
+    type: all
+    pairing: COMPARE
+    normalization: all
+  preprocessing:
+    method: toklem
+    params:
+      cached: true
+model:
+  name: bert
+  model: bert-base-cased
+  layers:
+  - 1
+  - -1
+  subword_aggregation: average

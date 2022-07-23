@@ -1,8 +1,10 @@
-from typing import Any, Tuple, Optional, Dict
+from typing import Any, Tuple, Optional, Dict, List
 
-from pydantic import conint, BaseModel, validator, root_validator, Field
+from pydantic import conint, BaseModel, validator, root_validator, Field, conlist
 
 import warnings
+
+from enum import Enum
 
 long2short = dict(
     english="en",
@@ -21,28 +23,35 @@ class SamplingParams(BaseModel):
     replacement: bool
 
 
+class Pairing(str, Enum):
+    COMPARE = "COMPARE"
+    EARLIER = "EARLIER"
+    LATER = "LATER"
+
+
+class UsesType(str, Enum):
+    annotated = "annotated",
+    sampled = "sampled",
+    all = "all"
+
+
 class Uses(BaseModel):
-    type: str = "annotated"
-    pairing: str = "COMPARE"
+    type: UsesType = UsesType.annotated
+    pairing: Pairing = Pairing.COMPARE
     params: Optional[SamplingParams] = None
 
-    @root_validator()
+    @root_validator(pre=False)
     def valid_use_type_and_params(cls, values: Dict):
-        allowed_types = ['annotated', 'all', 'sampled']
-        assert (type_ := values.get("type")) in allowed_types, f"value '{type_}' is not one of {allowed_types}"
+        # allowed_types = ['annotated', 'all', 'sampled']
+        # assert (type_ := values.get("type")) in allowed_types, f"value '{type_}' is not one of {allowed_types}"
 
+        type_ = values.get("type")
         if values.get("params") is None and type_ == "sampled":
             raise ValueError("you didn't provide sampling parameters")
         elif values.get("params") and type_ != "sampled":
             warnings.warn("you defined some sampling parameters, but the use type is not 'sampled'")
 
         return values
-
-    @validator("pairing")
-    def pairing_is_supported(cls, pairing: str):
-        supported_pairings = ["COMPARE", "EARLIER", "LATER"]
-        assert pairing in supported_pairings, f"value '{pairing}' not in {supported_pairings}"
-        return pairing
 
 
 class Preprocessing(BaseModel):
@@ -53,8 +62,7 @@ class Preprocessing(BaseModel):
 class DatasetConfig(BaseModel):
     name: str
     language: str
-    grouping_1: int
-    grouping_2: int
+    groupings: Tuple[int, int]
     uses: Uses
     task: str
     preprocessing: Preprocessing
@@ -74,17 +82,18 @@ class ModelConfig(BaseModel):
     name: str
     model: str
     layers: Tuple[int, int]
-    measure: str = "apd"
-    subword_aggregation: str = "average"
+    measures: conlist(item_type=str, unique_items=True)
+    subword_aggregation: str
 
-    @validator("measure")
-    def measure_supported(cls, measure: str):
+    @validator("measures")
+    def __measure_supported(cls, measures: str):
         supported_measures = ["apd", "cos"]
-        assert measure in supported_measures, f"value '{measure}' is not one of {[supported_measures]}"
-        return measure
+        assert all([m in supported_measures for m in measures]), \
+            f"one of the measures in '{measures}' is not a one of {supported_measures}"
+        return measures
 
     @validator("subword_aggregation")
-    def subword_aggregation_supported(cls, aggr: str):
+    def __subword_aggregation_supported(cls, aggr: str):
         supported_aggregations = ["average", "first"]
         assert aggr in supported_aggregations, f"value '{aggr}' is not one of {[supported_aggregations]}"
         return aggr

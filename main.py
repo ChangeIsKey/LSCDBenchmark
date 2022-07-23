@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import logging
 
 import hydra
@@ -21,10 +22,14 @@ def main(config: DictConfig):
 
     for target in dataset.targets:
         uses_1, uses_2 = target.get_uses()
-        id_pairs, _ = target.get_use_id_pairs(config.dataset.uses)
 
         model = lscd.VectorModel(config.model, list(uses_1.values()), list(uses_2.values()))
-        print(model.apd(id_pairs))
+        for measure in model.config.measures:
+            if measure == "apd":
+                id_pairs = target.use_id_pairs
+                print(model.apd(id_pairs))
+            elif measure == "cos" or measure == "cosine":
+                print(model.cosine())
 
 
 if __name__ == "__main__":

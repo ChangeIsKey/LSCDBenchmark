@@ -12,7 +12,7 @@ logging.set_verbosity_error()
 
 
 class Vectorizer(Protocol):
-    def vectorize(self, contexts: List[str], target_indices: List[Tuple[int, int]]) -> Tensor:
+    def __call__(self, contexts: List[str], target_indices: List[Tuple[int, int]]) -> Tensor:
         ...
 
 
@@ -24,7 +24,7 @@ class Bert:
         self.tokenizer: BertTokenizerFast = BertTokenizerFast.from_pretrained(self.config.model)
         self.model = BertModel.from_pretrained(self.config.model, output_hidden_states=True)
 
-    def vectorize(self, contexts: List[str], target_indices: List[Tuple[int, int]]) -> Tensor:
+    def __call__(self, contexts: List[str], target_indices: List[Tuple[int, int]]) -> Tensor:
         # TODO investigate how to do this in batches
         # TODO don't change between tensors, numpy arrays and lists
         target_vectors = []
@@ -69,7 +69,7 @@ class XLMR:
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model)
         self.model = AutoModelForMaskedLM.from_pretrained(self.config.model)
 
-    def vectorize(self, contexts: List[str], target_indices: List[Tuple[int, int]]) -> Tensor:
+    def __call__(self, contexts: List[str], target_indices: List[Tuple[int, int]]) -> Tensor:
         target_vectors = []
         for context, (target_begin, target_end) in zip(contexts, target_indices):
             encoded = self.tokenizer(context,
