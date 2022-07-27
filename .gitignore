@@ -1,1 +1,10 @@
 wug/
+.idea/
+.mypy_cache/
+src/__pycache__/
+src/lscd/__pycache__/
+.huggingface/
+.vscode-server/
+envs/
+outputs/
+results/

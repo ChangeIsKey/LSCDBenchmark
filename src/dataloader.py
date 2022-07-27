@@ -53,7 +53,7 @@ class DataLoader:
                                     for target in data_path.joinpath("data").iterdir()])
         self.clusters = pd.concat([pd.read_csv(target, **params)
                                    for target in data_path.joinpath("clusters", "opt").iterdir()])
-
+        self.agreements = pd.read_csv(data_path.joinpath("stats", "stats_agreement.tsv"), **params)
         self.lscd_labels = self.load_lscd_labels(path=data_path)
 
     @staticmethod
@@ -76,7 +76,7 @@ class DataLoader:
 
     def load_dataset(self, task: str) -> lscd.Dataset | semantic_proximity.Dataset:
         if task.lower() == "lscd":
-            return lscd.Dataset(config=self.config, uses=self.uses, labels=self.lscd_labels, judgments=self.judgments)
+            return lscd.Dataset(config=self.config, uses=self.uses, labels=self.lscd_labels, judgments=self.judgments, agreements=self.agreements)
         elif task.lower() == "semantic_proximity":
             return semantic_proximity.Dataset()
         else:

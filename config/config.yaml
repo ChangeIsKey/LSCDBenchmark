@@ -1,3 +1,33 @@
-defaults:
-  - dataset: '???'
-  - model: '???'
+dataset:
+  name: '???'
+  language: '???'
+  task: lscd
+  groupings: [1, 2]
+  uses:
+    type: all
+  #  params:
+  #    n: 100
+  #    replacement: true
+    pairing: COMPARE
+    normalization: all # we sample COMPARE pairs, and all pairs
+    # (all uses mixed in one set from uses1 uses2 with all possible combinations)
+  #  params:
+  #    n: 100
+  #    replacement: false
+  preprocessing:
+    module: src/preprocessing.py
+    method: toklem
+    params:
+      cached: true
+  #    save: true
+  cleaning:
+    fields: {}
+    method: all
+
+
+model:
+  name: '???'
+  layers: [1, -1]
+  measures:
+    - apd
+  subword_aggregation: average

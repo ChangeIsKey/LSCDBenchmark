@@ -1,7 +1,12 @@
 from typing import Any, Tuple, Optional, Dict, List
+from types import ModuleType
+from pathlib import Path
 
 from pydantic import conint, BaseModel, validator, root_validator, Field, conlist
+from pydantic.dataclasses import dataclass, Field
 
+import sys
+import importlib.util
 import warnings
 
 from enum import Enum
@@ -30,13 +35,13 @@ class Pairing(str, Enum):
 
 
 class UsesType(str, Enum):
-    annotated = "annotated",
-    sampled = "sampled",
-    all = "all"
+    ANNOTATED = "annotated",
+    SAMPLED = "sampled",
+    ALL = "all"
 
 
 class Uses(BaseModel):
-    type: UsesType = UsesType.annotated
+    type: UsesType = UsesType.ANNOTATED
     pairing: Pairing = Pairing.COMPARE
     params: Optional[SamplingParams] = None
 
@@ -54,9 +59,36 @@ class Uses(BaseModel):
         return values
 
 
-class Preprocessing(BaseModel):
+@dataclass
+class Preprocessing:
+    module: Path = Path("src/preprocessing.py").resolve()
     method: Optional[str] = None
     params: Dict[str, Any] = Field(default_factory=dict)
+
+
+    def __post_init_post_parse__(self):
+        spec = importlib.util.spec_from_file_location(
+            name=self.module.stem,
+            location=self.module
+        )
+        self.module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = self.module 
+        spec.loader.exec_module(self.module)
+
+
+@dataclass
+class CleaningParam:
+    threshold: float
+    above: bool = True
+
+class BooleanMethod(str, Enum):
+    ALL = "all"
+    ANY = "any"
+
+@dataclass
+class Cleaning:
+    fields: Dict[str, CleaningParam]
+    method: BooleanMethod = BooleanMethod.ALL
 
 
 class DatasetConfig(BaseModel):
@@ -66,39 +98,49 @@ class DatasetConfig(BaseModel):
     uses: Uses
     task: str
     preprocessing: Preprocessing
+    cleaning: Cleaning
 
     @validator("task")
     def task_is_supported(cls, task: str):
         supported_tasks = ["lscd"]
         assert task in supported_tasks, f"value '{task}' is not one of {supported_tasks}"
-
+        return task
+        
     @validator("language")
     def language_is_supported(cls, lang: str):
         assert lang in long2short.keys(), f"value '{lang}' is not one of {list(long2short.keys())}"
         return lang
 
 
+class SubwordAggregationMethod(str, Enum):
+    AVERAGE = "average"
+    FIRST = "first"
+
+
 class ModelConfig(BaseModel):
     name: str
-    model: str
     layers: Tuple[int, int]
-    measures: conlist(item_type=str, unique_items=True)
-    subword_aggregation: str
+    measures: List[str]
+    subword_aggregation: SubwordAggregationMethod
 
     @validator("measures")
-    def __measure_supported(cls, measures: str):
+    def _measure_supported(cls, measures: str):
         supported_measures = ["apd", "cos"]
         assert all([m in supported_measures for m in measures]), \
             f"one of the measures in '{measures}' is not a one of {supported_measures}"
         return measures
 
-    @validator("subword_aggregation")
-    def __subword_aggregation_supported(cls, aggr: str):
-        supported_aggregations = ["average", "first"]
-        assert aggr in supported_aggregations, f"value '{aggr}' is not one of {[supported_aggregations]}"
-        return aggr
 
+@dataclass
+class ResultsConfig:
+    output_directory: Path = Path("results")
+
+    def __post_init__(self):
+        self.output_directory.mkdir(exist_ok=True)
 
 class Config(BaseModel):
     dataset: DatasetConfig
     model: ModelConfig
+    results: ResultsConfig = Field(default_factory=ResultsConfig)
+
+

@@ -21,7 +21,7 @@ class Dataset:
         "de": "de_core_news_sm"
     }
 
-    def __init__(self, config: Config, uses: DataFrame, labels: DataFrame, judgments: DataFrame, mask: bool = False):
+    def __init__(self, config: Config, uses: DataFrame, labels: DataFrame, judgments: DataFrame, agreements: DataFrame, mask: bool = False):
         # TODO add test option
 
         self.config = config
@@ -30,12 +30,10 @@ class Dataset:
         self.uses = uses
         self.labels = labels
         self.judgments = judgments
+        self.agreements = agreements
         self.mask = mask
-
         self.groupings = self.config.dataset.groupings
-
         self._targets = None
-        self.name2target = {target.name: target for target in self.targets}
 
     def get_spacy_model(self) -> spacy.Language:
         return spacy.load(self.lang2model[self.config.dataset.language])
@@ -43,10 +41,23 @@ class Dataset:
     @property
     def targets(self) -> List[Target]:
         if self._targets is None:
+            self.agreements = self.agreements.iloc[1:, :].copy()  # remove "data=full" row
+            
+            if len(self.config.dataset.cleaning.fields) > 0:
+
+                conditions = [f'{column} >= {cleaning_param.threshold}' if cleaning_param.above else f'{column} <= {cleaning_param.threshold}' 
+                            for column, cleaning_param in self.config.dataset.cleaning.fields.items()]
+
+                if self.config.dataset.cleaning.method == "all":
+                    connector = '&'
+                elif self.config.dataset.cleaning.method == "any":
+                    connector = '|'
+                else:
+                    raise NotImplementedError
+
+                self.agreements = self.agreements.query(connector.join(conditions))
+                
             group_combination = "_".join(map(str, self.groupings))
-            target_names = [target.name for target in
-                            Path(__file__).parent.parent.parent.joinpath("wug", self.config.dataset.name, "data")
-                            .iterdir()]
 
             if not self.config.dataset.preprocessing.params.get("cached"):
                 self.nlp = self.get_spacy_model()
@@ -62,7 +73,7 @@ class Dataset:
                     judgments=self.judgments[self.judgments.lemma == target],
                     nlp=self.nlp,
                 )
-                for target in tqdm(target_names[:2], desc="Building targets")
+                for target in tqdm(self.agreements.data.unique(), desc="Building targets")
             ]
         return self._targets
 

@@ -4,6 +4,9 @@ from typing import Callable, Tuple, Dict, List, Set
 import numpy as np
 import pandas as pd
 import spacy
+import sys
+import importlib
+import importlib.util
 from pandas import DataFrame, Series
 
 from src import preprocessing
@@ -23,7 +26,9 @@ class Target:
         self.config = config
         self._use_id_pairs, self._ids = None, None
 
-        self.preprocess(how=getattr(preprocessing, self.config.dataset.preprocessing.method) if self.config.dataset.preprocessing.method is not None else None,
+
+
+        self.preprocess(how=getattr(self.config.dataset.preprocessing.module, self.config.dataset.preprocessing.method) if self.config.dataset.preprocessing.method is not None else None,
                         nlp=nlp,
                         **self.config.dataset.preprocessing.params)
 
@@ -38,7 +43,6 @@ class Target:
         :raises TypeError: if the 'how' parameter is neither None nor a function
         :raises TypeError: if the one of the returned outputs of the preprocessing function is not a string
         """
-
         assert how is None or callable(how), TypeError("preprocessing parameter type is invalid")
 
         if how is None:
