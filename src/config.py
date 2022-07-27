@@ -1,15 +1,13 @@
-from typing import Any, Tuple, Optional, Dict, List
-from types import ModuleType
-from pathlib import Path
-
-from pydantic import conint, BaseModel, validator, root_validator, Field, conlist
-from pydantic.dataclasses import dataclass, Field
-
-import sys
 import importlib.util
+import sys
 import warnings
-
 from enum import Enum
+from pathlib import Path
+from typing import Any, Tuple, Optional, Dict, List
+
+import torch
+from pydantic import conint, BaseModel, validator, root_validator
+from pydantic.dataclasses import dataclass, Field
 
 long2short = dict(
     english="en",
@@ -105,7 +103,7 @@ class DatasetConfig(BaseModel):
         supported_tasks = ["lscd"]
         assert task in supported_tasks, f"value '{task}' is not one of {supported_tasks}"
         return task
-        
+
     @validator("language")
     def language_is_supported(cls, lang: str):
         assert lang in long2short.keys(), f"value '{lang}' is not one of {list(long2short.keys())}"
@@ -115,6 +113,13 @@ class DatasetConfig(BaseModel):
 class SubwordAggregationMethod(str, Enum):
     AVERAGE = "average"
     FIRST = "first"
+
+    def __call__(self, vectors):
+        match self.name:
+            case self.AVERAGE.name:
+                return torch.mean(vectors, dim=0)
+            case self.FIRST.name:
+                return vectors[0]
 
 
 class ModelConfig(BaseModel):
@@ -137,6 +142,7 @@ class ResultsConfig:
 
     def __post_init__(self):
         self.output_directory.mkdir(exist_ok=True)
+
 
 class Config(BaseModel):
     dataset: DatasetConfig
