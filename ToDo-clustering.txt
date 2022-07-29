@@ -1,0 +1,9 @@
+- start new branch for clustering (discuss with Andres)
+- dataloader, main.py, results[class] (discuss with Andres) 
+- start with Spectral_clustering[sklearn]
+- one complete example with clustering (getting data, distance model, mapping use pairs to distances, 
+    cluster the distances [specify a format], then compare cluster to gold, store the results)
+- include dwug sense annotation
+- add more clustering algorithms
+- correlation clustering, stochastic block models, chinese whispers
+- how do we generally install third party packages which are not available from pip?
