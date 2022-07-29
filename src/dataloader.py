@@ -3,6 +3,7 @@
 import csv
 import logging
 import os
+from typing import Union
 import zipfile
 from pathlib import Path
 
@@ -74,7 +75,7 @@ class DataLoader:
 
         return df
 
-    def load_dataset(self, task: str) -> lscd.Dataset | semantic_proximity.Dataset:
+    def load_dataset(self, task: str) -> Union[lscd.Dataset, semantic_proximity.Dataset]:
         if task.lower() == "lscd":
             return lscd.Dataset(config=self.config, uses=self.uses, labels=self.lscd_labels, judgments=self.judgments, agreements=self.agreements)
         elif task.lower() == "semantic_proximity":

@@ -1,54 +1,36 @@
-import logging
-import os
+from pathlib import Path
 
 import hydra
-import pandas as pd
-from pandas import DataFrame
-from pathlib import Path
+from omegaconf import OmegaConf
 from tqdm import tqdm
-
-from omegaconf import DictConfig, OmegaConf
 
 from src.config import Config
 from src.dataloader import DataLoader
+from src.lscd.model import VectorModel
 from src.lscd.results import Results
-import src.lscd as lscd
 from src.vectorizer import Vectorizer
 
 
-
 @hydra.main(version_base=None, config_path="config", config_name="config")
-def main(config: DictConfig):
-
-    config = Config(**OmegaConf.to_object(config))
-    dataloader = DataLoader(config)
+def main(cfg: Config):
+    config = Config(**OmegaConf.to_object(cfg))
     vectorizer = Vectorizer(config.model)
-    dataset = dataloader.load_dataset(task=config.dataset.task)
+    dataset = DataLoader(config).load_dataset(task=config.dataset.task)
 
     predictions = dict()
+    labels = (
+        dataset.labels.loc[:, ["lemma", "graded_jsd"]]
+        .set_index("lemma")
+        .to_dict("index")
+    )
 
-    pbar = tqdm(dataset.targets)
-    for target in pbar:
-        pbar.set_description(f"Processing target '{target.name}'")
-        uses_1, uses_2 = target.get_uses()
-        model = lscd.VectorModel(config, list(uses_1.values()), list(uses_2.values()), vectorizer)
-        
-        grouping = "_".join(list(map(str, target.grouping_combination)))
-        predictions[(target.name, grouping)] = dict()
-        
+    for target in tqdm(dataset.targets, desc="Processing targets"):
+        uses = list(target.ids_to_uses.values())
+        model = VectorModel(config, uses, vectorizer)
+        predictions[target.name] = config.model.measure.method(target, model)
 
-        for measure in config.model.measures:
-            if measure == "apd":
-                id_pairs = target.use_id_pairs
-                predictions[(target.name, grouping)]["apd"] = float(model.apd(target_name=target.name, pairs=id_pairs))
-                
-            elif measure == "cos":
-                predictions[(target.name, grouping)]["apd"] = float(model.cos())
-   
-    
-    labels = dataset.labels.loc[:, ["lemma", "grouping", "graded_jsd"]].set_index(["lemma", "grouping"]).to_dict("index")
     results = Results(config, predictions, labels)
-    results.score("graded_change")
+    results.score(task="graded_change")
 
 
 if __name__ == "__main__":

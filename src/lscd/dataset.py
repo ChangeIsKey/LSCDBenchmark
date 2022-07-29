@@ -10,6 +10,7 @@ from src.lscd.target import Target
 
 
 class Dataset:
+
     lang2model = {
         "en": "en_core_web_sm",
         "english": "en_core_web_sm",
@@ -76,18 +77,3 @@ class Dataset:
                 for target in tqdm(self.agreements.data.unique(), desc="Building targets")
             ]
         return self._targets
-
-    def get_use_id_pairs(self):
-        pairs = []
-        for target in self.targets:
-            pairs.extend(target.get_use_id_pairs(self.config.dataset.uses))
-
-    def get_uses(self):
-        uses_1 = dict()
-        uses_2 = dict()
-        for target in self.targets:
-            target_uses_1, target_uses_2 = target.get_uses()
-            uses_1.update(target_uses_1)
-            uses_2.update(target_uses_2)
-
-        return uses_1, uses_2

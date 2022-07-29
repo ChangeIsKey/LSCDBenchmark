@@ -28,6 +28,6 @@ dataset:
 model:
   name: '???'
   layers: [1, -1]
-  measures:
-    - apd
+  measure: 
+    method: '???'
   subword_aggregation: average
