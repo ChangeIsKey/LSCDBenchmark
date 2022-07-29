@@ -10,6 +10,6 @@ outputs/
 results/
 *__pycache__*
 .conda/
-.env/
+.env
 .vscode/
 conda/
