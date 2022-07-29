@@ -8,3 +8,5 @@ src/lscd/__pycache__/
 envs/
 outputs/
 results/
+.conda/
+conda/
