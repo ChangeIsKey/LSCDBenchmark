@@ -7,9 +7,11 @@ src/lscd/__pycache__/
 .vscode-server/
 envs/
 outputs/
+multirun/
 results/
 *__pycache__*
 .conda/
 .env
 .vscode/
 conda/
+vectors/

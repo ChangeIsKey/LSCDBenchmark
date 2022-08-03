@@ -8,45 +8,37 @@ from thefuzz import process, fuzz
 __all__ = ["toklem", "lemmatize", "tokenize"]
 
 
-def toklem(s: Series, cached: bool = True, nlp: spacy.Language = None) -> Tuple[str, int, int]:
-    if cached:
-        tokens = s.context_tokenized.split()
-        tokens[int(s.indexes_target_token_tokenized)] = s.lemma
-        context_preprocessed = " ".join(tokens)
-        char_idx = 0
-        start = None
-        for token_idx, token in enumerate(tokens):
-            if token_idx == s.indexes_target_token_tokenized:
-                start = char_idx
-            char_idx += 1
-        end = context_preprocessed.rindex(s.lemma, start)
-        return context_preprocessed, start, end
+def toklem(s: Series) -> Tuple[str, int, int]:
+    tokens = s.context_tokenized.split()
+    target_token_idx = s.indexes_target_token_tokenized
+    lemma = s.lemma.split("_")[0]
 
-    else:
-        tokens = [token.text for token in nlp(s.context)]
-        context_preprocessed = " ".join(tokens)
-        target, _ = process.extractOne(s.lemma, tokens, scorer=fuzz.token_sort_ratio)
-        tokens[tokens.index(target)] = s.lemma
-        match = re.search(s.lemma, context_preprocessed)
-        return context_preprocessed, match.start(), match.end()
+    char_idx = -1
+    start, end = None, None
+    for i, token in enumerate(tokens):
+        if i == target_token_idx:
+            # char_idx will be one index to the left of the target, so we need to add 1
+            start = char_idx + 1  
+            end = start + len(lemma)
+            break
+        else:
+            char_idx += len(token) + 1  # plus one space
+
+    tokens[int(s.indexes_target_token_tokenized)] = lemma
+    context_preprocessed = " ".join(tokens)
+
+    return context_preprocessed, start, end
 
 
-def lemmatize(s: Series, cached: bool = True, nlp: spacy.Language = None) -> Tuple[str, int, int]:
-    if cached:
-        context_preprocessed = s.context_lemmatized
-    else:
-        context_preprocessed = " ".join([token.lemma_ for token in nlp(s.context)])
+def lemmatize(s: Series) -> Tuple[str, int, int]:
+    context_preprocessed = s.context_lemmatized
     match = re.search(s.lemma, context_preprocessed)
     return context_preprocessed, match.start(), match.end()
 
 
-def tokenize(s: Series, cached: bool = True, nlp: spacy.Language = None) -> Tuple[str, int, int]:
-    if cached:
-        tokens = s.context_tokenized.split()
-        target = tokens[int(s.indexes_target_token_tokenized)]
-    else:
-        tokens = [token.text for token in nlp(s.context)]
-        target, _ = process.extractOne(s.lemma, tokens, scorer=fuzz.token_sort_ratio)
+def tokenize(s: Series) -> Tuple[str, int, int]:
+    tokens = s.context_tokenized.split()
+    target = tokens[int(s.indexes_target_token_tokenized)]
     context_preprocessed = " ".join(tokens)
     match = re.search(target, context_preprocessed)
     return context_preprocessed, match.start(), match.end()

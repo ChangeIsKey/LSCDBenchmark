@@ -8,7 +8,6 @@ from pandas import DataFrame
 
 import sklearn.metrics as metrics
 import scipy.stats as stats
-from torchmetrics.functional import spearman_corrcoef
 
 from src.config import Config
 
@@ -19,8 +18,9 @@ class Results:
     ):
         self._scores = None
         self.config = config
-        self.predictions = predictions
-        self.labels = labels
+        self.predictions = sorted(predictions.items())
+        self.labels = sorted(labels.items())
+        self.targets = [lemma for lemma, _ in self.predictions]
 
     @property
     def scores(self):
@@ -39,29 +39,19 @@ class Results:
         self._scores = value
 
     def score(self, task: str, metric=None, threshold: float = 0.5, t: float = 0.1):
-        # 1. graded_change with spearman
-        # include number of targets after
-        #
-
         if task == "graded_change":
-            labels = torch.tensor(
-                [
-                    values["graded_jsd"]
-                    for lemma, values in self.labels.items()
-                    if lemma in set(self.predictions.keys())
-                ]
-            ).to("cuda:1")
+            labels = [values["change_graded"] for lemma, values in self.labels if lemma in self.targets]
+            predictions = [pred for _, pred in self.predictions]
 
-            predictions = torch.stack(list(self.predictions.values())).to("cuda:1")
-            spearman = spearman_corrcoef(predictions, labels)
+            spearman, p = stats.spearmanr(predictions, labels)
             row = {
-                "n_targets": len(list(self.predictions.keys())),
+                "n_targets": len(self.targets),
                 "task": self.config.dataset.task,
                 "method": "spearmanr",
-                "score": spearman.item(),
+                "score": spearman,
                 "measure": self.config.model.measure.method.__name__,
                 "model": self.config.model.name,
-                "preprocessing": self.config.dataset.preprocessing.method.__name__,
+                "preprocessing": str(self.config.dataset.preprocessing.method_name),
                 "dataset": self.config.dataset.name,
             }
             self.scores = pd.concat([self.scores, DataFrame([row])], ignore_index=True)

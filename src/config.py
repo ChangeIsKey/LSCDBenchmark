@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 import warnings
+from pandas import Series
 from enum import Enum, unique
 from itertools import product
 from pathlib import Path
@@ -27,11 +28,6 @@ long2short = dict(
     german="de",
     de="de",
 )
-
-
-class SamplingParams(BaseModel):
-    n: conint(ge=0)
-    replacement: bool
 
 
 ID = str
@@ -77,12 +73,10 @@ class sampling(str, Enum):
             return self.__sampled(target, pairing, **kwargs)
 
     def __annotated(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
-        # This simply takes
         return list(zip(pairing(target, self)))
 
     def __all(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
-        ids_1, ids_2 = pairing(target, self)
-        return list(product(ids_1, ids_2))
+        return list(product(*pairing(target, self)))
 
     def __sampled(self, target: Target, pairing: pairing, n: int = 100, replace: bool = True) -> List[Tuple[ID, ID]]:
         ids_1, ids_2 = pairing(target, self)
@@ -95,36 +89,19 @@ class sampling(str, Enum):
         return pairs
 
     
-
-
-
-
-class Uses(BaseModel):
-    type: sampling = sampling.annotated
-    pairing: pairing = pairing.COMPARE
-    params: Optional[SamplingParams] = None
-
-    @root_validator(pre=False)
-    def valid_use_type_and_params(cls, values: Dict):
-        # allowed_types = ['annotated', 'all', 'sampled']
-        # assert (type_ := values.get("type")) in allowed_types, f"value '{type_}' is not one of {allowed_types}"
-
-        type_ = values.get("type")
-        if values.get("params") is None and type_ == "sampled":
-            raise ValueError("you didn't provide sampling parameters")
-        elif values.get("params") and type_ != "sampled":
-            warnings.warn("you defined some sampling parameters, but the use type is not 'sampled'")
-
-        return values
-
-
 @dataclass
 class Preprocessing:
-    module: Path = Path("src/preprocessing.py").resolve()
-    method: Union[str, Callable] = None
-    params: Dict[str, Any] = Field(default_factory=dict)
+    module: Path
+    method: Optional[Union[str, Callable]]
+    params: Dict[str, Any]
+
+    @staticmethod
+    def keep_intact(s: Series, **kwargs) -> Tuple[str, int, int]:
+        start, end = tuple(map(int, s.indexes_target_token.split(":")))
+        return s.context, start, end
 
     def __post_init_post_parse__(self):
+        self.module = self.module.resolve()
         spec = importlib.util.spec_from_file_location(
             name=self.module.stem,
             location=self.module
@@ -132,16 +109,29 @@ class Preprocessing:
         self.module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = self.module 
         spec.loader.exec_module(self.module)
-        self.method = getattr(self.module, self.method) if self.method is not None else None
+
+        how = self.keep_intact if self.method is None else getattr(self.module, self.method)
+        self.method_name = None if self.method is None else self.method
+
+        def func(s: Series, **kwargs) -> Series:
+            context, start, end = how(s, **kwargs)
+            return Series({
+                "context_preprocessed": context,
+                "begin_index_token_preprocessed": start,
+                "end_index_token_preprocessed": end,
+            })
+
+        self.method = func
 
 
 @dataclass
 class Measure:
-    module: Path = Path("src/measures.py").resolve()
-    method: Union[str, Callable] = None
-    params: Dict[str, Any] = Field(default_factory=dict)
+    module: Path
+    method: Union[str, Callable]
+    params: Dict[str, Any]
 
     def __post_init_post_parse__(self):
+        self.module = self.module.resolve()
         spec = importlib.util.spec_from_file_location(
             name=self.module.stem,
             location=self.module
@@ -171,9 +161,8 @@ class Cleaning:
 
 class DatasetConfig(BaseModel):
     name: str
-    language: str
+    # language: str
     groupings: Tuple[int, int]
-    uses: Uses
     task: str
     preprocessing: Preprocessing
     cleaning: Cleaning
@@ -184,27 +173,49 @@ class DatasetConfig(BaseModel):
         assert task in supported_tasks, f"value '{task}' is not one of {supported_tasks}"
         return task
 
-    @validator("language")
-    def language_is_supported(cls, lang: str):
-        assert lang in long2short.keys(), f"value '{lang}' is not one of {list(long2short.keys())}"
-        return lang
+    # @validator("language")
+    # def language_is_supported(cls, lang: str):
+    #     assert lang in long2short.keys(), f"value '{lang}' is not one of {list(long2short.keys())}"
+    #     return lang
 
 
 @unique
 class SubwordAggregator(str, Enum):
     AVERAGE = "average"
     FIRST = "first"
+    LAST = "last"
+    SUM = "sum"
 
-    def __call__(self, vectors: Tensor):
+    def __call__(self, vectors: np.array) -> np.array:
         if self is self.AVERAGE:
-            return torch.mean(vectors, dim=0)
+            return vectors.mean(axis=0)
         elif self is self.FIRST:
             return vectors[0]
+        elif self is self.LAST:
+            return vectors[-1]
+        elif self is self.SUM:
+            return vectors.sum(axis=0, keepdim=True)
+
+
+class LayerAggregator(str, Enum):
+    AVERAGE = "average"
+    CONCAT = "concat"
+    SUM = "sum"
+
+    def __call__(self, layers: np.array) -> np.array:
+        if self is self.AVERAGE:
+            return layers.mean(axis=0)
+        elif self is self.SUM:
+            return layers.sum(axis=0, keepdim=True)
+        elif self is self.CONCAT:
+            dim = np.product(list(layers.shape))
+            return layers.reshape((dim, 1))
 
 
 class ModelConfig(BaseModel):
     name: str
     layers: List[int]
+    layer_aggregation: LayerAggregator
     measure: Measure
     subword_aggregation: SubwordAggregator
 
@@ -217,6 +228,7 @@ class ResultsConfig:
 
 
 class Config(BaseModel):
+    gpu: Optional[int]
     dataset: DatasetConfig
     model: ModelConfig
     results: ResultsConfig = Field(default_factory=ResultsConfig)

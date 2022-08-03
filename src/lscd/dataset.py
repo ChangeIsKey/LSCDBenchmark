@@ -36,13 +36,11 @@ class Dataset:
         self.groupings = self.config.dataset.groupings
         self._targets = None
 
-    def get_spacy_model(self) -> spacy.Language:
-        return spacy.load(self.lang2model[self.config.dataset.language])
-
     @property
     def targets(self) -> List[Target]:
         if self._targets is None:
             self.agreements = self.agreements.iloc[1:, :].copy()  # remove "data=full" row
+            print(self.agreements.head())
             
             if len(self.config.dataset.cleaning.fields) > 0:
 
@@ -59,9 +57,6 @@ class Dataset:
                 self.agreements = self.agreements.query(connector.join(conditions))
                 
             group_combination = "_".join(map(str, self.groupings))
-
-            if not self.config.dataset.preprocessing.params.get("cached"):
-                self.nlp = self.get_spacy_model()
 
             self._targets = [
                 Target(
