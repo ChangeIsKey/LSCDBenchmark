@@ -32,11 +32,17 @@ class Vectorizer:
         if path.exists():
             self._index = pd.read_csv(path, sep="\t")
         else:
-            self._index = DataFrame(columns=["model", "target", "id", "preprocessing"])
+            self._index = DataFrame(columns=["model", "target", "id", "preprocessing", "dataset"])
         return self._index
 
     def row(self, target_name: str, id: str):
-        return DataFrame([{"model": self.config.model.name, "target": target_name, "id": id, "preprocessing": str(self.config.dataset.preprocessing.method_name)}])
+        return DataFrame([{
+            "model": self.config.model.name, 
+            "target": target_name, 
+            "id": id, 
+            "preprocessing": str(self.config.dataset.preprocessing.method_name),
+            "dataset": self.config.dataset.name
+        }])
 
 
     @index.setter
@@ -56,9 +62,10 @@ class Vectorizer:
         row = self.index[
             (self.index.model == self.config.model.name) & 
             (self.index.target == target_name) & 
-            (self.index.preprocessing == str(self.config.dataset.preprocessing.method_name))
+            (self.index.preprocessing == str(self.config.dataset.preprocessing.method_name)) & 
+            (self.index.dataset == self.config.dataset.name)
         ]
-        
+
         if not row.empty:
             id = row["id"].iloc[0]
             hidden_states = np.load(cache.joinpath(f"{id}.npz"))
