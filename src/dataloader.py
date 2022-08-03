@@ -26,7 +26,7 @@ class DataLoader:
         dwug_de="https://zenodo.org/record/5796871/files/dwug_de.zip",
         dwug_la="https://zenodo.org/record/5255228/files/dwug_la.zip",
         dwug_en="https://zenodo.org/record/5796878/files/dwug_en.zip",
-        dwug_sv="https://zenodo.org/record/5090648/files/dwug_sv.zip",
+        dwug_sv="https://zenodo.org/record/5801358/files/dwug_sv.zip",
         dwug_es="https://zenodo.org/record/6433667/files/dwug_es.zip",
         discowug="https://zenodo.org/record/5791125/files/discowug.zip",
         refwug="https://zenodo.org/record/5791269/files/refwug.zip",
@@ -59,20 +59,10 @@ class DataLoader:
 
     @staticmethod
     def load_lscd_labels(path: Path) -> DataFrame:
-        labels = {
-            "change_graded": "graded_jsd",
-            "change_binary": "binary_change",
-            "change_binary_loss": "binary_loss",
-            "change_binary_gain": "binary_gain",
-            "COMPARE": "graded_compare"
-        }
         stats_path = path.joinpath("stats", "opt", "stats_groupings.tsv")
         if not stats_path.exists():
             stats_path = path.joinpath("stats", "stats_groupings.tsv")
         df = pd.read_csv(stats_path, delimiter="\t", encoding="utf8")
-        df.drop(columns=df.columns.difference({"lemma", "grouping", *labels.keys()}), inplace=True)
-        df.rename(columns={old: new for old, new in labels.items() if old in df.columns}, inplace=True)
-
         return df
 
     def load_dataset(self, task: str) -> Union[lscd.Dataset, semantic_proximity.Dataset]:

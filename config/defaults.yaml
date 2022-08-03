@@ -1,0 +1,24 @@
+gpu: null
+
+dataset:
+  name: '???'
+  task: lscd
+  groupings: [1, 2]
+  preprocessing:
+    module: src/preprocessing.py
+    method: null
+    params: {}
+  cleaning:
+    fields: {}
+    method: all
+
+
+model:
+  name: '???'
+  layers: [1, -1]
+  layer_aggregation: average
+  measure: 
+    module: src/measures.py
+    method: apd_compare_all
+    params: {}
+  subword_aggregation: average
