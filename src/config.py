@@ -161,7 +161,6 @@ class Cleaning:
 
 class DatasetConfig(BaseModel):
     name: str
-    # language: str
     groupings: Tuple[int, int]
     task: str
     preprocessing: Preprocessing
@@ -172,12 +171,6 @@ class DatasetConfig(BaseModel):
         supported_tasks = ["lscd"]
         assert task in supported_tasks, f"value '{task}' is not one of {supported_tasks}"
         return task
-
-    # @validator("language")
-    # def language_is_supported(cls, lang: str):
-    #     assert lang in long2short.keys(), f"value '{lang}' is not one of {list(long2short.keys())}"
-    #     return lang
-
 
 @unique
 class SubwordAggregator(str, Enum):
