@@ -1,5 +1,5 @@
 import re
-from typing import Tuple
+from typing import Tuple, List
 
 import spacy
 from pandas import Series
@@ -7,38 +7,37 @@ from thefuzz import process, fuzz
 
 __all__ = ["toklem", "lemmatize", "tokenize"]
 
-
-def toklem(s: Series) -> Tuple[str, int, int]:
-    tokens = s.context_tokenized.split()
-    target_token_idx = s.indexes_target_token_tokenized
-    lemma = s.lemma.split("_")[0]
-
+def char_indices(token_idx: int, tokens: List[str], target: str) -> Tuple[int, int]:
     char_idx = -1
     start, end = None, None
     for i, token in enumerate(tokens):
-        if i == target_token_idx:
+        if i == token_idx:
             # char_idx will be one index to the left of the target, so we need to add 1
             start = char_idx + 1  
-            end = start + len(lemma)
-            break
+            end = start + len(target)
+            return start, end
         else:
             char_idx += len(token) + 1  # plus one space
 
-    tokens[int(s.indexes_target_token_tokenized)] = lemma
-    context_preprocessed = " ".join(tokens)
-
-    return context_preprocessed, start, end
+def toklem(s: Series) -> Tuple[str, int, int]:
+    tokens = s.context_tokenized.split()
+    target = s.lemma.split("_")[0]
+    start, end = char_indices(token_idx=s.indexes_target_token_tokenized, tokens=tokens, target=target)
+    tokens[int(s.indexes_target_token_tokenized)] = target
+    return " ".join(tokens), start, end
 
 
 def lemmatize(s: Series) -> Tuple[str, int, int]:
     context_preprocessed = s.context_lemmatized
-    match = re.search(s.lemma, context_preprocessed)
-    return context_preprocessed, match.start(), match.end()
+    tokens = context_preprocessed.split()
+    idx = s.indexes_target_token_lemmatized
+    target = tokens[idx]
+    start, end = char_indices(token_idx=idx, tokens=tokens, target=target)
+    return s.context_lemmatized, start, end
 
 
 def tokenize(s: Series) -> Tuple[str, int, int]:
     tokens = s.context_tokenized.split()
-    target = tokens[int(s.indexes_target_token_tokenized)]
-    context_preprocessed = " ".join(tokens)
-    match = re.search(target, context_preprocessed)
-    return context_preprocessed, match.start(), match.end()
+    idx = s.indexes_target_token_tokenized
+    start, end = char_indices(token_idx=idx, tokens=tokens, target=tokens[idx])
+    return s.context_tokenized, start, end
