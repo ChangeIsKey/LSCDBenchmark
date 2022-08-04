@@ -40,7 +40,6 @@ class Dataset:
     def targets(self) -> List[Target]:
         if self._targets is None:
             self.agreements = self.agreements.iloc[1:, :].copy()  # remove "data=full" row
-            print(self.agreements.head())
             
             if len(self.config.dataset.cleaning.fields) > 0:
 
