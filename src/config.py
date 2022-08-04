@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 import warnings
+import pandas as pd
 from pandas import Series
 from enum import Enum, unique
 from itertools import product
@@ -41,9 +42,12 @@ class pairing(str, Enum):
 
     def __call__(self, target: Target, sampling: sampling) -> Tuple[List[ID], List[ID]]:
         if sampling is sampling.annotated:
+            judgments = pd.merge(target.judgments, target.uses_1, left_on="identifier1", right_on="identifier", how="left")
+            judgments = pd.merge(judgments, target.uses_2, left_on="identifier2", right_on="identifier", how="left")
+            judgments = judgments[(judgments.grouping_x == target.grouping_combination[0]) & (judgments.grouping_y == target.grouping_combination[1])].copy()
             ids = (
-                target.judgments.identifier1.tolist(),
-                target.judgments.identifier2.tolist()
+                judgments.identifier1.tolist(),
+                judgments.identifier2.tolist()
             )
         else:
             ids = (
@@ -73,7 +77,7 @@ class sampling(str, Enum):
             return self.__sampled(target, pairing, **kwargs)
 
     def __annotated(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
-        return list(zip(pairing(target, self)))
+        return list(zip(*pairing(target, self)))
 
     def __all(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
         return list(product(*pairing(target, self)))
