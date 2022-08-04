@@ -21,10 +21,24 @@ class Vectorizer:
 
     def __post_init__(self):
         self.device = torch.device("cpu" if self.config.gpu is None else f"cuda:{self.config.gpu}")
-        self.tokenizer = AutoTokenizer.from_pretrained(self.config.model.name)
-        self.model = AutoModel.from_pretrained(self.config.model.name, output_hidden_states=True).to(self.device)
-        self.model.eval()
+        self._tokenizer = None
+        self._model = None
         self._index = None
+
+    @property
+    def tokenizer(self):
+        if self._tokenizer is None:
+            self._tokenizer = AutoTokenizer.from_pretrained(self.config.model.name)
+        return self._tokenizer
+
+
+    @property
+    def model(self):
+        if self._model is None:
+            self._model = AutoModel.from_pretrained(self.config.model.name, output_hidden_states=True).to(self.device)
+            self._model.eval()
+        return self._model
+    
 
     @property
     def index(self):
@@ -68,8 +82,8 @@ class Vectorizer:
 
         if not row.empty:
             id = row["id"].iloc[0]
-            hidden_states = np.load(cache.joinpath(f"{id}.npz"))
-            subword_indices = np.load(cache.joinpath(f"{id}-offset-mapping.npz"))
+            hidden_states = np.load(cache.joinpath(f"{id}.npz"), mmap_mode="r")
+            subword_indices = np.load(cache.joinpath(f"{id}-offset-mapping.npz"), mmap_mode="r")
         else:
             for context, context_id in zip(contexts, ids):
                 encoded = self.tokenizer(
