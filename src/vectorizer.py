@@ -94,6 +94,9 @@ class Vectorizer:
                     return_offsets_mapping=True
                 ).to(self.device)
 
+
+
+
                 # TODO fix segment ids
                 input_ids = encoded["input_ids"].to(self.device)
                 segment_ids = torch.ones_like(input_ids).to(self.device)  

@@ -39,28 +39,31 @@ class pairing(str, Enum):
     COMPARE = "COMPARE"
     EARLIER = "EARLIER"
     LATER = "LATER"
+    MERGE = "MERGE"
 
     def __call__(self, target: Target, sampling: sampling) -> Tuple[List[ID], List[ID]]:
         if sampling is sampling.annotated:
             judgments = pd.merge(target.judgments, target.uses_1, left_on="identifier1", right_on="identifier", how="left")
             judgments = pd.merge(judgments, target.uses_2, left_on="identifier2", right_on="identifier", how="left")
-            judgments = judgments[(judgments.grouping_x == target.grouping_combination[0]) & (judgments.grouping_y == target.grouping_combination[1])].copy()
+            # judgments = judgments[(judgments.grouping_x == target.grouping_combination[0]) & (judgments.grouping_y == target.grouping_combination[1])].copy()
+            # judgments.to_csv("test.csv")
             ids = (
                 judgments.identifier1.tolist(),
                 judgments.identifier2.tolist()
             )
         else:
-            ids = (
-                target.uses_1.identifier.tolist(),
-                target.uses_2.identifier.tolist()
-            )
+            ids1 = target.uses_1.identifier.tolist(),
+            ids2 = target.uses_2.identifier.tolist(),
 
         if self is self.COMPARE:
-            return ids
+            return ids1, ids2
         elif self is self.EARLIER:
-            return ids[0], ids[0]
+            return ids1, ids1
         elif self is self.LATER:
-            return ids[1], ids[1]
+            return ids2, ids2
+        elif self is self.MERGE:
+            return ids1 + ids1 + ids2, ids2 + ids1 + ids2
+
 
 @unique
 class sampling(str, Enum):

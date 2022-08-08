@@ -26,7 +26,7 @@ def main(cfg: Config):
 
     for target in tqdm(dataset.targets, desc="Processing targets"):
         model = VectorModel(config, vectorizer, target)
-        predictions[target.name] = config.model.measure.method(target, model)
+        predictions[target.name] = config.model.measure.method(target, model, **config.model.measure.params)
 
     results = Results(config, predictions, labels)
     results.score(task="graded_change")

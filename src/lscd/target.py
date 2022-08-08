@@ -15,7 +15,7 @@ from src.use import Use
 
 class Target:
     def __init__(self, name: str, uses_1: DataFrame, uses_2: DataFrame,
-                 labels: DataFrame, judgments: DataFrame, config: Config, nlp: spacy.Language):
+                 labels: DataFrame, judgments: DataFrame, config: Config):
         self.name = name
         self.uses_1 = uses_1
         self.uses_2 = uses_2
