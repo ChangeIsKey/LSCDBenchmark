@@ -20,7 +20,7 @@ class Vectorizer:
     config: Config
 
     def __post_init__(self):
-        self.device = torch.device("cpu" if self.config.gpu is None else f"cuda:{self.config.gpu}")
+        self.device = torch.device("cpu" if self.config.model.gpu is None else f"cuda:{self.config.model.gpu}")
         self._tokenizer = None
         self._model = None
         self._index = None

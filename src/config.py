@@ -213,6 +213,7 @@ class LayerAggregator(str, Enum):
 
 
 class ModelConfig(BaseModel):
+    gpu: Optional[int]
     name: str
     layers: List[int]
     layer_aggregation: LayerAggregator
@@ -228,7 +229,6 @@ class ResultsConfig:
 
 
 class Config(BaseModel):
-    gpu: Optional[int]
     dataset: DatasetConfig
     model: ModelConfig
     results: ResultsConfig = Field(default_factory=ResultsConfig)

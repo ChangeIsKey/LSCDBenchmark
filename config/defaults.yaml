@@ -1,5 +1,3 @@
-gpu: null
-
 dataset:
   name: '???'
   task: lscd
@@ -14,6 +12,7 @@ dataset:
 
 
 model:
+  gpu: null
   name: '???'
   layers: [1, -1]
   layer_aggregation: average
