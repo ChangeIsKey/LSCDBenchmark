@@ -1,5 +1,6 @@
-import hydra
 from pathlib import Path
+
+import hydra
 
 
 def path(path: str) -> Path:

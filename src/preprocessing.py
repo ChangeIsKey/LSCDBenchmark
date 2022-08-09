@@ -1,5 +1,4 @@
-import re
-from typing import Tuple, List
+from typing import List, Tuple
 
 from pandas import Series
 
@@ -8,7 +7,6 @@ __all__ = ["toklem", "lemmatize", "tokenize"]
 
 def char_indices(token_idx: int, tokens: List[str], target: str) -> Tuple[int, int]:
     char_idx = -1
-    start, end = None, None
     for i, token in enumerate(tokens):
         if i == token_idx:
             # char_idx will be one index to the left of the target, so we need to add 1
@@ -17,6 +15,8 @@ def char_indices(token_idx: int, tokens: List[str], target: str) -> Tuple[int, i
             return start, end
         else:
             char_idx += len(token) + 1  # plus one space
+
+    raise ValueError
 
 
 def toklem(s: Series) -> Tuple[str, int, int]:

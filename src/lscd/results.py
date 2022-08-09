@@ -1,16 +1,9 @@
-import hydra
-import pandas as pd
-import numpy as np
-import torch
-import os
-
-from typing import Dict
 from pathlib import Path
-from pandas import DataFrame
+from typing import Dict
 
-import sklearn.metrics as metrics
 import scipy.stats as stats
-
+import sklearn.metrics as metrics
+from pandas import DataFrame
 from src.config import Config
 
 
@@ -21,11 +14,11 @@ class Results:
         self._scores = None
         self.config = config
         self.predictions = predictions
-        self.predictions = self.predictions
         self.labels = sorted(labels.items())
         self.targets = [lemma for lemma in self.predictions]
 
     def score(self, task: str, metric=None, threshold: float = 0.5, t: float = 0.1):
+        
         if task == "graded_change":
             labels = [
                 values["change_graded"]

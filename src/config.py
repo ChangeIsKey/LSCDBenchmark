@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-import os
 import importlib.util
 import sys
-import warnings
-import pandas as pd
-from pandas import Series
 from enum import Enum, unique
 from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
-import hydra
 
 import numpy as np
-import torch
-from pydantic import BaseModel, conint, conlist, root_validator, validator
-from pydantic.dataclasses import Field, dataclass
-from torch import Tensor
+import pandas as pd
+from pandas import Series
+from pydantic import BaseModel
+from pydantic.dataclasses import dataclass
+
 import src.utils as utils
 
 if TYPE_CHECKING:
@@ -51,10 +47,10 @@ class pairing(str, Enum):
     def __call__(self, target: Target, sampling: sampling) -> Tuple[List[ID], List[ID]]:
         """
         Retrieves two lists of use IDs for different types of pairings.
-        In general you don't need to call this function manually. 
-        By calling sampling.__call__ and passing a pairing as argument, this function will be automatically called
+        In general you don't need to call this function manually.
+        By calling sampling.__call__ and passing a pairing as argument, this
+        function will be automatically called
         """
-        ids_1, ids_2 = [], []
         if sampling is sampling.annotated:
             judgments = pd.merge(
                 target.judgments,
@@ -71,43 +67,39 @@ class pairing(str, Enum):
                 how="left",
             )
 
-            if self is self.COMPARE or self is self.MERGE:
-                judgments_filtered = judgments[
-                    (judgments.grouping_x == target.grouping_combination[0])
-                    & (judgments.grouping_y == target.grouping_combination[1])
-                ]
-                ids_1.extend(judgments_filtered.identifier1.tolist())
-                ids_2.extend(judgments_filtered.identifier2.tolist())
+            pairing_to_grouping = {
+                "COMPARE": target.grouping_combination,
+                "LATER": (
+                    target.grouping_combination[1],
+                    target.grouping_combination[1],
+                ),
+                "EARLIER": (
+                    target.grouping_combination[0],
+                    target.grouping_combination[0],
+                ),
+            }
 
-            if self is self.EARLIER or self is self.MERGE:
-                judgments_filtered = judgments[
-                    (judgments.grouping_x == target.grouping_combination[0])
-                    & (judgments.grouping_y == target.grouping_combination[0])
-                ]
-                ids_1.extend(judgments_filtered.identifier1.tolist())
-                ids_2.extend(judgments_filtered.identifier2.tolist())
+            conditions = [
+                f"grouping_x == {pairing_to_grouping[self.name][0]}",
+                f"grouping_y == {pairing_to_grouping[self.name][1]}",
+            ]
 
-            if self is self.LATER or self is self.MERGE:
-                judgments_filtered = judgments[
-                    (judgments.grouping_x == target.grouping_combination[1])
-                    & (judgments.grouping_y == target.grouping_combination[1])
-                ]
-                ids_1.extend(judgments_filtered.identifier1.tolist())
-                ids_2.extend(judgments_filtered.identifier2.tolist())
+            judgments = judgments.query("&".join(conditions))
+
+            return (
+                judgments.identifier1.tolist(),
+                judgments.identifier2.tolist(),
+            )
+
         else:
-            if self is self.COMPARE or self is self.MERGE:
-                ids_1.extend(target.uses_1.identifier.tolist())
-                ids_2.extend(target.uses_2.identifier.tolist())
-
-            if self is self.EARLIER or self is self.MERGE:
-                ids_1.extend(target.uses_1.identifier.tolist())
-                ids_2.extend(target.uses_1.identifier.tolist())
-
-            if self is self.LATER or self is self.MERGE:
-                ids_1.extend(target.uses_2.identifier.tolist())
-                ids_2.extend(target.uses_2.identifier.tolist())
-
-        return ids_1, ids_2
+            ids = (target.uses_1.identifier.tolist(), target.uses_2.identifier.tolist())
+            match self:
+                case self.COMPARE:
+                    return ids
+                case self.EARLIER:
+                    return ids[0], ids[0]
+                case self.LATER:
+                    return ids[1], ids[1]
 
 
 @unique
@@ -115,7 +107,7 @@ class sampling(str, Enum):
     """Class representing the possible types of sampling strategies
     annotated: retrieves only use pairs that have been manually annotated before
     sampled: randomly sample use pairs
-    all: cartesian product of all use pairs  
+    all: cartesian product of all use pairs
     """
 
     annotated = "annotated"

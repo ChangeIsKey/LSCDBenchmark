@@ -1,20 +1,17 @@
-from dataclasses import dataclass
-from typing import List, Tuple
-
 import os
 import uuid
-import hydra
-import torch
-import pandas as pd
+from dataclasses import dataclass
+from typing import List
+
 import numpy as np
-from pandas import DataFrame, Series
+import pandas as pd
+import torch
+from pandas import DataFrame
+from transformers import AutoModel, AutoTokenizer, logging
 
-from transformers import AutoTokenizer, AutoModel, logging
-from pathlib import Path
-
-from src.config import Config, ID
-from src.use import Use
 import src.utils as utils
+from src.config import Config
+from src.use import Use
 
 logging.set_verbosity_error()
 
@@ -84,8 +81,8 @@ class Vectorizer:
         existent_ids = self._index["id"].tolist()
         for filename in self.index_dir.iterdir():
             if filename.stem != "index":
-                id = filename.stem.replace("-offset-mapping", "")
-                if id not in existent_ids:
+                id_ = filename.stem.replace("-offset-mapping", "")
+                if id_ not in existent_ids:
                     os.remove(filename)
 
     def __call__(self, uses: List[Use]) -> torch.Tensor:
@@ -103,10 +100,10 @@ class Vectorizer:
         ]
 
         if not row.empty:
-            id = row["id"].iloc[0]
-            hidden_states = np.load(self.index_dir / f"{id}.npz", mmap_mode="r")
+            id_ = row["id"].iloc[0]
+            hidden_states = np.load(self.index_dir / f"{id_}.npz", mmap_mode="r")
             subword_indices = np.load(
-                self.index_dir / f"{id}-offset-mapping.npz", mmap_mode="r"
+                self.index_dir / f"{id_}-offset-mapping.npz", mmap_mode="r"
             )
         else:
             for use in uses:
@@ -132,15 +129,15 @@ class Vectorizer:
                         encoded["offset_mapping"].squeeze(0).cpu().numpy()
                     )
 
-            id = str(uuid.uuid4())
+            id_ = str(uuid.uuid4())
             self.index = pd.concat(
-                [self.index, self.row(target_name=use.target, id=id)],
+                [self.index, self.row(target_name=use.target, id=id_)],
                 ignore_index=True,
             )
-            with open(file=self.index_dir / f"{id}.npz", mode="wb") as f_hidden_states:
+            with open(file=self.index_dir / f"{id_}.npz", mode="wb") as f_hidden_states:
                 np.savez(f_hidden_states, **hidden_states)
             with open(
-                file=self.index_dir / f"{id}-offset-mapping.npz", mode="wb"
+                file=self.index_dir / f"{id_}-offset-mapping.npz", mode="wb"
             ) as f_subword_indices:
                 np.savez(f_subword_indices, **subword_indices)
 

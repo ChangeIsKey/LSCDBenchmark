@@ -7,15 +7,14 @@ import zipfile
 from pathlib import Path
 from typing import Union
 
-import hydra
 import pandas as pd
 import requests
 from pandas import DataFrame
 from tqdm import tqdm
-from src import utils
 
 import src.lscd as lscd
 import src.semantic_proximity as semantic_proximity
+from src import utils
 from src.config import Config, Task
 
 log = logging.getLogger(f"{Path(__file__).name}:{__name__}")
