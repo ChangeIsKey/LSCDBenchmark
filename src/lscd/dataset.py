@@ -81,7 +81,7 @@ class Dataset:
                     labels=self.labels[
                         (self.labels.lemma == target)
                         & (self.labels.grouping == group_combination)
-                    ]
+                    ],
                     judgments=self.judgments[self.judgments.lemma == target],
                 )
                 for target in tqdm(
