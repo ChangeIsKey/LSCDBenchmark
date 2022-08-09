@@ -1,5 +1,7 @@
 # cluster sketch
 
+- Dataset class should be able to be removed
+
 ```yaml
 gpu: null
 

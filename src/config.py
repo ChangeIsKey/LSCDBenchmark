@@ -39,12 +39,21 @@ ID = str
 
 @unique
 class pairing(str, Enum):
+    """
+    Class representing the possible types of use pairs
+    """
+
     COMPARE = "COMPARE"
     EARLIER = "EARLIER"
     LATER = "LATER"
     MERGE = "MERGE"
 
     def __call__(self, target: Target, sampling: sampling) -> Tuple[List[ID], List[ID]]:
+        """
+        Retrieves two lists of use IDs for different types of pairings.
+        In general you don't need to call this function manually. 
+        By calling sampling.__call__ and passing a pairing as argument, this function will be automatically called
+        """
         ids_1, ids_2 = [], []
         if sampling is sampling.annotated:
             judgments = pd.merge(
@@ -103,6 +112,12 @@ class pairing(str, Enum):
 
 @unique
 class sampling(str, Enum):
+    """Class representing the possible types of sampling strategies
+    annotated: retrieves only use pairs that have been manually annotated before
+    sampled: randomly sample use pairs
+    all: cartesian product of all use pairs  
+    """
+
     annotated = "annotated"
     sampled = "sampled"
     all = "all"
@@ -110,6 +125,9 @@ class sampling(str, Enum):
     def __call__(
         self, pairing: pairing, target: Target, **kwargs
     ) -> List[Tuple[ID, ID]]:
+        """
+        Retrieve use pairs following the specified strategy
+        """
         if self is self.annotated:
             return self.__annotated(target, pairing)
         elif self is self.all:
@@ -200,10 +218,15 @@ class Measure:
         )
 
 
+class ThresholdParam(str, Enum):
+    ABOVE = "above"
+    BELOW = "below"
+
+
 @dataclass
 class CleaningParam:
     threshold: float
-    above: bool = True
+    keep: ThresholdParam = ThresholdParam.ABOVE
 
 
 @unique
