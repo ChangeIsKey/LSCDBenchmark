@@ -30,6 +30,14 @@ model:
         n_clusters: 3
         groupings: ${dataset.groupings}
   subword_aggregation: average
+
+
+evaluation:
+  graded_change:
+    metric: spearmanr
+  binary_change:
+    metric: f1
+    threshold: 0.5
 ```
 
 ```yaml

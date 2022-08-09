@@ -1,4 +1,5 @@
 from __future__ import annotations
+from errno import EACCES
 
 import importlib.util
 import sys
@@ -93,13 +94,12 @@ class pairing(str, Enum):
 
         else:
             ids = (target.uses_1.identifier.tolist(), target.uses_2.identifier.tolist())
-            match self:
-                case self.COMPARE:
-                    return ids
-                case self.EARLIER:
-                    return ids[0], ids[0]
-                case self.LATER:
-                    return ids[1], ids[1]
+            if self is self.COMPARE:
+                return ids
+            elif self is self.EARLIER:
+                return ids[0], ids[0]
+            elif self is self.LATER:
+                return ids[1], ids[1]
 
 
 @unique
