@@ -14,4 +14,4 @@ results/
 .env
 .vscode/
 conda/
-vectors/
+.cache/

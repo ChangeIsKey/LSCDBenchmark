@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import importlib.util
 import sys
 import warnings
@@ -9,12 +10,14 @@ from enum import Enum, unique
 from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+import hydra
 
 import numpy as np
 import torch
 from pydantic import BaseModel, conint, conlist, root_validator, validator
 from pydantic.dataclasses import Field, dataclass
 from torch import Tensor
+import src.utils as utils
 
 if TYPE_CHECKING:
     from src.lscd import Target
@@ -42,27 +45,60 @@ class pairing(str, Enum):
     MERGE = "MERGE"
 
     def __call__(self, target: Target, sampling: sampling) -> Tuple[List[ID], List[ID]]:
+        ids_1, ids_2 = [], []
         if sampling is sampling.annotated:
-            judgments = pd.merge(target.judgments, target.uses_1, left_on="identifier1", right_on="identifier", how="left")
-            judgments = pd.merge(judgments, target.uses_2, left_on="identifier2", right_on="identifier", how="left")
-            # judgments = judgments[(judgments.grouping_x == target.grouping_combination[0]) & (judgments.grouping_y == target.grouping_combination[1])].copy()
-            # judgments.to_csv("test.csv")
-            ids = (
-                judgments.identifier1.tolist(),
-                judgments.identifier2.tolist()
+            judgments = pd.merge(
+                target.judgments,
+                target.uses_1,
+                left_on="identifier1",
+                right_on="identifier",
+                how="left",
             )
-        else:
-            ids1 = target.uses_1.identifier.tolist(),
-            ids2 = target.uses_2.identifier.tolist(),
+            judgments = pd.merge(
+                judgments,
+                target.uses_2,
+                left_on="identifier2",
+                right_on="identifier",
+                how="left",
+            )
 
-        if self is self.COMPARE:
-            return ids1, ids2
-        elif self is self.EARLIER:
-            return ids1, ids1
-        elif self is self.LATER:
-            return ids2, ids2
-        elif self is self.MERGE:
-            return ids1 + ids1 + ids2, ids2 + ids1 + ids2
+            if self is self.COMPARE or self is self.MERGE:
+                judgments_filtered = judgments[
+                    (judgments.grouping_x == target.grouping_combination[0])
+                    & (judgments.grouping_y == target.grouping_combination[1])
+                ]
+                ids_1.extend(judgments_filtered.identifier1.tolist())
+                ids_2.extend(judgments_filtered.identifier2.tolist())
+
+            if self is self.EARLIER or self is self.MERGE:
+                judgments_filtered = judgments[
+                    (judgments.grouping_x == target.grouping_combination[0])
+                    & (judgments.grouping_y == target.grouping_combination[0])
+                ]
+                ids_1.extend(judgments_filtered.identifier1.tolist())
+                ids_2.extend(judgments_filtered.identifier2.tolist())
+
+            if self is self.LATER or self is self.MERGE:
+                judgments_filtered = judgments[
+                    (judgments.grouping_x == target.grouping_combination[1])
+                    & (judgments.grouping_y == target.grouping_combination[1])
+                ]
+                ids_1.extend(judgments_filtered.identifier1.tolist())
+                ids_2.extend(judgments_filtered.identifier2.tolist())
+        else:
+            if self is self.COMPARE or self is self.MERGE:
+                ids_1.extend(target.uses_1.identifier.tolist())
+                ids_2.extend(target.uses_2.identifier.tolist())
+
+            if self is self.EARLIER or self is self.MERGE:
+                ids_1.extend(target.uses_1.identifier.tolist())
+                ids_2.extend(target.uses_1.identifier.tolist())
+
+            if self is self.LATER or self is self.MERGE:
+                ids_1.extend(target.uses_2.identifier.tolist())
+                ids_2.extend(target.uses_2.identifier.tolist())
+
+        return ids_1, ids_2
 
 
 @unique
@@ -71,7 +107,9 @@ class sampling(str, Enum):
     sampled = "sampled"
     all = "all"
 
-    def __call__(self, pairing: pairing, target: Target, **kwargs) -> List[Tuple[ID, ID]]:
+    def __call__(
+        self, pairing: pairing, target: Target, **kwargs
+    ) -> List[Tuple[ID, ID]]:
         if self is self.annotated:
             return self.__annotated(target, pairing)
         elif self is self.all:
@@ -85,17 +123,21 @@ class sampling(str, Enum):
     def __all(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
         return list(product(*pairing(target, self)))
 
-    def __sampled(self, target: Target, pairing: pairing, n: int = 100, replace: bool = True) -> List[Tuple[ID, ID]]:
+    def __sampled(
+        self, target: Target, pairing: pairing, n: int = 100, replace: bool = True
+    ) -> List[Tuple[ID, ID]]:
         ids_1, ids_2 = pairing(target, self)
         pairs = []
         for _ in range(n):
-            pairs.append((
-                np.random.choice(ids_1, replace=replace),
-                np.random.choice(ids_2, replace=replace)
-            ))
+            pairs.append(
+                (
+                    np.random.choice(ids_1, replace=replace),
+                    np.random.choice(ids_2, replace=replace),
+                )
+            )
         return pairs
 
-    
+
 @dataclass
 class Preprocessing:
     module: Path
@@ -103,30 +145,36 @@ class Preprocessing:
     params: Dict[str, Any]
 
     @staticmethod
-    def keep_intact(s: Series, **kwargs) -> Tuple[str, int, int]:
+    def __keep_intact(s: Series, **kwargs) -> Tuple[str, int, int]:
         start, end = tuple(map(int, s.indexes_target_token.split(":")))
         return s.context, start, end
 
     def __post_init_post_parse__(self):
-        self.module = self.module.resolve()
+        self.module = utils.path(self.module)
         spec = importlib.util.spec_from_file_location(
             name=self.module.stem,
-            location=self.module
+            location=self.module,
         )
         self.module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = self.module 
+        sys.modules[spec.name] = self.module
         spec.loader.exec_module(self.module)
 
-        how = self.keep_intact if self.method is None else getattr(self.module, self.method)
-        self.method_name = None if self.method is None else self.method
+        how = (
+            self.__keep_intact
+            if self.method is None
+            else getattr(self.module, self.method)
+        )
+        self.method_name = "None" if self.method is None else self.method
 
         def func(s: Series, **kwargs) -> Series:
             context, start, end = how(s, **kwargs)
-            return Series({
-                "context_preprocessed": context,
-                "begin_index_token_preprocessed": start,
-                "end_index_token_preprocessed": end,
-            })
+            return Series(
+                {
+                    "context_preprocessed": context,
+                    "begin_index_token_preprocessed": start,
+                    "end_index_token_preprocessed": end,
+                }
+            )
 
         self.method = func
 
@@ -138,27 +186,31 @@ class Measure:
     params: Dict[str, Any]
 
     def __post_init_post_parse__(self):
-        self.module = self.module.resolve()
+        self.module = utils.path(self.module)
         spec = importlib.util.spec_from_file_location(
             name=self.module.stem,
-            location=self.module
+            location=self.module,
         )
         self.module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = self.module 
+        sys.modules[spec.name] = self.module
         spec.loader.exec_module(self.module)
-        self.method = getattr(self.module, self.method) if self.method is not None else None
+        self.method_name = "None" if self.method is None else self.method
+        self.method = (
+            getattr(self.module, self.method) if self.method is not None else None
+        )
 
-    
 
 @dataclass
 class CleaningParam:
     threshold: float
     above: bool = True
 
+
 @unique
 class BooleanMethod(str, Enum):
     ALL = "all"
     ANY = "any"
+
 
 @dataclass
 class Cleaning:
@@ -166,18 +218,19 @@ class Cleaning:
     method: BooleanMethod = BooleanMethod.ALL
 
 
+class Task(str, Enum):
+    LSCD = "lscd"
+    CLUSTER = "cluster"
+    SEMANTIC_PROXIMITY = "semantic_proximity"
+
+
 class DatasetConfig(BaseModel):
     name: str
     groupings: Tuple[int, int]
-    task: str
+    task: Task
     preprocessing: Preprocessing
     cleaning: Cleaning
 
-    @validator("task")
-    def task_is_supported(cls, task: str):
-        supported_tasks = ["lscd"]
-        assert task in supported_tasks, f"value '{task}' is not one of {supported_tasks}"
-        return task
 
 @unique
 class SubwordAggregator(str, Enum):
@@ -220,16 +273,7 @@ class ModelConfig(BaseModel):
     measure: Measure
     subword_aggregation: SubwordAggregator
 
-@dataclass
-class ResultsConfig:
-    output_directory: Path = Path("results")
-
-    def __post_init__(self):
-        self.output_directory.mkdir(exist_ok=True)
-
 
 class Config(BaseModel):
     dataset: DatasetConfig
     model: ModelConfig
-    results: ResultsConfig = Field(default_factory=ResultsConfig)
-

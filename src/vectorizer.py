@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
+import os
 import uuid
+import hydra
 import torch
 import pandas as pd
 import numpy as np
@@ -11,6 +13,8 @@ from transformers import AutoTokenizer, AutoModel, logging
 from pathlib import Path
 
 from src.config import Config, ID
+from src.use import Use
+import src.utils as utils
 
 logging.set_verbosity_error()
 
@@ -20,10 +24,14 @@ class Vectorizer:
     config: Config
 
     def __post_init__(self):
-        self.device = torch.device("cpu" if self.config.model.gpu is None else f"cuda:{self.config.model.gpu}")
+        self.device = torch.device(
+            "cpu" if self.config.model.gpu is None else f"cuda:{self.config.model.gpu}"
+        )
         self._tokenizer = None
         self._model = None
         self._index = None
+        self.index_dir = utils.path(".cache")
+        self.index_dir.mkdir(exist_ok=True)
 
     @property
     def tokenizer(self):
@@ -31,100 +39,127 @@ class Vectorizer:
             self._tokenizer = AutoTokenizer.from_pretrained(self.config.model.name)
         return self._tokenizer
 
-
     @property
     def model(self):
         if self._model is None:
-            self._model = AutoModel.from_pretrained(self.config.model.name, output_hidden_states=True).to(self.device)
+            self._model = AutoModel.from_pretrained(
+                self.config.model.name, output_hidden_states=True
+            ).to(self.device)
             self._model.eval()
         return self._model
-    
 
     @property
     def index(self):
-        path = Path("vectors").joinpath("index.csv")
-        if path.exists():
-            self._index = pd.read_csv(path, sep="\t")
-        else:
-            self._index = DataFrame(columns=["model", "target", "id", "preprocessing", "dataset"])
+        path = self.index_dir / "index"
+        if self._index is None:
+            if path.exists():
+                self._index = pd.read_feather(path)
+                self.clean_cache()
+            else:
+                self._index = DataFrame(
+                    columns=["model", "target", "id", "preprocessing", "dataset"],
+                )
         return self._index
 
     def row(self, target_name: str, id: str):
-        return DataFrame([{
-            "model": self.config.model.name, 
-            "target": target_name, 
-            "id": id, 
-            "preprocessing": str(self.config.dataset.preprocessing.method_name),
-            "dataset": self.config.dataset.name
-        }])
-
+        return DataFrame(
+            [
+                {
+                    "model": self.config.model.name,
+                    "target": target_name,
+                    "id": id,
+                    "preprocessing": self.config.dataset.preprocessing.method_name,
+                    "dataset": self.config.dataset.name,
+                }
+            ]
+        )
 
     @index.setter
     def index(self, new: DataFrame):
-        path = Path("vectors").joinpath("index.csv")
+        path = self.index_dir / "index"
         self._index = new
-        self._index.to_csv(path, sep="\t", index=False)
+        self._index.to_feather(path)
 
-    def __call__(
-        self, contexts: List[str], target_indices: List[Tuple[int, int]], ids: List[ID], target_name: str
-    ) -> torch.Tensor:
+    def clean_cache(self):
+        existent_ids = self._index["id"].tolist()
+        for filename in self.index_dir.iterdir():
+            if filename.stem != "index":
+                id = filename.stem.replace("-offset-mapping", "")
+                if id not in existent_ids:
+                    os.remove(filename)
+
+    def __call__(self, uses: List[Use]) -> torch.Tensor:
         hidden_states = {}
         subword_indices = {}
-        cache = Path("vectors")
-        cache.mkdir(exist_ok=True)
 
         row = self.index[
-            (self.index.model == self.config.model.name) & 
-            (self.index.target == target_name) & 
-            (self.index.preprocessing == str(self.config.dataset.preprocessing.method_name)) & 
-            (self.index.dataset == self.config.dataset.name)
+            (self.index.model == self.config.model.name)
+            & (self.index.target == uses[0].target)
+            & (
+                self.index.preprocessing
+                == self.config.dataset.preprocessing.method_name
+            )
+            & (self.index.dataset == self.config.dataset.name)
         ]
 
         if not row.empty:
             id = row["id"].iloc[0]
-            hidden_states = np.load(cache.joinpath(f"{id}.npz"), mmap_mode="r")
-            subword_indices = np.load(cache.joinpath(f"{id}-offset-mapping.npz"), mmap_mode="r")
+            hidden_states = np.load(self.index_dir / f"{id}.npz", mmap_mode="r")
+            subword_indices = np.load(
+                self.index_dir / f"{id}-offset-mapping.npz", mmap_mode="r"
+            )
         else:
-            for context, context_id in zip(contexts, ids):
+            for use in uses:
                 encoded = self.tokenizer(
-                    context,
+                    use.context_preprocessed,
                     return_tensors="pt",
                     truncation=True,
                     add_special_tokens=True,
-                    return_offsets_mapping=True
+                    return_offsets_mapping=True,
                 ).to(self.device)
-
-
-
 
                 # TODO fix segment ids
                 input_ids = encoded["input_ids"].to(self.device)
-                segment_ids = torch.ones_like(input_ids).to(self.device)  
+                segment_ids = torch.ones_like(input_ids).to(self.device)
 
                 self.model.eval()
                 with torch.no_grad():
                     outputs = self.model(input_ids, segment_ids)
-                    hidden_states[context_id] = torch.stack(outputs[2], dim=0).cpu().numpy()
-                    subword_indices[context_id] = encoded["offset_mapping"].squeeze(0).cpu().numpy()
+                    hidden_states[use.identifier] = (
+                        torch.stack(outputs[2], dim=0).cpu().numpy()
+                    )
+                    subword_indices[use.identifier] = (
+                        encoded["offset_mapping"].squeeze(0).cpu().numpy()
+                    )
 
-            id = uuid.uuid4()
-            self.index = pd.concat([self.index, self.row(target_name=target_name, id=id)], ignore_index=True)
-            with open(file=cache.joinpath(f"{id}.npz"), mode="wb") as f_hidden_states:
+            id = str(uuid.uuid4())
+            self.index = pd.concat(
+                [self.index, self.row(target_name=use.target, id=id)],
+                ignore_index=True,
+            )
+            with open(file=self.index_dir / f"{id}.npz", mode="wb") as f_hidden_states:
                 np.savez(f_hidden_states, **hidden_states)
-            with open(file=cache.joinpath(f"{id}-offset-mapping.npz"), mode="wb") as f_subword_indices:
+            with open(
+                file=self.index_dir / f"{id}-offset-mapping.npz", mode="wb"
+            ) as f_subword_indices:
                 np.savez(f_subword_indices, **subword_indices)
 
         target_vectors = []
-        for context_id, (target_begin, target_end) in zip(ids, target_indices):
-            layers = self.config.model.layer_aggregation(hidden_states[context_id][self.config.model.layers])
+        for use in uses:
+            layers = self.config.model.layer_aggregation(
+                hidden_states[use.identifier][self.config.model.layers]
+            )
 
             target_subword_indices = [
-                (sub_start >= target_begin and sub_end <= target_end)
-                for sub_start, sub_end in subword_indices[context_id]
+                (
+                    sub_start >= use.target_index_begin
+                    and sub_end <= use.target_index_end
+                )
+                for sub_start, sub_end in subword_indices[use.identifier]
             ]
 
             embeddings = layers.squeeze(0)[target_subword_indices]
             vec = self.config.model.subword_aggregation(vectors=embeddings)
             target_vectors.append(vec)
-        
+
         return target_vectors

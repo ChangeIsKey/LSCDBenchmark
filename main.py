@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import hydra
 from omegaconf import OmegaConf
 from tqdm import tqdm
@@ -26,7 +24,9 @@ def main(cfg: Config):
 
     for target in tqdm(dataset.targets, desc="Processing targets"):
         model = VectorModel(config, vectorizer, target)
-        predictions[target.name] = config.model.measure.method(target, model, **config.model.measure.params)
+        predictions[target.name] = config.model.measure.method(
+            target, model, **config.model.measure.params
+        )
 
     results = Results(config, predictions, labels)
     results.score(task="graded_change")

@@ -21,3 +21,8 @@ model:
     method: apd_compare_all
     params: {}
   subword_aggregation: average
+
+
+hydra:
+  job:
+    chdir: true

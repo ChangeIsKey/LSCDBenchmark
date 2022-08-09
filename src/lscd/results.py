@@ -1,6 +1,8 @@
+import hydra
 import pandas as pd
 import numpy as np
 import torch
+import os
 
 from typing import Dict
 from pathlib import Path
@@ -18,44 +20,21 @@ class Results:
     ):
         self._scores = None
         self.config = config
-        self.predictions = sorted(predictions.items())
+        self.predictions = predictions
+        self.predictions = self.predictions
         self.labels = sorted(labels.items())
-        self.targets = [lemma for lemma, _ in self.predictions]
-
-    @property
-    def scores(self):
-        if self._scores is None:
-            try:
-                self._scores = pd.read_csv(
-                    self.config.results.output_directory.joinpath("scores.csv"),
-                    delimiter="\t",
-                )
-            except FileNotFoundError:
-                self._scores = DataFrame()
-        return self._scores
-
-    @scores.setter
-    def scores(self, value: DataFrame):
-        self._scores = value
+        self.targets = [lemma for lemma in self.predictions]
 
     def score(self, task: str, metric=None, threshold: float = 0.5, t: float = 0.1):
         if task == "graded_change":
-            labels = [values["change_graded"] for lemma, values in self.labels if lemma in self.targets]
-            predictions = [pred for _, pred in self.predictions]
-
+            labels = [
+                values["change_graded"]
+                for lemma, values in self.labels
+                if lemma in self.targets
+            ]
+            predictions = list(self.predictions.values())
             spearman, p = stats.spearmanr(predictions, labels)
-            row = {
-                "n_targets": len(self.targets),
-                "task": self.config.dataset.task,
-                "method": "spearmanr",
-                "score": spearman,
-                "measure": self.config.model.measure.method.__name__,
-                "model": self.config.model.name,
-                "preprocessing": str(self.config.dataset.preprocessing.method_name),
-                "dataset": self.config.dataset.name,
-            }
-            self.scores = pd.concat([self.scores, DataFrame([row])], ignore_index=True)
-            self.export()
+            self.export(score=spearman)
             return spearman
 
         elif task == "binary_change":
@@ -71,30 +50,19 @@ class Results:
                 for lemma, values in labels.items()
                 if lemma in set(self.predictions.keys())
             }
+
             binary_scores = {
                 target: int(distance >= threshold)
                 for target, distance in self.predictions.items()
             }
+
             f1 = metrics.f1_score(list(labels.values()), list(binary_scores.values()))
-            row = DataFrame([
-                {
-                    "n_targets": len(list(self.predictions.keys())),
-                    "task": self.config.dataset.task,
-                    "method": "spearmanr",
-                    "score": spearman,
-                    "model": self.config.model.name,
-                    "preprocessing": self.config.dataset.preprocessing.method,
-                    "dataset": self.config.dataset.name,
-                    "threshold": threshold,
-                }
-            ])
-            self.scores = pd.concat([self.scores, row])
-            self.export()
+            self.export(score=f1)
             return f1
 
-    def export(self):
-        self.scores.to_csv(
-            self.config.results.output_directory.joinpath("scores.csv"),
-            sep="\t",
-            index=False,
+    def export(self, score: float):
+        predictions = DataFrame(
+            data={"target": self.targets, "value": list(self.predictions.values())}
         )
+        predictions.to_csv("predictions.tsv", sep="\t", index=False)
+        Path("score.txt").write_text(str(score))

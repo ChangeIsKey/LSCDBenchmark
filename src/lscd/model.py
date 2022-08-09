@@ -15,12 +15,7 @@ from torch import Tensor
 
 
 class VectorModel:
-    def __init__(
-        self,
-        config: Config,
-        vectorizer: Vectorizer,
-        target: Target
-    ):
+    def __init__(self, config: Config, vectorizer: Vectorizer, target: Target):
         self.config = config
         self.uses = list(target.ids_to_uses.values())
         self.vectorizer = vectorizer
@@ -36,10 +31,7 @@ class VectorModel:
         return self._id_to_row
 
     def distances(
-        self,
-        ids: List[Tuple[ID, ID]],
-        method: Callable = distance.cosine,
-        **kwargs
+        self, ids: List[Tuple[ID, ID]], method: Callable = distance.cosine, **kwargs
     ) -> List[float]:
         return [
             method(
@@ -53,12 +45,5 @@ class VectorModel:
     @property
     def vectors(self):
         if self._vectors is None:
-            self._vectors = self.vectorizer(
-                contexts=[u.context_preprocessed for u in self.uses],
-                target_indices=[
-                    (u.target_index_begin, u.target_index_end) for u in self.uses
-                ],
-                ids=[u.identifier for u in self.uses],
-                target_name=self.target.name
-            )
+            self._vectors = self.vectorizer(self.uses)
         return self._vectors
