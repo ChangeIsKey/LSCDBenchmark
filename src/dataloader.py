@@ -12,6 +12,7 @@ import pandas as pd
 import requests
 from pandas import DataFrame
 from tqdm import tqdm
+from src import utils
 
 import src.lscd as lscd
 import src.semantic_proximity as semantic_proximity
@@ -39,7 +40,7 @@ class DataLoader:
     def __init__(self, config: Config) -> None:
 
         self.config = config
-        self.path = Path(hydra.utils.to_absolute_path("wug")) / config.dataset.name
+        self.path = utils.path("wug") / config.dataset.name
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
         if not self.path.exists():

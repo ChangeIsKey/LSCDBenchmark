@@ -4,7 +4,7 @@ from typing import Optional, List
 from pandas import DataFrame
 from tqdm import tqdm
 
-from src.config import Config
+from src.config import Config, ThresholdParam
 from src.lscd.target import Target
 
 
@@ -49,7 +49,7 @@ class Dataset:
 
                 conditions = [
                     f"{column} >= {cleaning_param.threshold}"
-                    if cleaning_param.above
+                    if cleaning_param.keep is ThresholdParam.ABOVE
                     else f"{column} <= {cleaning_param.threshold}"
                     for column, cleaning_param in self.config.dataset.cleaning.fields.items()
                 ]
