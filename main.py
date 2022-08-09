@@ -13,7 +13,7 @@ from src.vectorizer import Vectorizer
 def main(cfg: Config):
     config = Config(**OmegaConf.to_object(cfg))
     vectorizer = Vectorizer(config)
-    dataset = DataLoader(config).load_dataset(task=config.dataset.task)
+    dataset = DataLoader(config).load_dataset()
 
     predictions = dict()
     labels = (
