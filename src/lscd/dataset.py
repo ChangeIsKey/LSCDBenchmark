@@ -82,8 +82,6 @@ class Dataset:
                         (self.labels.lemma == target)
                         & (self.labels.grouping == group_combination)
                     ]
-                    if not self.mask
-                    else None,
                     judgments=self.judgments[self.judgments.lemma == target],
                 )
                 for target in tqdm(
