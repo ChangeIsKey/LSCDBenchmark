@@ -37,6 +37,7 @@ class Dataset:
         self.judgments = judgments
         self.agreements = agreements
         self.groupings = self.config.dataset.groupings
+        self._targets = None
 
     @property
     def targets(self) -> List[Target]:
