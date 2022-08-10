@@ -29,7 +29,7 @@ def main(cfg: Config):
         )
 
     results = Results(config, predictions, labels)
-    results.score(task="graded_change")
+    results.score(task="change_graded")
 
 
 if __name__ == "__main__":

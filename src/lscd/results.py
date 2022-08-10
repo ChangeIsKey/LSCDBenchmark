@@ -18,18 +18,20 @@ class Results:
         self.targets = [lemma for lemma in self.predictions]
 
     def score(self, task: str, metric=None, threshold: float = 0.5, t: float = 0.1):
-        
+
         self.labels = {
             lemma: values[task]
             for lemma, values in self.labels.items()
             if lemma in self.targets
         }
-        if task == "graded_change":
-            spearman, p = stats.spearmanr(a=list(self.predictions.values()), b=list(self.labels.values()))
+        if task == "change_graded":
+            spearman, p = stats.spearmanr(
+                a=list(self.predictions.values()), b=list(self.labels.values())
+            )
             self.export(score=spearman)
             return spearman
 
-        elif task == "binary_change":
+        elif task == "change_binary":
             # t = 0.1
             # mean = np.mean(distances, axis=0)
             # std = np.std(distances, axis=0)
@@ -41,13 +43,19 @@ class Results:
                 for target, distance in self.predictions.items()
             }
 
-            f1 = metrics.f1_score(y_true=list(self.labels.values()), y_pred=list(binary_scores.values()))
+            f1 = metrics.f1_score(
+                y_true=list(self.labels.values()), y_pred=list(binary_scores.values())
+            )
             self.export(score=f1)
             return f1
 
     def export(self, score: float):
         predictions = DataFrame(
-            data={"target": self.targets, "prediction": list(self.predictions.values()), "label": list(self.labels)}
+            data={
+                "target": self.targets,
+                "prediction": list(self.predictions.values()),
+                "label": list(self.labels.values()),
+            }
         )
         predictions.to_csv("predictions.tsv", sep="\t", index=False)
         Path("score.txt").write_text(str(score))
