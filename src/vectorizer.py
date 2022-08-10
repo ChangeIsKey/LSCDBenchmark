@@ -3,6 +3,7 @@ import uuid
 from dataclasses import dataclass
 from typing import List
 
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import torch
@@ -139,9 +140,7 @@ class Vectorizer:
                 lindex_target = target_subword_indices.index(True)
                 rindex_target = lindex_target + target_subword_indices.count(True)
                 lindex = max(rindex_target - 512, 0)
-                subword_indices[use.identifier] = subword_indices[use.identifier][
-                    lindex:
-                ]
+                subword_indices[use.identifier] = subword_indices[use.identifier][lindex:]
 
                 input_ids = encoded["input_ids"][lindex:].to(self.device)
                 segment_ids = torch.ones_like(input_ids).to(self.device)
