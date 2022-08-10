@@ -1,7 +1,7 @@
 import os
 import uuid
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 from tqdm import tqdm
 import numpy as np
@@ -34,7 +34,9 @@ class Vectorizer:
     @property
     def tokenizer(self):
         if self._tokenizer is None:
-            self._tokenizer = AutoTokenizer.from_pretrained(self.config.model.name)
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.config.model.name, use_fast=True, model_max_length=int(1e30)
+            )
         return self._tokenizer
 
     @property
@@ -86,6 +88,35 @@ class Vectorizer:
                 if id_ not in existent_ids:
                     os.remove(filename)
 
+    def truncate_input(
+        self,
+        subword_indices: np.array,
+        input_ids: torch.Tensor,
+        target_subword_indices: torch.Tensor,
+        p_before: float = 0.95,
+    ) -> Tuple[np.array, torch.Tensor]:
+
+        n_target_subtokens = target_subword_indices.count(True)
+        tokens_before = int(
+            (self.model.config.max_position_embeddings - n_target_subtokens) * p_before
+        )
+        tokens_after = (
+            self.model.config.max_position_embeddings
+            - tokens_before
+            - n_target_subtokens
+        )
+
+        # get index of the first target subword
+        lindex_target = target_subword_indices.index(True)  
+        # get index of the last target subword
+        rindex_target = lindex_target + n_target_subtokens
+        lindex = max(lindex_target - tokens_before, 0)
+        rindex = rindex_target + tokens_after
+        subword_indices = subword_indices[lindex:rindex]
+        input_ids = input_ids[:, lindex:rindex]
+
+        return subword_indices, input_ids
+
     def __call__(self, uses: List[Use]) -> torch.Tensor:
         hidden_states = {}
         subword_indices = {}
@@ -111,10 +142,9 @@ class Vectorizer:
             for use in tqdm(
                 uses, desc=f"Vectorizing uses of target '{target}'", leave=False
             ):
-                encoded = self.tokenizer(
+                encoded = self.tokenizer.encode_plus(
                     use.context_preprocessed,
                     return_tensors="pt",
-                    truncation=True,
                     add_special_tokens=True,
                     return_offsets_mapping=True,
                 ).to(self.device)
@@ -124,6 +154,7 @@ class Vectorizer:
                 subword_indices[use.identifier] = (
                     encoded["offset_mapping"].squeeze(0).cpu().numpy()
                 )
+                input_ids = encoded["input_ids"].to(self.device)
 
                 target_subword_indices = [
                     (
@@ -133,17 +164,13 @@ class Vectorizer:
                     for sub_start, sub_end in subword_indices[use.identifier]
                 ]
 
-                try:
-                    lindex_target = target_subword_indices.index(True)
-                except ValueError as e:
-                    print(use.identifier, use.target)
-                    raise e
+                if len(encoded.tokens()) > self.model.config.max_position_embeddings:
+                    subword_indices[use.identifier], input_ids = self.truncate_input(
+                        subword_indices[use.identifier],
+                        input_ids,
+                        target_subword_indices,
+                    )
 
-                rindex_target = lindex_target + target_subword_indices.count(True)
-                lindex = max(rindex_target - 512, 0)
-                subword_indices[use.identifier] = subword_indices[use.identifier][lindex:]
-
-                input_ids = encoded["input_ids"][lindex:].to(self.device)
                 segment_ids = torch.ones_like(input_ids).to(self.device)
 
                 self.model.eval()
