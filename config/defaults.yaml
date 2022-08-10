@@ -7,7 +7,7 @@ dataset:
     method: null
     params: {}
   cleaning:
-    fields: {}
+    stats: {}
     method: all
 
 
