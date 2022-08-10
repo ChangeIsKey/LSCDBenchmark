@@ -39,7 +39,7 @@ dataset:
     method: null
     params: {}
   cleaning:
-    fields: {}
+    stats: {}
     method: all
 
 
@@ -69,7 +69,7 @@ The default configuration performs no preprocessing on the contexts (`dataset.pr
 
 The default configuration performs no cleaning (filtering) of the target words. It is possible to filter some targets out by specifying some fields. For example, if we wanted to filter out targets whose Krippendorf's alpha is below 0.3, we can do:
 
-> `python main.py dataset.name=dwug_de model.name=bert-base-german-cased +dataset.cleaning.fields.kri_full.threshold=0.3`
+> `python main.py dataset.name=dwug_de model.name=bert-base-german-cased +dataset.cleaning.stats.kri_full.threshold=0.3`
 
 This would result in the following configuration:
 
@@ -83,7 +83,7 @@ dataset:
     method: null
     params: {}
   cleaning:
-    fields:
+    stats:
       kri_full:
         threshold: 0.3
         keep: above
@@ -110,7 +110,7 @@ hydra:
 Notice the `keep` field under `kri_full`. If it's not provided, this field will
 be filled automatically. It determines whether we should keep the targets above
 the specified threshold (alternative, you can set it to `below`).
-The fields can be any numerical column in the `stats_agreement.tsv` files, and
+These `stats` can be any numerical column in the `stats_agreement.tsv` files, and
 you can add as many as necessary. The `cleaning.method` parameter specifies
 whether to keep targets that fulfill all conditions, or to keep those that
 fulfill at least one.

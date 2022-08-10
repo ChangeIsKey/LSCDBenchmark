@@ -46,13 +46,13 @@ class Dataset:
                 1:, :
             ].copy()  # remove "data=full" row
 
-            if len(self.config.dataset.cleaning.fields) > 0:
+            if len(self.config.dataset.cleaning.stats) > 0:
 
                 conditions = [
                     f"{column} >= {cleaning_param.threshold}"
                     if cleaning_param.keep is ThresholdParam.ABOVE
                     else f"{column} <= {cleaning_param.threshold}"
-                    for column, cleaning_param in self.config.dataset.cleaning.fields.items()
+                    for column, cleaning_param in self.config.dataset.cleaning.stats.items()
                 ]
 
                 if self.config.dataset.cleaning.method == "all":

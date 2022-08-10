@@ -229,7 +229,7 @@ class BooleanMethod(str, Enum):
 
 @dataclass
 class Cleaning:
-    fields: Dict[str, CleaningParam]
+    stats: Dict[str, CleaningParam]
     method: BooleanMethod = BooleanMethod.ALL
 
 
