@@ -85,7 +85,7 @@ class Dataset:
                     judgments=self.judgments[self.judgments.lemma == target],
                 )
                 for target in tqdm(
-                    self.agreements.data.unique(), desc="Building targets"
+                    self.agreements.data.unique(), desc="Building targets", leave=False
                 )
             ]
         return self._targets

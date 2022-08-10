@@ -106,7 +106,10 @@ class Vectorizer:
                 self.index_dir / f"{id_}-offset-mapping.npz", mmap_mode="r"
             )
         else:
-            for use in uses:
+            target = uses[0].target
+            for use in tqdm(
+                uses, desc=f"Vectorizing uses of target '{target}'", leave=False
+            ):
                 encoded = self.tokenizer(
                     use.context_preprocessed,
                     return_tensors="pt",
@@ -116,7 +119,31 @@ class Vectorizer:
                 ).to(self.device)
 
                 # TODO fix segment ids
-                input_ids = encoded["input_ids"].to(self.device)
+
+                subword_indices[use.identifier] = (
+                    encoded["offset_mapping"].squeeze(0).cpu().numpy()
+                )
+
+                try:
+                    target_subword_indices = [
+                        (
+                            sub_start >= use.target_index_begin
+                            and sub_end <= use.target_index_end
+                        )
+                        for sub_start, sub_end in subword_indices[use.identifier]
+                    ]
+                except ValueError as e:
+                    print(use.identifier, use.target)
+                    raise e
+
+                lindex_target = target_subword_indices.index(True)
+                rindex_target = lindex_target + target_subword_indices.count(True)
+                lindex = max(rindex_target - 512, 0)
+                subword_indices[use.identifier] = subword_indices[use.identifier][
+                    lindex:
+                ]
+
+                input_ids = encoded["input_ids"][lindex:].to(self.device)
                 segment_ids = torch.ones_like(input_ids).to(self.device)
 
                 self.model.eval()
@@ -124,9 +151,6 @@ class Vectorizer:
                     outputs = self.model(input_ids, segment_ids)
                     hidden_states[use.identifier] = (
                         torch.stack(outputs[2], dim=0).cpu().numpy()
-                    )
-                    subword_indices[use.identifier] = (
-                        encoded["offset_mapping"].squeeze(0).cpu().numpy()
                     )
 
             id_ = str(uuid.uuid4())

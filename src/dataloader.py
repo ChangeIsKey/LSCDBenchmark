@@ -131,6 +131,7 @@ class DataLoader:
                 unit_scale=True,
                 unit_divisor=1024,
                 total=int(r.headers["Content-Length"]),
+                leave=False
             )
             pbar.clear()  # clear 0% info
             for chunk in r.iter_content(chunk_size=1024):

@@ -22,7 +22,7 @@ def main(cfg: Config):
         .to_dict("index")
     )
 
-    for target in tqdm(dataset.targets, desc="Processing targets"):
+    for target in tqdm(dataset.targets, desc="Processing targets", leave=False):
         model = VectorModel(config, vectorizer, target)
         predictions[target.name] = config.model.measure.method(
             target, model, **config.model.measure.params
