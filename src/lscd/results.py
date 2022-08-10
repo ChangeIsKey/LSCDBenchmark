@@ -14,19 +14,18 @@ class Results:
         self._scores = None
         self.config = config
         self.predictions = predictions
-        self.labels = sorted(labels.items())
+        self.labels = labels
         self.targets = [lemma for lemma in self.predictions]
 
     def score(self, task: str, metric=None, threshold: float = 0.5, t: float = 0.1):
         
+        self.labels = {
+            lemma: values[task]
+            for lemma, values in self.labels.items()
+            if lemma in self.targets
+        }
         if task == "graded_change":
-            labels = [
-                values["change_graded"]
-                for lemma, values in self.labels
-                if lemma in self.targets
-            ]
-            predictions = list(self.predictions.values())
-            spearman, p = stats.spearmanr(predictions, labels)
+            spearman, p = stats.spearmanr(a=list(self.predictions.values()), b=list(self.labels.values()))
             self.export(score=spearman)
             return spearman
 
@@ -37,25 +36,18 @@ class Results:
             # threshold = mean + t * std
 
             # threshold could be a percentile
-
-            labels = {
-                lemma: values["binary_change"]
-                for lemma, values in labels.items()
-                if lemma in set(self.predictions.keys())
-            }
-
             binary_scores = {
                 target: int(distance >= threshold)
                 for target, distance in self.predictions.items()
             }
 
-            f1 = metrics.f1_score(list(labels.values()), list(binary_scores.values()))
+            f1 = metrics.f1_score(y_true=list(self.labels.values()), y_pred=list(binary_scores.values()))
             self.export(score=f1)
             return f1
 
     def export(self, score: float):
         predictions = DataFrame(
-            data={"target": self.targets, "value": list(self.predictions.values())}
+            data={"target": self.targets, "prediction": list(self.predictions.values()), "label": list(self.labels)}
         )
         predictions.to_csv("predictions.tsv", sep="\t", index=False)
         Path("score.txt").write_text(str(score))
