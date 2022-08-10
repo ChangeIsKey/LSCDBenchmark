@@ -54,7 +54,6 @@ class Vectorizer:
         if self._index is None:
             if path.exists():
                 self._index = pd.read_feather(path)
-                self.clean_cache()
             else:
                 self._index = DataFrame(
                     columns=["model", "target", "id", "preprocessing", "dataset"],
@@ -79,14 +78,6 @@ class Vectorizer:
         path = self.index_dir / "index"
         self._index = new
         self._index.to_feather(path)
-
-    def clean_cache(self):
-        existent_ids = self._index["id"].tolist()
-        for filename in self.index_dir.iterdir():
-            if filename.stem != "index":
-                id_ = filename.stem.replace("-offset-mapping", "")
-                if id_ not in existent_ids:
-                    os.remove(filename)
 
     def truncate_input(
         self,
