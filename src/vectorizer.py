@@ -100,6 +100,7 @@ class Vectorizer:
             & (self.index.dataset == self.config.dataset.name)
         ]
 
+        target = uses[0].target
         if not row.empty:
             id_ = row["id"].iloc[0]
             hidden_states = np.load(self.index_dir / f"{id_}.npz", mmap_mode="r")
@@ -107,7 +108,6 @@ class Vectorizer:
                 self.index_dir / f"{id_}-offset-mapping.npz", mmap_mode="r"
             )
         else:
-            target = uses[0].target
             for use in tqdm(
                 uses, desc=f"Vectorizing uses of target '{target}'", leave=False
             ):
@@ -125,19 +125,20 @@ class Vectorizer:
                     encoded["offset_mapping"].squeeze(0).cpu().numpy()
                 )
 
+                target_subword_indices = [
+                    (
+                        sub_start >= use.target_index_begin
+                        and sub_end <= use.target_index_end
+                    )
+                    for sub_start, sub_end in subword_indices[use.identifier]
+                ]
+
                 try:
-                    target_subword_indices = [
-                        (
-                            sub_start >= use.target_index_begin
-                            and sub_end <= use.target_index_end
-                        )
-                        for sub_start, sub_end in subword_indices[use.identifier]
-                    ]
+                    lindex_target = target_subword_indices.index(True)
                 except ValueError as e:
                     print(use.identifier, use.target)
                     raise e
 
-                lindex_target = target_subword_indices.index(True)
                 rindex_target = lindex_target + target_subword_indices.count(True)
                 lindex = max(rindex_target - 512, 0)
                 subword_indices[use.identifier] = subword_indices[use.identifier][lindex:]
@@ -165,7 +166,7 @@ class Vectorizer:
                 np.savez(f_subword_indices, **subword_indices)
 
         target_vectors = []
-        for use in uses:
+        for use in tqdm(uses, desc=f"Processing uses of {target}", leave=False):
             layers = self.config.model.layer_aggregation(
                 hidden_states[use.identifier][self.config.model.layers]
             )

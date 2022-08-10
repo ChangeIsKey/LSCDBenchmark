@@ -1,12 +1,12 @@
 from __future__ import annotations
-from errno import EACCES
 
 import importlib.util
 import sys
 from enum import Enum, unique
 from itertools import product
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple,
+                    Union)
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from pydantic.dataclasses import dataclass
 
 import src.utils as utils
+from src.preprocessing import normalize_spaces
 
 if TYPE_CHECKING:
     from src.lscd import Target
@@ -157,7 +158,7 @@ class Preprocessing:
     @staticmethod
     def __keep_intact(s: Series, **kwargs) -> Tuple[str, int, int]:
         start, end = tuple(map(int, s.indexes_target_token.split(":")))
-        return s.context, start, end
+        return normalize_spaces(s.context), start, end
 
     def __post_init_post_parse__(self):
         self.module = utils.path(self.module)

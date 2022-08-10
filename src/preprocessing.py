@@ -1,8 +1,12 @@
 from typing import List, Tuple
-
+import re
 from pandas import Series
 
 __all__ = ["toklem", "lemmatize", "tokenize"]
+
+
+def normalize_spaces(string: str) -> str:
+    return re.sub(r"\s+", " ", string)
 
 
 def char_indices(token_idx: int, tokens: List[str], target: str) -> Tuple[int, int]:
