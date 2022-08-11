@@ -53,17 +53,18 @@ class pairing(str, Enum):
         By calling sampling.__call__ and passing a pairing as argument, this
         function will be automatically called
         """
+        target_uses = pd.concat([target.uses_1, target.uses_2])
         if sampling is sampling.annotated:
             judgments = pd.merge(
                 target.judgments,
-                target.uses_1,
+                target_uses,
                 left_on="identifier1",
                 right_on="identifier",
                 how="left",
             )
             judgments = pd.merge(
                 judgments,
-                target.uses_2,
+                target_uses,
                 left_on="identifier2",
                 right_on="identifier",
                 how="left",
@@ -87,7 +88,6 @@ class pairing(str, Enum):
             ]
 
             judgments = judgments.query("&".join(conditions))
-
             return (
                 judgments.identifier1.tolist(),
                 judgments.identifier2.tolist(),
