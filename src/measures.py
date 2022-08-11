@@ -6,12 +6,7 @@ from src.lscd.target import Target
 
 
 def apd_compare_all(target: Target, model: VectorModel) -> float:
-    pairs = (
-        sampling.all(pairing.COMPARE, target)
-        + sampling.all(pairing.EARLIER, target)
-        + sampling.all(pairing.LATER, target)
-    )
-    return np.mean(model.distances(pairs))
+    return np.mean(model.distances(sampling.all(pairing.COMPARE, target)))
 
 
 def apd_compare_annotated(target: Target, model: VectorModel) -> float:
