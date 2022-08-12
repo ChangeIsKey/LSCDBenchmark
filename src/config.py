@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from enum import Enum, unique
+from enum import Enum, unique, auto
 from itertools import product
 from pathlib import Path
 from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple,
@@ -53,8 +53,8 @@ class pairing(str, Enum):
         By calling sampling.__call__ and passing a pairing as argument, this
         function will be automatically called
         """
-        target_uses = pd.concat([target.uses_1, target.uses_2])
         if sampling is sampling.annotated:
+            target_uses = pd.concat([target.uses_1, target.uses_2])
             judgments = pd.merge(
                 target.judgments,
                 target_uses,
