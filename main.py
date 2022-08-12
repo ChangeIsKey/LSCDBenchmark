@@ -4,7 +4,8 @@ from tqdm import tqdm
 
 from src.config import Config
 from src.dataloader import DataLoader
-from src.lscd.model import VectorModel
+from src.vector_model import VectorModel
+from src.distance_model import DistanceModel
 from src.lscd.results import Results
 from src.vectorizer import Vectorizer
 
@@ -12,6 +13,10 @@ from src.vectorizer import Vectorizer
 @hydra.main(version_base=None, config_path="config", config_name="defaults")
 def main(cfg: Config):
     config = Config(**OmegaConf.to_object(cfg))
+    
+    if config.model.name.lower() == "deep_mistake":
+        
+    
     vectorizer = Vectorizer(config)
     dataset = DataLoader(config).load_dataset()
 

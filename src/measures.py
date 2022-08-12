@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.config import pairing, sampling
-from src.lscd.model import VectorModel
+from src.vector_model import VectorModel
 from src.lscd.target import Target
 
 
