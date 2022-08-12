@@ -21,7 +21,7 @@ file. Instead, modify its parameters through the CLI.
 
 The only required parameters in the shell are the dataset name (`dataset.name`)
 and the model identifier (`model.name`). This identifier should be the identifier
-of a model from the Huggingface Hub.
+of a model from the [Huggingface Hub](https://huggingface.co/models).
 
 A basic command could therefore be the following:
 
