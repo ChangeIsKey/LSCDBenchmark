@@ -26,7 +26,8 @@ class Results:
         }
         if task == "change_graded":
             spearman, p = stats.spearmanr(
-                a=list(self.predictions.values()), b=list(self.labels.values())
+                list(self.predictions.values()),
+                list(self.labels.values())
             )
             self.export(score=spearman)
             return spearman
