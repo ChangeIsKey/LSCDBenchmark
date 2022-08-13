@@ -55,17 +55,16 @@ class pairing(str, Enum):
         function will be automatically called
         """
         if sampling is sampling.annotated:
-            target_uses = pd.concat([target.uses_1, target.uses_2])
             judgments = pd.merge(
                 target.judgments,
-                target_uses,
+                target.uses,
                 left_on="identifier1",
                 right_on="identifier",
                 how="left",
             )
             judgments = pd.merge(
                 judgments,
-                target_uses,
+                target.uses,
                 left_on="identifier2",
                 right_on="identifier",
                 how="left",
@@ -95,13 +94,16 @@ class pairing(str, Enum):
             )
 
         else:
-            ids = (target.uses_1.identifier.tolist(), target.uses_2.identifier.tolist())
             if self is self.COMPARE:
-                return ids
+                ids_1 = target.uses[target.uses.grouping == target.grouping_combination[0]].identifier.tolist()
+                ids_2 = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
+                return ids_1, ids_2
             elif self is self.EARLIER:
-                return ids[0], ids[0]
+                ids = target.uses[target.uses.grouping == target.grouping_combination[0]].identifier.tolist()
+                return ids, ids
             elif self is self.LATER:
-                return ids[1], ids[1]
+                ids = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
+                return ids, ids
 
 
 @unique
@@ -154,7 +156,7 @@ class sampling(str, Enum):
 
 @dataclass
 class Preprocessing:
-    module: Optional[Union[str, Path, ModuleType]]
+    module: Optional[Union[str, Path, Any]]
     method: Optional[Union[str, Callable]]
     params: Dict[str, Any]
 
@@ -185,8 +187,8 @@ class Preprocessing:
             return Series(
                 {
                     "context_preprocessed": context,
-                    "begin_index_token_preprocessed": start,
-                    "end_index_token_preprocessed": end,
+                    "target_index_begin": start,
+                    "target_index_end": end,
                 }
             )
 

@@ -69,14 +69,7 @@ class Dataset:
                 Target(
                     config=self.config,
                     name=target,
-                    uses_1=self.uses[
-                        (self.uses.lemma == target)
-                        & (self.uses.grouping == self.groupings[0])
-                    ].copy(),
-                    uses_2=self.uses[
-                        (self.uses.lemma == target)
-                        & (self.uses.grouping == self.groupings[1])
-                    ].copy(),
+                    uses=self.uses[self.uses.lemma == target].copy(),
                     labels=self.labels[
                         (self.labels.lemma == target)
                         & (self.labels.grouping == group_combination)

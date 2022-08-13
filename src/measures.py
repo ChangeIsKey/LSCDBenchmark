@@ -6,7 +6,7 @@ from src.lscd.target import Target
 
 
 def apd_compare_all(target: Target, model: VectorModel) -> float:
-    return np.mean(model.distances(sampling.all(pairing.COMPARE, target)))
+    return np.mean(list(model.distances(sampling.all, pairing.COMPARE)[target.name].values())).item()
 
 
 def apd_earlier_all(target: Target, model: VectorModel) -> float:
