@@ -116,7 +116,7 @@ class VectorModel:
         input_ids: torch.Tensor,
         target_subword_indices: List[bool],
         p_before: float = 0.95,
-    ) -> Tuple[np.array, torch.Tensor]:
+    ) -> Tuple[np.array, torch.Tensor, List[bool]]:
 
         n_target_subtokens = target_subword_indices.count(True)
         tokens_before = int(
@@ -136,8 +136,8 @@ class VectorModel:
         rindex = rindex_target + tokens_after
         subword_indices = subword_indices[lindex:rindex]
         input_ids = input_ids[:, lindex:rindex]
-
-        return subword_indices, input_ids
+        target_subword_indices = target_subword_indices[lindex:rindex]
+        return subword_indices, input_ids, target_subword_indices
 
     def distances(self, target: Target, sampling: sampling, pairing: pairing, method: Callable = distance.cosine, **kwargs) -> List[float]:
         if target.name not in self._distances:
@@ -156,7 +156,7 @@ class VectorModel:
             pbar = tqdm(self.targets, leave=False)
             for target in pbar:
                 pbar.set_description(f"Processing target {target.name}", refresh=False)
-                hidden_states = {}
+                token_embeddings = {}
                 subword_indices = {}
 
                 row = self.index[
@@ -168,10 +168,7 @@ class VectorModel:
 
                 if not row.empty:
                     id_ = row["id"].iloc[0]
-                    hidden_states = np.load(str(self.index_dir / f"{id_}.npz"), mmap_mode="r")
-                    subword_indices = np.load(
-                        str(self.index_dir / f"{id_}-offset-mapping.npz"), mmap_mode="r"
-                    )
+                    token_embeddings = np.load(str(self.index_dir / f"{id_}.npz"), mmap_mode="r")
                 else:
                     for _, use in target.uses.iterrows():
                         encoded = self.tokenizer.encode_plus(
@@ -194,47 +191,36 @@ class VectorModel:
                         ]
 
                         if len(encoded.tokens()) > self.model.config.max_position_embeddings:
-                            subword_indices[use.identifier], input_ids = self.truncate_input(
+                            subword_indices[use.identifier], input_ids, target_subword_indices = self.truncate_input(
                                 subword_indices[use.identifier],
                                 input_ids,
                                 target_subword_indices,
                             )
 
-                        segment_ids = torch.ones_like(input_ids).to(self.device)
+                        segment_ids = torch.ones_like(input_ids)
 
                         self.model.eval()
                         with torch.no_grad():
                             outputs = self.model(input_ids, segment_ids)
-                            hidden_states[use.identifier] = (
-                                torch.stack(outputs[2], dim=0).cpu().numpy()
-                            )
+                            token_embeddings[use.identifier] = torch.stack(outputs[2], dim=0)
+                            token_embeddings[use.identifier] = torch.squeeze(token_embeddings[use.identifier], dim=1)
+                            token_embeddings[use.identifier] = token_embeddings[use.identifier].permute(1, 0, 2)
+                            token_embeddings[use.identifier] = token_embeddings[use.identifier][torch.tensor(target_subword_indices), :, :]
+                            token_embeddings[use.identifier] = token_embeddings[use.identifier].cpu().numpy()
 
                     id_ = str(uuid.uuid4())
                     self.index = pd.concat(
                         [self.index, self.index_row(target_name=target.name, id=id_)],
                         ignore_index=True,
                     )
-                    with open(file=self.index_dir / f"{id_}.npz", mode="wb") as f_hidden_states:
-                        np.savez(f_hidden_states, **hidden_states)
-                    with open(
-                        file=self.index_dir / f"{id_}-offset-mapping.npz", mode="wb"
-                    ) as f_subword_indices:
-                        np.savez(f_subword_indices, **subword_indices)
+                    with open(file=self.index_dir / f"{id_}.npz", mode="wb") as f_target_embeddings:
+                        np.savez(f_target_embeddings, **token_embeddings)
 
                 for _, use in target.uses.iterrows():
-                    layers = self.config.model.layer_aggregation(
-                        np.take(hidden_states[use.identifier], self.config.model.layers, axis=0)
+                    target_subword_embeddings = token_embeddings[use.identifier]
+                    target_embedding = self.config.model.subword_aggregation(vectors=target_subword_embeddings).squeeze()
+                    self._vectors[use.identifier] = self.config.model.layer_aggregation(
+                        np.take(target_embedding, self.config.model.layers, axis=0)
                     )
-
-                    target_subword_indices = [
-                        (
-                            sub_start >= use.target_index_begin
-                            and sub_end <= use.target_index_end
-                        )
-                        for sub_start, sub_end in subword_indices[use.identifier]
-                    ]
-
-                    embeddings = layers.squeeze()[target_subword_indices]
-                    self._vectors[use.identifier] = self.config.model.subword_aggregation(vectors=embeddings)
 
         return self._vectors
