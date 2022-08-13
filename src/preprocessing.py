@@ -38,11 +38,7 @@ def lemmatize(s: Series) -> Tuple[str, int, int]:
     tokens = context_preprocessed.split()
 
     # the spanish dataset has an index column for the lemmatized contexts, but all the others don't
-    if "indexes_target_token_lemmatized" in s.columns:
-        idx = s.indexes_target_token_lemmatized
-    else:
-        idx = s.indexes_target_token_tokenized
-
+    idx = s.get("indexes_target_token_lemmatized", default=s.indexes_target_token_tokenized)
     target = tokens[idx]
     start, end = char_indices(token_idx=idx, tokens=tokens, target=target)
     return s.context_lemmatized, start, end
