@@ -5,5 +5,5 @@ from typing import Callable, List, Tuple
 
 class DistanceModel(ABC):
     @abstractmethod
-    def distances(ids: List[Tuple[ID, ID]], distance_measure: Callable, **kwargs):
+    def distances(self, ids: List[Tuple[ID, ID]], distance_measure: Callable, **kwargs):
         pass

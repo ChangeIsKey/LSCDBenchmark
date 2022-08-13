@@ -1,18 +1,11 @@
-from typing import TYPE_CHECKING, Callable, Dict, List, Tuple
+from typing import Callable, List, Tuple
 
-import numpy as np
-import pandas as pd
-import scipy.spatial.distance as distance
-import torch
-import torch.nn.functional as F
-from pandas import DataFrame
 from scipy.spatial import distance
+
 from src.config import ID, Config
-from src.lscd.target import Target
-from src.use import Use
 from src.distance_model import DistanceModel
+from src.lscd.target import Target
 from src.vectorizer import Vectorizer
-from torch import Tensor
 
 
 class VectorModel(DistanceModel):
@@ -23,7 +16,6 @@ class VectorModel(DistanceModel):
         self._vectors = None
         self._id_to_row = None
         self._distances = None
-        self.target = target
 
     @property
     def id_to_row(self):

@@ -1,5 +1,4 @@
-from pathlib import Path
-from typing import Optional, List
+from typing import List
 
 from pandas import DataFrame
 from tqdm import tqdm

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from enum import Enum, unique, auto
+from enum import Enum, unique
 from itertools import product
 from pathlib import Path
+from types import ModuleType
 from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple,
                     Union)
 
@@ -49,7 +50,7 @@ class pairing(str, Enum):
     def __call__(self, target: Target, sampling: sampling) -> Tuple[List[ID], List[ID]]:
         """
         Retrieves two lists of use IDs for different types of pairings.
-        In general you don't need to call this function manually.
+        In general, you don't need to call this function manually.
         By calling sampling.__call__ and passing a pairing as argument, this
         function will be automatically called
         """
@@ -129,10 +130,12 @@ class sampling(str, Enum):
             return self.__sampled(target, pairing, **kwargs)
 
     def __annotated(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
-        return list(zip(*pairing(target, self)))
+        ids1, ids2 = pairing(target, self)
+        return list(zip(ids1, ids2))
 
     def __all(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
-        return list(product(*pairing(target, self)))
+        ids1, ids2 = pairing(target, self)
+        return list(product(ids1, ids2))
 
     def __sampled(
         self, target: Target, pairing: pairing, n: int = 100, replace: bool = True
@@ -151,12 +154,12 @@ class sampling(str, Enum):
 
 @dataclass
 class Preprocessing:
-    module: Path
+    module: Optional[Union[str, Path, ModuleType]]
     method: Optional[Union[str, Callable]]
     params: Dict[str, Any]
 
     @staticmethod
-    def __keep_intact(s: Series, **kwargs) -> Tuple[str, int, int]:
+    def __keep_intact(s: Series) -> Tuple[str, int, int]:
         start, end = tuple(map(int, s.indexes_target_token.split(":")))
         return normalize_spaces(s.context), start, end
 
@@ -271,7 +274,7 @@ class LayerAggregator(str, Enum):
     CONCAT = "concat"
     SUM = "sum"
 
-    def __call__(self, layers: np.array) -> np.array:
+    def __call__(self, layers: np.array) -> np.ndarray:
         if self is self.AVERAGE:
             return layers.mean(axis=0)
         elif self is self.SUM:

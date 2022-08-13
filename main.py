@@ -4,21 +4,19 @@ from tqdm import tqdm
 
 from src.config import Config
 from src.dataloader import DataLoader
-from src.vector_model import VectorModel
-from src.distance_model import DistanceModel
+from src.deepmistake import DeepMistake
 from src.lscd.results import Results
+from src.vector_model import VectorModel
 from src.vectorizer import Vectorizer
 
 
 @hydra.main(version_base=None, config_path="config", config_name="defaults")
 def main(cfg: Config):
     config = Config(**OmegaConf.to_object(cfg))
-    
-    if config.model.name.lower() == "deep_mistake":
-        
-    
-    vectorizer = Vectorizer(config)
+
+
     dataset = DataLoader(config).load_dataset()
+    vectorizer = Vectorizer(config)
 
     predictions = dict()
     labels = (
@@ -28,7 +26,11 @@ def main(cfg: Config):
     )
 
     for target in tqdm(dataset.targets, desc="Processing targets", leave=False):
-        model = VectorModel(config, vectorizer, target)
+        if config.model.name.lower() == "deep_mistake":
+            model = DeepMistake()
+        else:
+            model = VectorModel(config, vectorizer, target)
+
         predictions[target.name] = config.model.measure.method(
             target, model, **config.model.measure.params
         )

@@ -83,7 +83,7 @@ class Vectorizer:
         self,
         subword_indices: np.array,
         input_ids: torch.Tensor,
-        target_subword_indices: torch.Tensor,
+        target_subword_indices: List[bool],
         p_before: float = 0.95,
     ) -> Tuple[np.array, torch.Tensor]:
 
@@ -108,7 +108,7 @@ class Vectorizer:
 
         return subword_indices, input_ids
 
-    def __call__(self, uses: List[Use]) -> torch.Tensor:
+    def __call__(self, uses: List[Use]) -> List[np.array]:
         hidden_states = {}
         subword_indices = {}
 
@@ -125,9 +125,9 @@ class Vectorizer:
         target = uses[0].target
         if not row.empty:
             id_ = row["id"].iloc[0]
-            hidden_states = np.load(self.index_dir / f"{id_}.npz", mmap_mode="r")
+            hidden_states = np.load(str(self.index_dir / f"{id_}.npz"), mmap_mode="r")
             subword_indices = np.load(
-                self.index_dir / f"{id_}-offset-mapping.npz", mmap_mode="r"
+                str(self.index_dir / f"{id_}-offset-mapping.npz"), mmap_mode="r"
             )
         else:
             for use in tqdm(
@@ -186,7 +186,7 @@ class Vectorizer:
         target_vectors = []
         for use in tqdm(uses, desc=f"Processing uses of {target}", leave=False):
             layers = self.config.model.layer_aggregation(
-                hidden_states[use.identifier][self.config.model.layers]
+                np.take(hidden_states[use.identifier], self.config.model.layers, axis=0)
             )
 
             target_subword_indices = [
