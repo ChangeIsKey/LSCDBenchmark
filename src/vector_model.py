@@ -81,8 +81,8 @@ class VectorModel:
 
     @property
     def index(self):
-        path = self.index_dir / "index"
         if self._index is None:
+            path = self.index_dir / "index"
             if path.exists():
                 self._index = pd.read_feather(path)
             else:
@@ -139,15 +139,14 @@ class VectorModel:
 
         return subword_indices, input_ids
 
-    def distances(self, sampling: sampling, pairing: pairing, method: Callable = distance.cosine, **kwargs) -> Dict[str, Dict[Tuple[ID, ID], float]]:
-        for target in self.targets:
-            if target.name not in self._distances:
-                self._distances[target.name] = dict()
-            ids = sampling(pairing, target, **kwargs)
-            for id_pair in ids:
-                if id_pair not in self._distances[target.name]:
-                    self._distances[target.name][id_pair] = method(self.vectors[id_pair[0]], self.vectors[id_pair[1]], **kwargs)
-        return self._distances
+    def distances(self, target: Target, sampling: sampling, pairing: pairing, method: Callable = distance.cosine, **kwargs) -> List[float]:
+        if target.name not in self._distances:
+            self._distances[target.name] = dict()
+        ids = sampling(pairing, target, **kwargs)
+        for id_pair in ids:
+            if id_pair not in self._distances[target.name]:
+                self._distances[target.name][id_pair] = method(self.vectors[id_pair[0]], self.vectors[id_pair[1]], **kwargs)
+        return list(self._distances[target.name].values())
 
     @property
     def vectors(self) -> Dict[ID, np.array]:

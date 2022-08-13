@@ -6,7 +6,7 @@ from src.lscd.target import Target
 
 
 def apd_compare_all(target: Target, model: VectorModel) -> float:
-    return np.mean(list(model.distances(sampling.all, pairing.COMPARE)[target.name].values())).item()
+    return np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE)).item()
 
 
 def apd_earlier_all(target: Target, model: VectorModel) -> float:
@@ -30,7 +30,7 @@ def apd_earlier_annotated(target: Target, model: VectorModel) -> float:
 
 
 def apd_compare_sampled(
-    target: Target, model: VectorModel, n: int, replace: bool
+        target: Target, model: VectorModel, n: int, replace: bool
 ) -> float:
     return np.mean(
         model.distances(sampling.sampled(pairing.COMPARE, target, n=n, replace=replace))
@@ -38,7 +38,7 @@ def apd_compare_sampled(
 
 
 def apd_compare_sampled(
-    target: Target, model: VectorModel, n: int, replace: bool
+        target: Target, model: VectorModel, n: int, replace: bool
 ) -> float:
     return np.mean(
         model.distances(sampling.sampled(pairing.COMPARE, target, n=n, replace=replace))
