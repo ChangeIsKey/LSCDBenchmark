@@ -278,9 +278,9 @@ class LayerAggregator(str, Enum):
 
     def __call__(self, layers: np.array) -> np.ndarray:
         if self is self.AVERAGE:
-            return np.mean(layers, axis=0, keepdims=True)
+            return np.mean(layers, axis=0)
         elif self is self.SUM:
-            return np.sum(layers, axis=0, keepdims=True)
+            return np.sum(layers, axis=0)
         elif self is self.CONCAT:
             dim = np.product(list(layers.shape))
             return layers.reshape((dim, 1))
