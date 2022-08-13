@@ -140,13 +140,15 @@ class VectorModel:
         return subword_indices, input_ids, target_subword_indices
 
     def distances(self, target: Target, sampling: sampling, pairing: pairing, method: Callable = distance.cosine, **kwargs) -> List[float]:
+        distances = []
         if target.name not in self._distances:
             self._distances[target.name] = dict()
         ids = sampling(pairing, target, **kwargs)
         for id_pair in ids:
             if id_pair not in self._distances[target.name]:
                 self._distances[target.name][id_pair] = method(self.vectors[id_pair[0]], self.vectors[id_pair[1]], **kwargs)
-        return list(self._distances[target.name].values())
+            distances.append(self._distances[target.name][id_pair])
+        return distances
 
     @property
     def vectors(self) -> Dict[ID, np.array]:
