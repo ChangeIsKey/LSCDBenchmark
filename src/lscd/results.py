@@ -15,16 +15,14 @@ class Results:
         self.config = config
         self.predictions = predictions
         self.labels = labels
-        self.targets = [lemma for lemma in self.labels]
+        self.targets = set([lemma for lemma in self.labels]).intersection([lemma for lemma in self.predictions])
 
     def score(self, task: str, metric=None, threshold: float = 0.5, t: float = 0.1):
         if task == "change_graded":
             labels = [self.labels[target]["change_graded"] for target in self.targets]
             predictions = [self.predictions[target] for target in self.targets]
-            print(len(labels))
-            print(len(predictions))
-            spearman, p = stats.spearmanr( labels, predictions)
-            self.export(score=spearman)
+            spearman, p = stats.spearmanr(labels, predictions)
+            self.export(score=spearman, labels=labels, predictions=predictions)
             return spearman
 
         elif task == "change_binary":
@@ -45,9 +43,7 @@ class Results:
             self.export(score=f1)
             return f1
 
-    def export(self, score: float):
-        labels = [self.labels[target]["change_graded"] for target in self.targets]
-        predictions = [self.predictions[target] for target in self.targets]
+    def export(self, score: float, labels: List[float], predictions: List[float]):
         predictions = DataFrame(
             data={
                 "target": self.targets,
