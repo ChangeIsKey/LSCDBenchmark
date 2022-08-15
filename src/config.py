@@ -262,13 +262,13 @@ class SubwordAggregator(str, Enum):
 
     def __call__(self, vectors: np.array) -> np.array:
         if self is self.AVERAGE:
-            return vectors.mean(axis=0)
+            return np.mean(vectors, axis=0, keepdims=True)
         elif self is self.FIRST:
             return vectors[0]
         elif self is self.LAST:
             return vectors[-1]
         elif self is self.SUM:
-            return vectors.sum(axis=0, keepdim=True)
+            return np.sum(vectors, axis=0, keepdims=True)
 
 
 class LayerAggregator(str, Enum):
