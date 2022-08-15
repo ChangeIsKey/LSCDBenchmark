@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 import scipy.stats as stats
 import sklearn.metrics as metrics
