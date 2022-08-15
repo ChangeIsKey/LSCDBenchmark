@@ -5,7 +5,6 @@ import sys
 from enum import Enum, unique
 from itertools import product
 from pathlib import Path
-from types import ModuleType
 from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple,
                     Union)
 
@@ -20,6 +19,7 @@ from src.preprocessing import normalize_spaces
 
 if TYPE_CHECKING:
     from src.lscd import Target
+    from src.distance_model import DistanceModel
 
 long2short = dict(
     english="en",
@@ -152,6 +152,26 @@ class sampling(str, Enum):
             )
         return pairs
 
+        
+def load_method(module: Path, method: Optional[str], default: Callable) -> Tuple[Callable, str]:
+        module = utils.path(module)
+        spec = importlib.util.spec_from_file_location(
+            name=module.stem,
+            location=module,
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+
+        method_name = "None" if method is None else method
+        method = (
+            default
+            if method is None
+            else getattr(module, method)
+        )
+        return method, method_name
+    
+
 
 @dataclass
 class Preprocessing:
@@ -166,26 +186,13 @@ class Preprocessing:
 
     def __post_init_post_parse__(self):
         self.module = utils.path(self.module)
-        spec = importlib.util.spec_from_file_location(
-            name=self.module.stem,
-            location=self.module,
-        )
-        self.module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = self.module
-        spec.loader.exec_module(self.module)
-
-        how = (
-            self.__keep_intact
-            if self.method is None
-            else getattr(self.module, self.method)
-        )
-        self.method_name = "None" if self.method is None else self.method
+        how, self.method_name = load_method(self.module, self.method, default=self.__keep_intact)
 
         def func(s: Series, **kwargs) -> Series:
             context, start, end = how(s, **kwargs)
             return Series(
                 {
-                    "context_preprocessed": context,
+                    "context_preprocessed": normalize_spaces(context),
                     "target_index_begin": start,
                     "target_index_end": end,
                 }
@@ -203,18 +210,11 @@ class Measure:
 
     def __post_init_post_parse__(self):
         self.module = utils.path(self.module)
-        spec = importlib.util.spec_from_file_location(
-            name=self.module.stem,
-            location=self.module,
-        )
-        self.module = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = self.module
-        spec.loader.exec_module(self.module)
-        self.method_name = "None" if self.method is None else self.method
-        self.method = (
-            getattr(self.module, self.method) if self.method is not None else None
-        )
+        self.method, self.method_name = load_method(self.module, self.method, default=None)
 
+    def __call__(self, target: Target, model: DistanceModel, **kwargs):
+        return self.method(target, model, **kwargs)
+    
 
 class ThresholdParam(str, Enum):
     ABOVE = "above"
@@ -294,7 +294,28 @@ class ModelConfig(BaseModel):
     measure: Measure
     subword_aggregation: SubwordAggregator
 
+class EvaluationTask(str, Enum):
+    GRADED_CHANGE = "graded_change"
+    BINARY_CHANGE = "binary_change"
+    
+    
+@dataclass
+class Threshold:    
+    module: Union[str, Path]
+    method: Optional[Union[str, Callable]]
+    params: Dict[str, Any]
+
+    def __post_init_post_parse__(self):
+        self.module = utils.path(self.module)
+        self.method, self.method_name = load_method(self.module, self.method, default=None)
+    
+    
+class EvaluationConfig(BaseModel):
+    task: EvaluationTask
+    binary_threshold: Threshold
+
 
 class Config(BaseModel):
     dataset: DatasetConfig
     model: ModelConfig
+    evaluation: EvaluationConfig

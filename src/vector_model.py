@@ -159,6 +159,7 @@ class VectorModel(DistanceModel):
         method: Callable = distance.cosine,
         return_pairs: bool = False,
     ) -> Union[Tuple[List[Tuple[ID, ID]], List[float]], List[float]]:
+
         ids = sampling(pairing, target, **self.config.model.measure.sampling_params)
         for id_pair in ids:
             if id_pair not in self._distances[target.name][sampling][pairing]:
@@ -203,7 +204,7 @@ class VectorModel(DistanceModel):
                         encoded = self.tokenizer.encode_plus(
                             use.context_preprocessed,
                             return_tensors="pt",
-                            add_special_tokens=True,
+                            # add_special_tokens=True,
                             return_offsets_mapping=True,
                         ).to(self.device)
 
@@ -233,6 +234,7 @@ class VectorModel(DistanceModel):
                                 input_ids,
                                 target_subword_indices,
                             )
+
 
                         segment_ids = torch.ones_like(input_ids)
 

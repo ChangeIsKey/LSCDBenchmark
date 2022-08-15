@@ -23,6 +23,12 @@ model:
     sampling_params: {}
   subword_aggregation: average
 
+evaluation:
+  task: '???'
+  binary_threshold:
+    module: src/threshold.py
+    method: null
+    params: {}
 
 hydra:
   job:

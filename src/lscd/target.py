@@ -23,7 +23,6 @@ class Target:
         self.judgments = judgments
         self.grouping_combination = config.dataset.groupings
         self.config = config
-        self._use_id_pairs, self._ids = None, None
 
         self.preprocess()
 

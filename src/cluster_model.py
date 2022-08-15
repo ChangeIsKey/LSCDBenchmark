@@ -11,15 +11,15 @@ class ClusterModel:
         self.distances = distances
         
         
-    def cluster(self, method: Callable, **kwargs) -> Dict[ID, int]:
-        """
-        method: a clustering algorithm
-        returns: a mapping from context identifiers to cluster labels
-        """
-        # 1. construct distance matrix
-        # 2. cluster distance matrix
-        # 3. return clusters (mapping from use ids to clusters)
-        pass
+    # def cluster(self, method: Callable, **kwargs) -> Dict[ID, int]:
+    #     """
+    #     method: a clustering algorithm
+    #     returns: a mapping from context identifiers to cluster labels
+    #     """
+    #     # 1. construct distance matrix
+    #     # 2. cluster distance matrix
+    #     # 3. return clusters (mapping from use ids to clusters)
+    #     pass
     
     def split(self, groupings: Tuple[int, int], clustering: Dict[ID, int], uses_to_groupings: Dict[ID, int]):
         """

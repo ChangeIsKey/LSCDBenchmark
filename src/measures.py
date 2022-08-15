@@ -13,13 +13,6 @@ def apd_compare_all(target: Target, model: DistanceModel) -> float:
     return np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE)).item()
 
 
-def apd_merge_all(target: Target, model: DistanceModel) -> float:
-    distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE) \
-                + model.distances(target=target, sampling=sampling.all, pairing=pairing.LATER) \
-                + model.distances(target=target, sampling=sampling.all, pairing=pairing.EARLIER)
-    return np.mean(distances).item()
-
-
 def apd_earlier_all(target: Target, model: DistanceModel) -> float:
     return np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.EARLIER)).item()
 
@@ -28,21 +21,29 @@ def apd_later_all(target: Target, model: DistanceModel) -> float:
     return np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.LATER)).item()
 
 
+def apd_merge_all(target: Target, model: DistanceModel) -> float:
+    distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE) \
+                + model.distances(target=target, sampling=sampling.all, pairing=pairing.LATER) \
+                + model.distances(target=target, sampling=sampling.all, pairing=pairing.EARLIER)
+    return np.mean(distances).item()
+
+
 def apd_compare_annotated(target: Target, model: DistanceModel) -> float:
     return np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE)).item()
+
+def apd_later_annotated(target: Target, model: DistanceModel) -> float:
+    return np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER)).item()
+
+
+def apd_earlier_annotated(target: Target, model: DistanceModel) -> float:
+    return np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER)).item()
+
 
 def apd_merge_annotated(target: Target, model: DistanceModel) -> float:
     distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE) \
                 + model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER) \
                 + model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER)
     return np.mean(distances).item()
-
-def apd_later_annotated(target: Target, model: DistanceModel) -> float:
-    return np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER))
-
-
-def apd_earlier_annotated(target: Target, model: DistanceModel) -> float:
-    return np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER))
 
 
 def apd_compare_sampled(
@@ -53,9 +54,27 @@ def apd_compare_sampled(
     )
 
 
-def apd_compare_sampled(
+def apd_earlier_sampled(
         target: Target, model: DistanceModel, n: int, replace: bool
 ) -> float:
+    return np.mean(
+        model.distances(sampling.sampled(pairing.EARLIER, target, n=n, replace=replace))
+    )
+
+def apd_later_sampled(
+        target: Target, model: DistanceModel, n: int, replace: bool
+) -> float:
+    return np.mean(
+        model.distances(sampling.sampled(pairing.LATER, target, n=n, replace=replace))
+    )
+
+
+def apd_merge_sampled(
+        target: Target, model: DistanceModel, n: int, replace: bool
+) -> float:
+    distances = model.distances(target=target, sampling=sampling.sampled, pairing=pairing.COMPARE) \
+                + model.distances(target=target, sampling=sampling.sampled, pairing=pairing.LATER) \
+                + model.distances(target=target, sampling=sampling.sampled, pairing=pairing.EARLIER)
     return np.mean(
         model.distances(sampling.sampled(pairing.COMPARE, target, n=n, replace=replace))
     )

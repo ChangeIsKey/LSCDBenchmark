@@ -7,5 +7,13 @@ from src.lscd.target import Target
 
 class DistanceModel(ABC):
     @abstractmethod
-    def distances(self, target: Target, sampling: sampling, pairing: pairing, method: Callable, return_pairs: bool, **kwargs) -> Union[Tuple[List[Tuple[ID, ID]], List[float]], List[float]]:
+    def distances(
+        self,
+        target: Target,
+        sampling: sampling,
+        pairing: pairing,
+        method: Callable,
+        return_pairs: bool,
+        **kwargs
+    ) -> Union[Tuple[List[Tuple[ID, ID]], List[float]], List[float]]:
         pass

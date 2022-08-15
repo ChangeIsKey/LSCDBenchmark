@@ -19,20 +19,15 @@ def main(cfg: Config):
     else:
         model = VectorModel(config, dataset.targets)
 
-    labels = (
-        dataset.labels.loc[:, ["lemma", "change_graded", "change_binary"]]
-        .set_index("lemma")
-        .to_dict("index")
-    )
-    
 
     predictions = {
-        target.name: config.model.measure.method(target, model, **config.model.measure.method_params)
+        target.name: config.model.measure(target, model, **config.model.measure.method_params)
         for target in sorted(dataset.targets, key=lambda target: target.name)
     }
 
+    labels = dict(zip(dataset.labels.lemma, dataset.labels[config.evaluation.task.value]))
     results = Results(config, predictions, labels)
-    results.score(task="change_graded")
+    results.score()
 
 
 if __name__ == "__main__":
