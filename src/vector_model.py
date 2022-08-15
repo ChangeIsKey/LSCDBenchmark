@@ -82,13 +82,14 @@ class VectorModel:
     @property
     def index(self):
         if self._index is None:
-            path = self.index_dir / "index"
+            path = self.index_dir / "index.csv"
             if path.exists():
-                self._index = pd.read_feather(path)
+                self._index = pd.read_csv(path, sep="\t", engine="pyarrow")
             else:
                 self._index = DataFrame(
                     columns=["model", "target", "id", "preprocessing", "dataset"],
                 )
+        self.clean_cache() 
         return self._index
 
     def index_row(self, target_name: str, id: str):
@@ -106,9 +107,16 @@ class VectorModel:
 
     @index.setter
     def index(self, new: DataFrame):
-        path = self.index_dir / "index"
+        path = self.index_dir / "index.csv"
         self._index = new
-        self._index.to_feather(path)
+        self._index.to_csv(path, index=False, sep="\t")
+
+    def clean_cache(self):
+        valid_ids = set(self._index.id.tolist())
+        for file in utils.path(".cache").iterdir():
+            if file.stem != "index" and file.stem not in valid_ids:
+                file.unlink()
+
 
     def truncate_input(
         self,
@@ -211,6 +219,9 @@ class VectorModel:
                             token_embeddings[use.identifier] = token_embeddings[use.identifier].cpu().numpy()
 
                     id_ = str(uuid.uuid4())
+                    while (self.index_dir / f"{id_}.npz").exists():
+                        id_ = str(uuid.uuid4())
+
                     self.index = pd.concat(
                         [self.index, self.index_row(target_name=target.name, id=id_)],
                         ignore_index=True,

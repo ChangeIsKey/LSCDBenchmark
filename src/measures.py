@@ -25,8 +25,13 @@ def apd_later_all(target: Target, model: VectorModel) -> float:
 
 
 def apd_compare_annotated(target: Target, model: VectorModel) -> float:
-    return np.mean(model.distances(sampling.annotated(pairing.COMPARE, target)))
+    return np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE)).item()
 
+def apd_all_annotated(target: Target, model: VectorModel) -> float:
+    distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE) \
+                + model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER) \
+                + model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER)
+    return np.mean(distances).item()
 
 def apd_later_annotated(target: Target, model: VectorModel) -> float:
     return np.mean(model.distances(sampling.annotated(pairing.LATER, target)))
