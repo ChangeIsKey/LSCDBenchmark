@@ -45,7 +45,6 @@ class pairing(str, Enum):
     COMPARE = "COMPARE"
     EARLIER = "EARLIER"
     LATER = "LATER"
-    MERGE = "MERGE"
 
     def __call__(self, target: Target, sampling: sampling) -> Tuple[List[ID], List[ID]]:
         """
@@ -199,7 +198,8 @@ class Preprocessing:
 class Measure:
     module: Path
     method: Union[str, Callable]
-    params: Dict[str, Any]
+    sampling_params: Dict[str, Any]
+    method_params: Dict[str, Any]
 
     def __post_init_post_parse__(self):
         self.module = utils.path(self.module)

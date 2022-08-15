@@ -24,10 +24,11 @@ def main(cfg: Config):
         .set_index("lemma")
         .to_dict("index")
     )
+    
 
     predictions = {
-        target.name: config.model.measure.method(target, model, **config.model.measure.params)
-        for target in dataset.targets
+        target.name: config.model.measure.method(target, model, **config.model.measure.method_params)
+        for target in sorted(dataset.targets, key=lambda target: target.name)
     }
 
     results = Results(config, predictions, labels)

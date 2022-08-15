@@ -15,20 +15,15 @@ class Results:
         self.config = config
         self.predictions = predictions
         self.labels = labels
-        self.targets = [lemma for lemma in self.predictions]
+        self.targets = [lemma for lemma in self.labels]
 
     def score(self, task: str, metric=None, threshold: float = 0.5, t: float = 0.1):
-
-        self.labels = {
-            lemma: values[task]
-            for lemma, values in self.labels.items()
-            if lemma in self.targets
-        }
         if task == "change_graded":
-            spearman, p = stats.spearmanr(
-                list(self.predictions.values()),
-                list(self.labels.values())
-            )
+            labels = [self.labels[target]["change_graded"] for target in self.targets]
+            predictions = [self.predictions[target] for target in self.targets]
+            print(len(labels))
+            print(len(predictions))
+            spearman, p = stats.spearmanr( labels, predictions)
             self.export(score=spearman)
             return spearman
 
@@ -51,11 +46,13 @@ class Results:
             return f1
 
     def export(self, score: float):
+        labels = [self.labels[target]["change_graded"] for target in self.targets]
+        predictions = [self.predictions[target] for target in self.targets]
         predictions = DataFrame(
             data={
                 "target": self.targets,
-                "prediction": list(self.predictions.values()),
-                "label": list(self.labels.values()),
+                "prediction": predictions,
+                "label": labels
             }
         )
         predictions.to_csv("predictions.tsv", sep="\t", index=False)

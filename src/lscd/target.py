@@ -45,3 +45,16 @@ class Target:
         self.uses = pd.concat(
             [self.uses, self.uses.apply(method, axis=1, **params)], axis=1
         )
+    
+    def uses_to_grouping(self) -> Dict[ID, int]:
+        print(self.uses)
+        uses_to_grouping = (
+            self.uses.loc[:, ["identifier", "grouping"]]
+            .set_index("identifier")
+            .to_dict("index")
+        )
+        return {
+            identifier: value["grouping"] 
+            for identifier, value in uses_to_grouping.items() 
+            if value["grouping"] in self.grouping_combination
+        }

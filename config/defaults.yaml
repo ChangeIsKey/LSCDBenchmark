@@ -19,7 +19,8 @@ model:
   measure: 
     module: src/measures.py
     method: apd_compare_all
-    params: {}
+    method_params: {}
+    sampling_params: {}
   subword_aggregation: average
 
 
