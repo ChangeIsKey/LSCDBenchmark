@@ -41,27 +41,27 @@ class Dataset:
     @property
     def targets(self) -> List[Target]:
         if self._targets is None:
-            # self.agreements = self.agreements.iloc[
-            #     1:, :
-            # ].copy()  # remove "data=full" row
+            self.agreements = self.agreements.iloc[
+                1:, :
+            ].copy()  # remove "data=full" row
 
-            # if len(self.config.dataset.cleaning.stats) > 0:
+            if len(self.config.dataset.cleaning.stats) > 0:
 
-            #     conditions = [
-            #         f"{column} >= {cleaning_param.threshold}"
-            #         if cleaning_param.keep is ThresholdParam.ABOVE
-            #         else f"{column} <= {cleaning_param.threshold}"
-            #         for column, cleaning_param in self.config.dataset.cleaning.stats.items()
-            #     ]
+                conditions = [
+                    f"{column} >= {cleaning_param.threshold}"
+                    if cleaning_param.keep is ThresholdParam.ABOVE
+                    else f"{column} <= {cleaning_param.threshold}"
+                    for column, cleaning_param in self.config.dataset.cleaning.stats.items()
+                ]
 
-            #     if self.config.dataset.cleaning.method == "all":
-            #         connector = "&"
-            #     elif self.config.dataset.cleaning.method == "any":
-            #         connector = "|"
-            #     else:
-            #         raise NotImplementedError
+                if self.config.dataset.cleaning.method == "all":
+                    connector = "&"
+                elif self.config.dataset.cleaning.method == "any":
+                    connector = "|"
+                else:
+                    raise NotImplementedError
 
-            #     self.agreements = self.agreements.query(connector.join(conditions))
+                self.agreements = self.agreements.query(connector.join(conditions))
 
             group_combination = "_".join(map(str, self.groupings))
 
