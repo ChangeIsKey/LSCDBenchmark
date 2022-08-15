@@ -39,17 +39,13 @@ class Results:
             # threshold could be a percentile
 
             threshold = self.config.evaluation.binary_threshold.method()
-            
-            binary_scores = {
-                target: int(self.predictions[target] >= threshold)
-                for target in self.targets
-            }
+            predictions = [int(self.predictions[target] >= threshold) for target in self.targets]
 
             f1 = metrics.f1_score(
                 y_true=labels, 
-                y_pred=list(binary_scores.values())
+                y_pred=predictions,
             )
-            self.export(score=f1)
+            self.export(score=f1, labels=labels, predictions=predictions)
             return f1
 
     def export(self, score: float, labels: List[float], predictions: List[float]):
