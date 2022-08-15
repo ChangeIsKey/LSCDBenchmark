@@ -295,8 +295,8 @@ class ModelConfig(BaseModel):
     subword_aggregation: SubwordAggregator
 
 class EvaluationTask(str, Enum):
-    GRADED_CHANGE = "graded_change"
-    BINARY_CHANGE = "binary_change"
+    GRADED_CHANGE = "change_graded"
+    BINARY_CHANGE = "change_binary"
     
     
 @dataclass

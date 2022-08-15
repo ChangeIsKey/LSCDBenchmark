@@ -41,9 +41,7 @@ class Dataset:
     @property
     def targets(self) -> List[Target]:
         if self._targets is None:
-            self.agreements = self.agreements.iloc[
-                1:, :
-            ].copy()  # remove "data=full" row
+            self.agreements = self.agreements.iloc[1:, :].copy()  # remove "data=full" row
 
             if len(self.config.dataset.cleaning.stats) > 0:
 

@@ -39,12 +39,6 @@ class VectorModel(DistanceModel):
         self.index_dir.mkdir(exist_ok=True)
 
     @property
-    def uses(self):
-        if self._uses is None:
-            self._uses = pd.concat([target.uses for target in self.targets], axis=0)
-        return self._uses
-
-    @property
     def device(self):
         if self._device is None:
             self._device = torch.device(
@@ -143,9 +137,9 @@ class VectorModel(DistanceModel):
         # get index of the first target subword
         lindex_target = target_subword_indices.index(True)
         # get index of the last target subword
-        rindex_target = lindex_target + n_target_subtokens
+        rindex_target = lindex_target + n_target_subtokens + 1
         lindex = max(lindex_target - tokens_before, 0)
-        rindex = rindex_target + tokens_after
+        rindex = rindex_target + tokens_after - 1
         subword_indices = subword_indices[lindex:rindex]
         input_ids = input_ids[:, lindex:rindex]
         target_subword_indices = target_subword_indices[lindex:rindex]
@@ -182,7 +176,6 @@ class VectorModel(DistanceModel):
             for target in pbar:
                 pbar.set_description(f"Processing target {target.name}", refresh=False)
                 token_embeddings = {}
-                subword_indices = {}
 
                 row = self.index[
                     (self.index.model == self.config.model.name)
@@ -204,37 +197,24 @@ class VectorModel(DistanceModel):
                         encoded = self.tokenizer.encode_plus(
                             use.context_preprocessed,
                             return_tensors="pt",
-                            # add_special_tokens=True,
-                            return_offsets_mapping=True,
                         ).to(self.device)
 
-                        # TODO fix segment ids
-
-                        subword_indices[use.identifier] = (
-                            encoded["offset_mapping"].squeeze(0).cpu().numpy()
-                        )
                         input_ids = encoded["input_ids"].to(self.device)
+                        tokens = encoded.tokens()
+                        subword_spans = [encoded.token_to_chars(i) for i in range(len(tokens))]
 
                         target_subword_indices = [
-                            sub_start >= use.target_index_begin
-                            and sub_end <= use.target_index_end
-                            for sub_start, sub_end in subword_indices[use.identifier]
+                            span.start >= use.target_index_begin and span.end <= use.target_index_end
+                            if span is not None else False
+                            for span in subword_spans
                         ]
 
-                        if (
-                            len(encoded.tokens())
-                            > self.model.config.max_position_embeddings
-                        ):
-                            (
-                                subword_indices[use.identifier],
-                                input_ids,
-                                target_subword_indices,
-                            ) = self.truncate_input(
-                                subword_indices[use.identifier],
+                        if len(encoded.tokens()) > self.model.config.max_position_embeddings:
+                            subword_spans, input_ids, target_subword_indices = self.truncate_input(
+                                subword_spans,
                                 input_ids,
                                 target_subword_indices,
                             )
-
 
                         segment_ids = torch.ones_like(input_ids)
 

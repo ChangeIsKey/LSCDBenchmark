@@ -23,8 +23,7 @@ log = logging.getLogger(f"{Path(__file__).name}:{__name__}")
 class DataLoader:
 
     wug2url = dict(
-        # dwug_de="https://zenodo.org/record/5796871/files/dwug_de.zip",
-        dwug_de="https://zenodo.org/record/5543724/files/dwug_de.zip",
+        dwug_de="https://zenodo.org/record/5796871/files/dwug_de.zip",
         dwug_la="https://zenodo.org/record/5255228/files/dwug_la.zip",
         dwug_en="https://zenodo.org/record/5796878/files/dwug_en.zip",
         dwug_sv="https://zenodo.org/record/5801358/files/dwug_sv.zip",
@@ -101,9 +100,7 @@ class DataLoader:
     @property
     def lscd_labels(self) -> DataFrame:
         if self._lscd_labels is None:
-            path = self.path / "stats" / "semeval" / "stats_groupings.tsv"
-            if not path.exists():
-                path = self.path / "stats" / "opt" / "stats_groupings.tsv"
+            path = self.path / "stats" / "opt" / "stats_groupings.tsv"
             if not path.exists():
                 path = self.path / "stats" / "stats_groupings.tsv"
             self._lscd_labels = pd.read_csv(path, delimiter="\t", encoding="utf8")
@@ -125,7 +122,7 @@ class DataLoader:
 
     def download(self) -> None:
         r = requests.get(self.wug2url[self.config.dataset.name.lower()], stream=True)
-        filename = f"{self.config.dataset.name}.zip"
+        filename = utils.path(f"{self.config.dataset.name}.zip")
 
         with open(file=filename, mode="wb") as f:
             pbar = tqdm(
@@ -144,7 +141,7 @@ class DataLoader:
             pbar.close()
 
     def unzip(self, output_dir: Path) -> None:
-        filename = f"{self.config.dataset.name}.zip"
+        filename = utils.path(f"{self.config.dataset.name}.zip")
         with zipfile.ZipFile(file=filename) as z:
             z.extractall()
             for f in z.namelist():

@@ -31,13 +31,7 @@ class Results:
             return spearman
 
         elif self.config.evaluation.task is EvaluationTask.BINARY_CHANGE:
-            # t = 0.1
-            # mean = np.mean(distances, axis=0)
-            # std = np.std(distances, axis=0)
-            # threshold = mean + t * std
-
-            # threshold could be a percentile
-
+            # The parameters need to be filled
             threshold = self.config.evaluation.binary_threshold.method()
             predictions = [int(self.predictions[target] >= threshold) for target in self.targets]
 
