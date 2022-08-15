@@ -15,7 +15,7 @@ class Results:
         self.config = config
         self.predictions = predictions
         self.labels = labels
-        self.targets = set([lemma for lemma in self.labels]).intersection([lemma for lemma in self.predictions])
+        self.targets = sorted(set([lemma for lemma in self.labels]).intersection([lemma for lemma in self.predictions]))
 
     def score(self, task: str, metric=None, threshold: float = 0.5, t: float = 0.1):
         if task == "change_graded":
