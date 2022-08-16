@@ -163,7 +163,7 @@ def load_method(module: Path, method: Optional[str], default: Callable) -> Tuple
         sys.modules[spec.name] = module
         spec.loader.exec_module(module)
 
-        method_name = "None" if method is None else method
+        method_name = str(method)
         method = (
             default
             if method is None
@@ -204,16 +204,16 @@ class Preprocessing:
 @dataclass
 class Measure:
     module: Path
-    method: Union[str, Callable]
+    method: str
     sampling_params: Dict[str, Any]
     method_params: Dict[str, Any]
 
     def __post_init_post_parse__(self):
         self.module = utils.path(self.module)
-        self.method, self.method_name = load_method(self.module, self.method, default=None)
+        self.__method, self.method = load_method(self.module, self.method, default=None)
 
     def __call__(self, target: Target, model: DistanceModel, **kwargs):
-        return self.method(target, model, **kwargs)
+        return self.__method(target, model, **kwargs)
     
 
 class ThresholdParam(str, Enum):
@@ -307,8 +307,10 @@ class Threshold:
 
     def __post_init_post_parse__(self):
         self.module = utils.path(self.module)
-        self.method, self.method_name = load_method(self.module, self.method, default=None)
+        self.__method, self.method = load_method(self.module, self.method, default=None)
     
+    def __call__(self, **kwargs):
+        return self.__method(**kwargs)
     
 class EvaluationConfig(BaseModel):
     task: EvaluationTask
