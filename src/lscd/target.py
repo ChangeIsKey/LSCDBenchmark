@@ -38,11 +38,15 @@ class Target:
         :raises TypeError: if the one of the returned outputs of the preprocessing function is not a string
         """
 
-        method = self.config.dataset.preprocessing.method
-        params = self.config.dataset.preprocessing.params
-
         self.uses = pd.concat(
-            [self.uses, self.uses.apply(method, axis=1, **params)], axis=1
+            [
+                self.uses, 
+                self.uses.apply(
+                    func=self.config.dataset.preprocessing, 
+                    axis=1
+                )
+            ], 
+            axis=1
         )
     
     def uses_to_grouping(self) -> Dict[ID, int]:

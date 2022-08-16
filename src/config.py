@@ -5,12 +5,12 @@ import sys
 from enum import Enum, unique
 from itertools import product
 from pathlib import Path
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple,
+from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple,
                     Union)
 
 import numpy as np
 import pandas as pd
-from pandas import Series
+from pandas import Series, DataFrame
 from pydantic import BaseModel
 from pydantic.dataclasses import dataclass
 
@@ -198,8 +198,13 @@ class Preprocessing:
                 }
             )
 
-        self.method = func
+        self.__method = func
+    
+    def __call__(self, s: Series) -> Tuple[str, int, int]:
+        return self.__method(s, **self.params)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return 
 
 @dataclass
 class Measure:
@@ -212,8 +217,8 @@ class Measure:
         self.module = utils.path(self.module)
         self.__method, self.method = load_method(self.module, self.method, default=None)
 
-    def __call__(self, target: Target, model: DistanceModel, **kwargs):
-        return self.__method(target, model, **kwargs)
+    def __call__(self, target: Target, model: DistanceModel):
+        return self.__method(target, model, **self.method_params)
     
 
 class ThresholdParam(str, Enum):
@@ -308,8 +313,8 @@ class Threshold:
         self.module = utils.path(self.module)
         self.__method, self.method = load_method(self.module, self.method, default=None)
     
-    def __call__(self, **kwargs):
-        return self.__method(**kwargs)
+    def __call__(self, distances: Iterable[float]):
+        return self.__method(distances, **self.params)
     
 class EvaluationConfig(BaseModel):
     task: EvaluationTask
