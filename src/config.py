@@ -282,8 +282,7 @@ class LayerAggregator(str, Enum):
         elif self is self.SUM:
             return np.sum(layers, axis=0)
         elif self is self.CONCAT:
-            dim = np.product(list(layers.shape))
-            return layers.reshape((dim, 1))
+            return np.ravel(layers)
 
 
 class ModelConfig(BaseModel):
