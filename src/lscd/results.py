@@ -32,11 +32,12 @@ class Results:
 
         elif self.config.evaluation.task is EvaluationTask.BINARY_CHANGE:
             # The parameters need to be filled
-            threshold = self.config.evaluation.binary_threshold.method()
+            predictions = [self.predictions[target] for target in self.targets]
+            threshold = self.config.evaluation.binary_threshold.method(predictions,**self.config.evaluation.binary_threshold.params)
             predictions = [int(self.predictions[target] >= threshold) for target in self.targets]
 
             f1 = metrics.f1_score(
-                y_true=labels, 
+                y_true=labels,
                 y_pred=predictions,
             )
             self.export(score=f1, labels=labels, predictions=predictions)

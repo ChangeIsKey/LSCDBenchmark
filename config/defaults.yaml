@@ -16,7 +16,7 @@ model:
   name: '???'
   layers: [1, -1]
   layer_aggregation: average
-  measure: 
+  measure:
     module: src/measures.py
     method: apd_compare_all
     method_params: {}
@@ -27,8 +27,9 @@ evaluation:
   task: '???'
   binary_threshold:
     module: src/threshold.py
-    method: null
-    params: {}
+    method: mean_std
+    params:
+          t: 0.1
 
 hydra:
   job:
