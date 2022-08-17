@@ -1,10 +1,13 @@
 from pathlib import Path
 from typing import Dict, List
 
+import json
 import scipy.stats as stats
 import sklearn.metrics as metrics
+import pandas as pd
 from pandas import DataFrame
 from src.config import Config, EvaluationConfig, EvaluationTask
+import src.utils as utils
 
 
 class Results:
@@ -19,6 +22,10 @@ class Results:
             set([lemma for lemma in self.labels])
             .intersection([lemma for lemma in self.predictions])
         )
+        self._aggregated_results_dir = utils.path("results")
+        self._aggregated_results_dir.mkdir(exist_ok=True)
+        self._aggregated_results = None
+        
 
     def score(self):
 
@@ -31,7 +38,6 @@ class Results:
             return spearman
 
         elif self.config.evaluation.task is EvaluationTask.BINARY_CHANGE:
-            # The parameters need to be filled
             predictions = [self.predictions[target] for target in self.targets]
             threshold = self.config.evaluation.binary_threshold(predictions)
             predictions = [int(self.predictions[target] >= threshold) for target in self.targets]
@@ -42,6 +48,32 @@ class Results:
             )
             self.export(score=f1, labels=labels, predictions=predictions)
             return f1
+    
+    @property
+    def aggregated_results(self):
+        if self._aggregated_results is None:
+            path = self._aggregated_results_dir / "results.tsv"
+            self._aggregated_results = pd.read_csv(path, engine="pyarrow", sep="\t") if path.exists() else DataFrame()
+        return self._aggregated_results
+
+    def aggregated_results_row(self, score: float):
+        # convert the config into a flat dictionary with keys ready for a csv export
+        [dict_cfg] = pd.json_normalize(json.loads(self.config.json()), sep=".").to_dict(orient="records")
+        return DataFrame(
+            [
+                {
+                    "score": score,
+                    "n_targets": len(self.predictions),
+                    **dict_cfg
+                }
+            ]
+        )
+
+    @aggregated_results.setter
+    def aggregated_results(self, new: DataFrame):
+        path = self._aggregated_results_dir / "results.tsv"
+        self._aggregated_results = new
+        self._aggregated_results.to_csv(path, sep="\t", index=False)
 
     def export(self, score: float, labels: List[float], predictions: List[float]):
         predictions = DataFrame(
@@ -51,5 +83,7 @@ class Results:
                 "label": labels
             }
         )
+
         predictions.to_csv("predictions.tsv", sep="\t", index=False)
+        self.aggregated_results = pd.concat([self.aggregated_results, self.aggregated_results_row(score)], axis=0)
         Path("score.txt").write_text(str(score))

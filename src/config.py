@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+from multiprocessing.sharedctypes import Value
 import sys
 from enum import Enum, unique
 from itertools import product
@@ -163,30 +164,30 @@ def load_method(module: Path, method: Optional[str], default: Callable) -> Tuple
         sys.modules[spec.name] = module
         spec.loader.exec_module(module)
 
-        method_name = str(method)
         method = (
             default
             if method is None
             else getattr(module, method)
         )
-        return method, method_name
+        return method
     
 
 
 @dataclass
 class Preprocessing:
-    module: Optional[Union[str, Path, Any]]
-    method: Optional[Union[str, Callable]]
+    module: str
+    method: Optional[str]
     params: Dict[str, Any]
 
     @staticmethod
     def __keep_intact(s: Series) -> Tuple[str, int, int]:
         start, end = tuple(map(int, s.indexes_target_token.split(":")))
-        return normalize_spaces(s.context), start, end
+        return s.context, start, end
 
     def __post_init_post_parse__(self):
-        self.module = utils.path(self.module)
-        how, self.method_name = load_method(self.module, self.method, default=self.__keep_intact)
+        module = utils.path(self.module)
+        how = load_method(module, self.method, default=self.__keep_intact)
+        self.method = str(self.method)  # to convert None values to "None"
 
         def func(s: Series, **kwargs) -> Series:
             context, start, end = how(s, **kwargs)
@@ -203,19 +204,18 @@ class Preprocessing:
     def __call__(self, s: Series) -> Tuple[str, int, int]:
         return self.__method(s, **self.params)
 
-    def to_dict(self) -> Dict[str, Any]:
-        return 
 
 @dataclass
 class Measure:
-    module: Path
+    module: str
     method: str
     sampling_params: Dict[str, Any]
     method_params: Dict[str, Any]
 
     def __post_init_post_parse__(self):
-        self.module = utils.path(self.module)
-        self.__method, self.method = load_method(self.module, self.method, default=None)
+        module = utils.path(self.module)
+        self.__method = load_method(module, self.method, default=None)
+        self.method = str(self.method)
 
     def __call__(self, target: Target, model: DistanceModel):
         return self.__method(target, model, **self.method_params)
@@ -266,14 +266,17 @@ class SubwordAggregator(str, Enum):
     SUM = "sum"
 
     def __call__(self, vectors: np.array) -> np.array:
-        if self is self.AVERAGE:
-            return np.mean(vectors, axis=0, keepdims=True)
-        elif self is self.FIRST:
-            return vectors[0]
-        elif self is self.LAST:
-            return vectors[-1]
-        elif self is self.SUM:
-            return np.sum(vectors, axis=0, keepdims=True)
+        match self:
+            case self.AVERAGE:
+                return np.mean(vectors, axis=0, keepdims=True)
+            case self.SUM:
+                return np.sum(vectors, axis=0, keepdims=True)
+            case self.FIRST:
+                return vectors[0]
+            case self.LAST:
+                return vectors[-1]
+            case _:
+                raise NotImplementedError
 
 
 class LayerAggregator(str, Enum):
@@ -282,12 +285,13 @@ class LayerAggregator(str, Enum):
     SUM = "sum"
 
     def __call__(self, layers: np.array) -> np.ndarray:
-        if self is self.AVERAGE:
-            return np.mean(layers, axis=0)
-        elif self is self.SUM:
-            return np.sum(layers, axis=0)
-        elif self is self.CONCAT:
-            return np.ravel(layers)
+        match self:
+            case self.AVERAGE:
+                return np.mean(layers, axis=0)
+            case self.SUM:
+                return np.sum(layers, axis=0)
+            case self.CONCAT:
+                return np.ravel(layers)
 
 
 class ModelConfig(BaseModel):
@@ -298,23 +302,26 @@ class ModelConfig(BaseModel):
     measure: Measure
     subword_aggregation: SubwordAggregator
 
+
 class EvaluationTask(str, Enum):
     GRADED_CHANGE = "change_graded"
     BINARY_CHANGE = "change_binary"
-    
-    
+
+
 @dataclass
 class Threshold:    
-    module: Union[str, Path]
-    method: Optional[Union[str, Callable]]
+    module: str
+    method: Optional[str]
     params: Dict[str, Any]
 
     def __post_init_post_parse__(self):
-        self.module = utils.path(self.module)
-        self.__method, self.method = load_method(self.module, self.method, default=None)
+        module = utils.path(self.module)
+        self.__method = load_method(module, self.method, default=None)
+        self.method = str(self.method)
     
     def __call__(self, distances: Iterable[float]):
         return self.__method(distances, **self.params)
+
     
 class EvaluationConfig(BaseModel):
     task: EvaluationTask
@@ -325,3 +332,6 @@ class Config(BaseModel):
     dataset: DatasetConfig
     model: ModelConfig
     evaluation: EvaluationConfig
+     
+     
+    

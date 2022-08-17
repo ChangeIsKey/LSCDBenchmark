@@ -1,6 +1,8 @@
 import hydra
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 from tqdm import tqdm
+import pandas as pd
+import json
 
 from src.config import Config
 from src.dataloader import DataLoader
@@ -10,7 +12,7 @@ from src.vector_model import VectorModel
 
 
 @hydra.main(version_base=None, config_path="config", config_name="defaults")
-def main(cfg: Config):
+def main(cfg: DictConfig):
     config = Config(**OmegaConf.to_object(cfg))
 
     dataset = DataLoader(config).load_dataset()

@@ -180,10 +180,7 @@ class VectorModel(DistanceModel):
                 row = self.index[
                     (self.index.model == self.config.model.name)
                     & (self.index.target == target.name)
-                    & (
-                        self.index.preprocessing
-                        == self.config.dataset.preprocessing.method_name
-                    )
+                    & (self.index.preprocessing == self.config.dataset.preprocessing.method)
                     & (self.index.dataset == self.config.dataset.name)
                 ]
 
