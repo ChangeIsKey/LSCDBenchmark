@@ -77,7 +77,7 @@ class Results:
                     "date": date.today().strftime("%d/%m/%Y"),
                     "time": datetime.now().strftime("%H:%M:%S"),
                     "score": score,
-                    "n_targets": len(self.predictions),
+                    "n_targets": len(self.targets),
                     **dict_cfg,
                 }
             ]
