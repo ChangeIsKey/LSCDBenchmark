@@ -1,56 +1,50 @@
-import importlib.util
+import csv
 from typing import Dict
 
+import src.utils as utils
 import pandas as pd
 from pandas import DataFrame
 from src.config import ID, Config
-from src.use import Use
 
 
 class Target:
-    def __init__(
-        self,
-        name: str,
-        uses: DataFrame,
-        labels: DataFrame,
-        judgments: DataFrame,
-        config: Config,
-    ):
-        self.name = name
-        self.uses = uses
-        self._ids_to_uses = None
-        self.labels = labels
-        self.judgments = judgments
-        self.grouping_combination = config.dataset.groupings
+    def __init__(self, name: str, config: Config, translation_table: Dict[str, str]) -> None:
         self.config = config
+        self.name = name
+        self.translation_table = translation_table
 
-        self.preprocess()
-
-    def preprocess(self) -> None:
-        """
-        :param nlp:
-        :param how:
-            A function to preprocess the contexts. This can be any function that takes a pandas Series (i.e., a row of
-            one of the uses.csv files) as input, and possibly other parameters, and returns a string.
-            The module preprocessing contains useful preprocessing functions.
-        :param params: Extra keyword parameters for the preprocessing function
-        :raises TypeError: if the 'how' parameter is neither None nor a function
-        :raises TypeError: if the one of the returned outputs of the preprocessing function is not a string
-        """
-
-        self.uses = pd.concat(
-            [
-                self.uses, 
-                self.uses.apply(
-                    func=self.config.dataset.preprocessing, 
-                    axis=1
-                )
-            ], 
-            axis=1
+        self.__wug = utils.path("wug") / self.config.dataset.name / self.config.dataset.version
+        self.__csv_params = dict(
+            delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
         )
+
+        self._uses = None
+        self._judgments = None
+        self._clusters = None
+        self.grouping_combination = config.groupings
+
+    @property
+    def uses(self) -> DataFrame:
+        if self._uses is None:
+            # load uses
+            self._uses = pd.read_csv(self.__wug / "data" / self.name / "uses.tsv", **self.__csv_params)
+            # preprocess uses
+            self._uses = pd.concat([self._uses, self.uses.apply(self.config.preprocessing, axis=1, translation_table=self.translation_table)], axis=1)
+        return self._uses
+
+    @property
+    def judgments(self) -> DataFrame:
+        if self._judgments is None:
+            self._judgments = pd.read_csv(self.__wug / "data"/ self.name / "judgments.tsv", **self.__csv_params)
+        return self._judgments
+    
+    @property
+    def clusters(self) -> DataFrame:
+        if self._clusters is None:
+            self._clusters = pd.read_csv(self.__wug / "clusters" / "opt" / f"{self.name}.tsv", **self.__csv_params)
+        return self._clusters 
     
     def uses_to_grouping(self) -> Dict[ID, int]:
-        print(self.uses)
         uses_to_grouping = (
             self.uses.loc[:, ["identifier", "grouping"]]
             .set_index("identifier")

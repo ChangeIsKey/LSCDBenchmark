@@ -1,26 +1,26 @@
+
 from __future__ import annotations
 
 import importlib.util
-from multiprocessing.sharedctypes import Value
+import json
 import sys
 from enum import Enum, unique
 from itertools import product
 from pathlib import Path
-from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple,
-                    Union)
+from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
+                    Optional, Tuple)
 
 import numpy as np
 import pandas as pd
 from pandas import Series, DataFrame
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic.dataclasses import dataclass
 
 import src.utils as utils
-from src.preprocessing import normalize_spaces
 
 if TYPE_CHECKING:
-    from src.lscd import Target
     from src.distance_model import DistanceModel
+    from src.lscd import Target
 
 long2short = dict(
     english="en",
@@ -180,20 +180,20 @@ class Preprocessing:
     params: Dict[str, Any]
 
     @staticmethod
-    def __keep_intact(s: Series) -> Tuple[str, int, int]:
+    def __keep_intact(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
         start, end = tuple(map(int, s.indexes_target_token.split(":")))
         return s.context, start, end
 
     def __post_init_post_parse__(self):
         module = utils.path(self.module)
         how = load_method(module, self.method, default=self.__keep_intact)
-        self.method = str(self.method)  # to convert None values to "None"
+        self.method = str(self.method).lower()  # to convert None values to "None"
 
-        def func(s: Series, **kwargs) -> Series:
-            context, start, end = how(s, **kwargs)
+        def func(s: Series, translation_table: Dict[str, str], **kwargs) -> Series:
+            context, start, end = how(s, translation_table, **kwargs)
             return Series(
                 {
-                    "context_preprocessed": normalize_spaces(context),
+                    "context_preprocessed": context,
                     "target_index_begin": start,
                     "target_index_end": end,
                 }
@@ -201,8 +201,8 @@ class Preprocessing:
 
         self.__method = func
     
-    def __call__(self, s: Series) -> Tuple[str, int, int]:
-        return self.__method(s, **self.params)
+    def __call__(self, s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
+        return self.__method(s, translation_table, **self.params)
 
 
 @dataclass
@@ -215,7 +215,7 @@ class Measure:
     def __post_init_post_parse__(self):
         module = utils.path(self.module)
         self.__method = load_method(module, self.method, default=None)
-        self.method = str(self.method)
+        self.method = str(self.method).lower()
 
     def __call__(self, target: Target, model: DistanceModel):
         return self.__method(target, model, **self.method_params)
@@ -243,19 +243,30 @@ class Cleaning:
     stats: Dict[str, CleaningParam]
     method: BooleanMethod = BooleanMethod.ALL
 
+    def __call__(self, agreements: DataFrame) -> List[str]:
+        conditions = [
+            f"{column} >= {cleaning_param.threshold}"
+            if cleaning_param.keep is ThresholdParam.ABOVE
+            else f"{column} <= {cleaning_param.threshold}"
+            for column, cleaning_param in self.stats.items()
+        ]
+
+        if self.method is BooleanMethod.ALL:
+            connector = "&"
+        elif self.method is BooleanMethod.ANY:
+            connector = "|"
+        else:
+            raise NotImplementedError
+
+        return agreements.query(connector.join(conditions))
+
+        
+
 
 class Task(str, Enum):
     LSCD = "lscd"
     CLUSTER = "cluster"
     SEMANTIC_PROXIMITY = "semantic_proximity"
-
-
-class DatasetConfig(BaseModel):
-    name: str
-    groupings: Tuple[int, int]
-    task: Task
-    preprocessing: Preprocessing
-    cleaning: Cleaning
 
 
 @unique
@@ -294,15 +305,6 @@ class LayerAggregator(str, Enum):
                 return np.ravel(layers)
 
 
-class ModelConfig(BaseModel):
-    gpu: Optional[int]
-    name: str
-    layers: List[int]
-    layer_aggregation: LayerAggregator
-    measure: Measure
-    subword_aggregation: SubwordAggregator
-
-
 class EvaluationTask(str, Enum):
     GRADED_CHANGE = "change_graded"
     BINARY_CHANGE = "change_binary"
@@ -317,21 +319,46 @@ class Threshold:
     def __post_init_post_parse__(self):
         module = utils.path(self.module)
         self.__method = load_method(module, self.method, default=None)
-        self.method = str(self.method)
+        self.method = str(self.method).lower()
     
     def __call__(self, distances: Iterable[float]):
         return self.__method(distances, **self.params)
 
     
-class EvaluationConfig(BaseModel):
+@dataclass
+class EvaluationConfig:
     task: EvaluationTask
     binary_threshold: Threshold
 
 
-class Config(BaseModel):
-    dataset: DatasetConfig
-    model: ModelConfig
-    evaluation: EvaluationConfig
-     
-     
+@dataclass
+class DatasetConfig:
+    name: str
+    version: str
+
+    @property
+    def wug_to_url(self) -> Dict[str, Dict[str, str]]:
+        path = utils.path("datasets.json")
+        with path.open(mode="r") as f:
+            return json.load(f)
     
+    def __post_init__(self) -> None:
+        if self.version == "latest":
+            versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
+            self.version = versions[0]
+
+
+class Config(BaseModel):
+    layers: List[int]
+    layer_aggregation: LayerAggregator
+    measure: Measure
+    subword_aggregation: SubwordAggregator
+    dataset: DatasetConfig
+    model: str
+    evaluation: EvaluationConfig
+    groupings: Tuple[int, int]
+    task: Task
+    preprocessing: Preprocessing
+    cleaning: Cleaning
+    test_targets: Optional[List[str]] = None
+    gpu: Optional[int] = Field(exclude=True)

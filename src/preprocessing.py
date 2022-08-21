@@ -1,13 +1,11 @@
-from typing import List, Tuple
-import re
+from typing import Dict, List, Tuple
+
 from pandas import Series
 
-__all__ = ["toklem", "lemmatize", "tokenize"]
-
-
-def normalize_spaces(string: str) -> str:
-    return re.sub(r"\s+", " ", string)
-
+def clean_context(context: str, translation_table: Dict[str, str]) -> str:
+    for key, replacement in translation_table.items():
+        context = context.replace(key, replacement)
+    return context
 
 def char_indices(token_idx: int, tokens: List[str], target: str) -> Tuple[int, int]:
     char_idx = -1
@@ -23,8 +21,8 @@ def char_indices(token_idx: int, tokens: List[str], target: str) -> Tuple[int, i
     raise ValueError
 
 
-def toklem(s: Series) -> Tuple[str, int, int]:
-    tokens = s.context_tokenized.split()
+def toklem(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
+    tokens = clean_context(s.context_tokenized, translation_table).split()
     target = s.lemma.split("_")[0]
     start, end = char_indices(
         token_idx=s.indexes_target_token_tokenized, tokens=tokens, target=target
@@ -33,19 +31,20 @@ def toklem(s: Series) -> Tuple[str, int, int]:
     return " ".join(tokens), start, end
 
 
-def lemmatize(s: Series) -> Tuple[str, int, int]:
-    context_preprocessed = s.context_lemmatized
+def lemmatize(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
+    context_preprocessed = clean_context(s.context_lemmatized, translation_table)
     tokens = context_preprocessed.split()
 
     # the spanish dataset has an index column for the lemmatized contexts, but all the others don't
-    idx = s.get("indexes_target_token_lemmatized", default=s.indexes_target_token_tokenized)
-    target = tokens[idx]
-    start, end = char_indices(token_idx=idx, tokens=tokens, target=target)
-    return s.context_lemmatized, start, end
+    idx = s.get(
+        "indexes_target_token_lemmatized", default=s.indexes_target_token_tokenized
+    )
+    start, end = char_indices(token_idx=idx, tokens=tokens, target=tokens[idx])
+    return context_preprocessed, start, end
 
 
-def tokenize(s: Series) -> Tuple[str, int, int]:
-    tokens = s.context_tokenized.split()
+def tokenize(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
+    tokens = clean_context(s.context_tokenized, translation_table).split()
     idx = s.indexes_target_token_tokenized
     start, end = char_indices(token_idx=idx, tokens=tokens, target=tokens[idx])
-    return s.context_tokenized, start, end
+    return " ".join(tokens), start, end

@@ -5,7 +5,7 @@ import pandas as pd
 import json
 
 from src.config import Config
-from src.dataloader import DataLoader
+from src.dataset import Dataset
 from src.deepmistake import DeepMistake
 from src.lscd.results import Results
 from src.vector_model import VectorModel
@@ -15,19 +15,18 @@ from src.vector_model import VectorModel
 def main(cfg: DictConfig):
     config = Config(**OmegaConf.to_object(cfg))
 
-    dataset = DataLoader(config).load_dataset()
-    if config.model.name.lower() == "deep_mistake":
-        model = DeepMistake()
-    else:
-        model = VectorModel(config, dataset.targets)
-
+    dataset = Dataset(config)
+    model = (
+        DeepMistake() if config.model.lower() == "deep_mistake" 
+        else VectorModel(config, dataset.targets)
+    )
 
     predictions = {
-        target.name: config.model.measure(target, model, **config.model.measure.method_params)
+        target.name: config.measure(target, model, **config.measure.method_params)
         for target in sorted(dataset.targets, key=lambda target: target.name)
     }
 
-    labels = dict(zip(dataset.labels.lemma, dataset.labels[config.evaluation.task.value]))
+    labels = dict(zip(dataset.lscd_labels.lemma, dataset.lscd_labels[config.evaluation.task.value]))
     results = Results(config, predictions, labels)
     results.score()
 

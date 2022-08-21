@@ -1,27 +1,32 @@
+defaults:
+  - override hydra/job_logging: custom
+
+
 dataset:
   name: '???'
-  task: lscd
-  groupings: [1, 2]
-  preprocessing:
-    module: src/preprocessing.py
-    method: null
-    params: {}
-  cleaning:
-    stats: {}
-    method: all
+  version: 'latest'
+task: lscd
+groupings: [1, 2]
+test_targets: null
+preprocessing:
+  module: src/preprocessing.py
+  method: null
+  params: {}
+cleaning:
+  stats: {}
+  method: all
 
+gpu: null
 
-model:
-  gpu: null
-  name: '???'
-  layers: [1, -1]
-  layer_aggregation: average
-  measure:
-    module: src/measures.py
-    method: apd_compare_all
-    method_params: {}
-    sampling_params: {}
-  subword_aggregation: average
+model: '???'
+layers: [1, -1]
+layer_aggregation: average
+measure:
+  module: src/measures.py
+  method: apd_compare_all
+  method_params: {}
+  sampling_params: {}
+subword_aggregation: average
 
 evaluation:
   task: '???'
@@ -29,7 +34,7 @@ evaluation:
     module: src/threshold.py
     method: mean_std
     params:
-          t: 0.1
+      t: 0.1
 
 hydra:
   job:
