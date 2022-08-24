@@ -345,10 +345,9 @@ class DatasetConfig:
             return json.load(f)
     
     def __post_init_post_parse__(self) -> None:
-        if self.version == "latest":
-            if self.name is not None:
-                versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
-                self.version = versions[0]
+        if self.version == "latest" and self.name is not None:
+            versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
+            self.version = versions[0]
         if self.path is not None:
             self.path = utils.path(self.path)
             self.name = self.path.name

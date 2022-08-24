@@ -91,6 +91,6 @@ def cluster_jsd_merge_all(target: Target, model: DistanceModel, **clustering_par
         method=sklearn.cluster.KMeans,
         **clustering_params
     )
-
+    
     c1, c2 = cluster_model.split(target.grouping_combination, clusters, target.uses_to_grouping())
     return scipy.spatial.distance.jensenshannon(c1, c2, base=2.0)

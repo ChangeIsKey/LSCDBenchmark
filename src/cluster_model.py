@@ -10,7 +10,6 @@ class ClusterModel:
         self.use_pairs = use_pairs 
         self.distances = distances
         
-        
     # def cluster(self, method: Callable, **kwargs) -> Dict[ID, int]:
     #     """
     #     method: a clustering algorithm
@@ -30,3 +29,4 @@ class ClusterModel:
     @staticmethod
     def clustering_method_1(self, n_clusters: int) -> Dict[ID, int]:
         pass
+

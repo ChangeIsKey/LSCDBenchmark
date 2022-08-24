@@ -85,9 +85,7 @@ class Results:
 
     @aggregated_results.setter
     def aggregated_results(self, new: DataFrame):
-        path = self._aggregated_results_dir / "results.tsv"
         self._aggregated_results = new
-        self._aggregated_results.to_csv(path, sep="\t", index=False)
 
     def export(self, score: float, labels: List[float], predictions: List[float]):
         predictions = DataFrame(
@@ -98,4 +96,5 @@ class Results:
         self.aggregated_results = pd.concat(
             [self.aggregated_results, self.aggregated_results_row(score)], axis=0
         )
+        self.aggregated_results.to_csv(self._aggregated_results_dir / "results.tsv", sep="\t", index=False)
         Path("score.txt").write_text(str(score))
