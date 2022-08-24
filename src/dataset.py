@@ -27,17 +27,29 @@ class Dataset:
         self._agreements = None
         self._lscd_labels = None
         self._targets = None
+        self._wug_to_url = None
+        self._path = None
         self.__csv_params = dict(
             delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
         )
-        self._wug_to_url = None
-        
-        self.path = utils.path("wug") / self.config.dataset.name / self.config.dataset.version
-        self.path.parent.parent.mkdir(parents=True, exist_ok=True)
-
         if not self.path.exists():
-            self.__download()
-            self.__unzip(self.path.parent.parent)
+            if self.config.dataset.name in self.config.dataset.wug_to_url:
+                self.path.parent.parent.mkdir(parents=True, exist_ok=True)
+                self.__download()
+                self.__unzip(self.path.parent.parent)
+            else:
+                raise KeyError("dataset could not be found")
+
+    @property
+    def path(self) -> Path:
+        if self._path is None:
+            if self.config.dataset.path is not None:
+                self._path = self.config.dataset.path
+            else:
+                self._path = utils.path("wug") / self.config.dataset.name / self.config.dataset.version
+        return self._path
+            
+
 
     @property
     def translation_table(self) -> Dict[str, str]:
@@ -120,11 +132,12 @@ class Dataset:
     @property
     def lscd_labels(self) -> DataFrame:
         if self._lscd_labels is None:
-            path = self.path / "stats" / "semeval" / "stats_groupings.tsv"
+            stats_groupings =  "stats_groupings.tsv"
+            path = self.path / "stats" / "semeval" / stats_groupings
             if not path.exists():
-                path = self.path / "stats" / "opt" / "stats_groupings.tsv"
+                path = self.path / "stats" / "opt" / stats_groupings
             if not path.exists():
-                path = self.path / "stats" / "stats_groupings.tsv"
+                path = self.path / "stats" / stats_groupings
             self._lscd_labels = pd.read_csv(path, delimiter="\t", encoding="utf8")
         return self._lscd_labels
 
@@ -173,7 +186,7 @@ class Dataset:
 
             trans_table = self.translation_table
             self._targets = [
-                Target(config=self.config, name=target, translation_table=trans_table)
+                Target(config=self.config, name=target, translation_table=trans_table, path=self.path)
                 for target in tqdm(to_load, desc="Building targets", leave=False)
             ]
 

@@ -3,8 +3,9 @@ defaults:
 
 
 dataset:
-  name: '???'
+  name: null
   version: 'latest'
+  path: null
 task: lscd
 groupings: [1, 2]
 test_targets: null

@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import time
 from enum import Enum, unique
 from itertools import product
 from pathlib import Path
@@ -13,7 +14,7 @@ from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
 import numpy as np
 import pandas as pd
 from pandas import Series, DataFrame
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 from pydantic.dataclasses import dataclass
 
 import src.utils as utils
@@ -333,8 +334,9 @@ class EvaluationConfig:
 
 @dataclass
 class DatasetConfig:
-    name: str
     version: str
+    name: Optional[str] = None
+    path: Optional[Path] = None
 
     @property
     def wug_to_url(self) -> Dict[str, Dict[str, str]]:
@@ -342,11 +344,16 @@ class DatasetConfig:
         with path.open(mode="r") as f:
             return json.load(f)
     
-    def __post_init__(self) -> None:
+    def __post_init_post_parse__(self) -> None:
         if self.version == "latest":
-            versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
-            self.version = versions[0]
-
+            if self.name is not None:
+                versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
+                self.version = versions[0]
+        if self.path is not None:
+            self.path = utils.path(self.path)
+            self.name = self.path.name
+            self.version = time.ctime(self.path.stat().st_mtime)
+    
 
 class Config(BaseModel):
     layers: List[int]
