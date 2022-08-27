@@ -183,7 +183,6 @@ class Dataset:
                 to_load = [f.name for f in (self.path / "data").iterdir()]
 
             trans_table = self.translation_table
-            print(self.path)
             self._targets = [
                 Target(config=self.config, name=target, translation_table=trans_table, path=self.path)
                 for target in tqdm(to_load, desc="Building targets", leave=False)
