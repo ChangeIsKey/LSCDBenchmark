@@ -9,12 +9,12 @@ from enum import Enum, unique
 from itertools import product
 from pathlib import Path
 from typing import (TYPE_CHECKING, Any, Callable, Dict, Iterable, List,
-                    Optional, Tuple)
+                    Optional, Tuple, TypeAlias)
 
 import numpy as np
 import pandas as pd
-from pandas import Series, DataFrame
-from pydantic import BaseModel, Field, root_validator
+from pandas import DataFrame, Series
+from pydantic import BaseModel, Field
 from pydantic.dataclasses import dataclass
 
 import src.utils as utils
@@ -35,7 +35,8 @@ long2short = dict(
 )
 
 
-ID = str
+UseID: TypeAlias = str
+Grouping: TypeAlias = str
 
 
 @unique
@@ -48,7 +49,7 @@ class pairing(str, Enum):
     EARLIER = "EARLIER"
     LATER = "LATER"
 
-    def __call__(self, target: Target, sampling: sampling) -> Tuple[List[ID], List[ID]]:
+    def __call__(self, target: Target, sampling: sampling) -> Tuple[List[UseID], List[UseID]]:
         """
         Retrieves two lists of use IDs for different types of pairings.
         In general, you don't need to call this function manually.
@@ -121,7 +122,7 @@ class sampling(str, Enum):
 
     def __call__(
         self, pairing: pairing, target: Target, **kwargs
-    ) -> List[Tuple[ID, ID]]:
+    ) -> List[Tuple[UseID, UseID]]:
         """
         Retrieve use pairs following the specified strategy
         """
@@ -132,17 +133,17 @@ class sampling(str, Enum):
         elif self is self.sampled:
             return self.__sampled(target, pairing, **kwargs)
 
-    def __annotated(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
+    def __annotated(self, target: Target, pairing: pairing) -> List[Tuple[UseID, UseID]]:
         ids1, ids2 = pairing(target, self)
         return list(zip(ids1, ids2))
 
-    def __all(self, target: Target, pairing: pairing) -> List[Tuple[ID, ID]]:
+    def __all(self, target: Target, pairing: pairing) -> List[Tuple[UseID, UseID]]:
         ids1, ids2 = pairing(target, self)
         return list(product(ids1, ids2))
 
     def __sampled(
         self, target: Target, pairing: pairing, n: int = 100, replace: bool = True
-    ) -> List[Tuple[ID, ID]]:
+    ) -> List[Tuple[UseID, UseID]]:
         ids_1, ids_2 = pairing(target, self)
         pairs = []
         for _ in range(n):
@@ -362,7 +363,7 @@ class Config(BaseModel):
     dataset: DatasetConfig
     model: str
     evaluation: EvaluationConfig
-    groupings: Tuple[int, int]
+    groupings: Tuple[Grouping, Grouping]
     task: Task
     preprocessing: Preprocessing
     cleaning: Cleaning

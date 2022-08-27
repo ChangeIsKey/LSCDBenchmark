@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.config import ID, pairing, sampling
+from src.config import UseID, pairing, sampling
 from typing import Callable, List, Tuple, Union
 
 from src.lscd.target import Target
@@ -15,5 +15,5 @@ class DistanceModel(ABC):
         method: Callable,
         return_pairs: bool,
         **kwargs
-    ) -> Union[Tuple[List[Tuple[ID, ID]], List[float]], List[float]]:
+    ) -> Union[Tuple[List[Tuple[UseID, UseID]], List[float]], List[float]]:
         pass

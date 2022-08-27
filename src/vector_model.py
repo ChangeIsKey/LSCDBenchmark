@@ -13,7 +13,7 @@ from transformers import AutoModel, AutoTokenizer, BatchEncoding
 from transformers import logging as trans_logging
 
 import src.utils as utils
-from src.config import ID, Config, pairing, sampling
+from src.config import UseID, Config, pairing, sampling
 from src.distance_model import DistanceModel
 from src.lscd import Target
 
@@ -57,12 +57,6 @@ class VectorModel(DistanceModel):
                 self.config.model, use_fast=True, model_max_length=int(1e30)
             )
         return self._tokenizer
-
-    @tokenizer.setter
-    def tokenizer(self, other: str):
-        self._tokenizer = AutoTokenizer.from_pretrained(
-            other, use_fast=True, model_max_length=int(1e30)
-        )
 
     @property
     def model(self):
@@ -108,7 +102,7 @@ class VectorModel(DistanceModel):
 
     def clean_cache(self):
         valid_ids = set(self._index.id.tolist())
-        for file in utils.path(".cache").iterdir():
+        for file in self.index_dir.iterdir():
             if file.stem != "index" and file.stem not in valid_ids:
                 file.unlink()
 
@@ -140,7 +134,7 @@ class VectorModel(DistanceModel):
         pairing: pairing,
         method: Callable = distance.cosine,
         return_pairs: bool = False,
-    ) -> Union[Tuple[List[Tuple[ID, ID]], List[float]], List[float]]:
+    ) -> Union[Tuple[List[Tuple[UseID, UseID]], List[float]], List[float]]:
 
         ids = sampling(pairing, target, **self.config.measure.sampling_params)
         for id_pair in ids:
@@ -209,7 +203,7 @@ class VectorModel(DistanceModel):
         
 
     @property
-    def vectors(self) -> Dict[ID, np.array]:
+    def vectors(self) -> Dict[UseID, np.array]:
         if self._vectors is None:
             self._vectors = {}
 

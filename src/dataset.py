@@ -69,13 +69,13 @@ class Dataset:
                     u'æ': u'ae', u'Æ': u'Ae', u'göñ': u'gönn', 
                     u'spañ': u'spann'
                 }
-            case "english":
-                translation_table = {
-                    u' \'s': u'\'s', u' n\'t': u'n\'t', u' \'ve': u'\'ve', 
-                    u' \'d' : u'\'d', u' \'re': u'\'re', u' \'ll': u'\'ll'
-                }
-            case "swedish":
-                translation_table = {u' \'s': u'\'s'}
+            # case "english":
+            #     translation_table = {
+            #         u' \'s': u'\'s', u' n\'t': u'n\'t', u' \'ve': u'\'ve', 
+            #         u' \'d' : u'\'d', u' \'re': u'\'re', u' \'ll': u'\'ll'
+            #     }
+            # case "swedish":
+            #     translation_table = {u' \'s': u'\'s'}
             case _:
                 translation_table = {}
         return translation_table 
@@ -113,7 +113,7 @@ class Dataset:
             root = output_dir / namelist[0]
             root.mkdir(parents=True, exist_ok=True)
 
-            for filename in namelist:
+            for filename in tqdm(namelist, desc=f"Unzipping dataset '{self.config.dataset.name}' (version {self.config.dataset.version})"):
                 path = Path(filename)
                 f_parts = list(path.parts)
                 f_parts[f_parts.index(root.name)] = self.config.dataset.version
@@ -122,8 +122,6 @@ class Dataset:
 
                 if not filename.endswith("/"):
                     target_path.parent.mkdir(parents=True, exist_ok=True)
-                    if target_path.suffix == ".csv":
-                        target_path = target_path.with_suffix(".tsv")
                     with target_path.open(mode="wb") as file_obj:
                         shutil.copyfileobj(z.open(filename, mode="r"), file_obj)
                     
@@ -132,7 +130,7 @@ class Dataset:
     @property
     def lscd_labels(self) -> DataFrame:
         if self._lscd_labels is None:
-            stats_groupings =  "stats_groupings.tsv"
+            stats_groupings =  "stats_groupings.csv"
             path = self.path / "stats" / "semeval" / stats_groupings
             if not path.exists():
                 path = self.path / "stats" / "opt" / stats_groupings
@@ -144,7 +142,7 @@ class Dataset:
     @property
     def agreements(self) -> DataFrame:
         if self._agreements is None:
-            path = self.path / "stats" / "stats_agreement.tsv"
+            path = self.path / "stats" / "stats_agreement.csv"
             self._agreements = pd.read_csv(path, **self.__csv_params)
         return self._agreements
     
@@ -185,6 +183,7 @@ class Dataset:
                 to_load = [f.name for f in (self.path / "data").iterdir()]
 
             trans_table = self.translation_table
+            print(self.path)
             self._targets = [
                 Target(config=self.config, name=target, translation_table=trans_table, path=self.path)
                 for target in tqdm(to_load, desc="Building targets", leave=False)

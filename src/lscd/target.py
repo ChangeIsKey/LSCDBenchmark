@@ -2,10 +2,9 @@ import csv
 from typing import Dict
 
 from pathlib import Path
-import src.utils as utils
 import pandas as pd
 from pandas import DataFrame
-from src.config import ID, Config
+from src.config import UseID, Config, Grouping
 
 
 class Target:
@@ -28,10 +27,11 @@ class Target:
     def uses(self) -> DataFrame:
         if self._uses is None:
             # load uses
-            path = self.__wug / "data" / self.name / "uses.tsv"
-            if not path.exists():
-                path = path.with_suffix(".csv")
+            path = self.__wug / "data" / self.name / "uses.csv"
             self._uses = pd.read_csv(path, **self.__csv_params)
+            # filter by grouping
+            self._uses.grouping = self._uses.grouping.astype(Grouping)
+            self._uses = self._uses[self._uses.grouping.isin(self.config.groupings)]
             # preprocess uses
             self._uses = pd.concat([self._uses, self.uses.apply(self.config.preprocessing, axis=1, translation_table=self.translation_table)], axis=1)
         return self._uses
@@ -39,22 +39,18 @@ class Target:
     @property
     def judgments(self) -> DataFrame:
         if self._judgments is None:
-            path = self.__wug / "data" / self.name / "judgments.tsv"
-            if not path.exists():
-                path = path.with_suffix(".csv")
+            path = self.__wug / "data" / self.name / "judgments.csv"
             self._judgments = pd.read_csv(path, **self.__csv_params)
         return self._judgments
     
     @property
     def clusters(self) -> DataFrame:
         if self._clusters is None:
-            path = self.__wug / "clusters" / "opt" / f"{self.name}.tsv"
-            if not path.exists():
-                path = path.with_suffix(".csv")
+            path = self.__wug / "clusters" / "opt" / f"{self.name}.csv"
             self._clusters = pd.read_csv(path, **self.__csv_params)
         return self._clusters 
     
-    def uses_to_grouping(self) -> Dict[ID, int]:
+    def uses_to_grouping(self) -> Dict[UseID, Grouping]:
         uses_to_grouping = dict(zip(self.uses.identifier, self.uses.grouping))
 
         return {

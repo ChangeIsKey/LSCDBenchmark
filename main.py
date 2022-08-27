@@ -1,9 +1,9 @@
-import hydra
-from omegaconf import OmegaConf, DictConfig
-from tqdm import tqdm
-import pandas as pd
-import json
+import dotenv
+dotenv.load_dotenv()
 
+import hydra
+from omegaconf import DictConfig, OmegaConf
+import os
 from src.config import Config
 from src.dataset import Dataset
 from src.deepmistake import DeepMistake
