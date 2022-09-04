@@ -14,7 +14,6 @@ from src.vector_model import VectorModel
 @hydra.main(version_base=None, config_path="config", config_name="defaults")
 def main(cfg: DictConfig):
     config = Config(**OmegaConf.to_object(cfg))
-
     dataset = Dataset(config)
     model = (
         DeepMistake() if config.model.lower() == "deep_mistake" 
@@ -26,9 +25,7 @@ def main(cfg: DictConfig):
         for target in sorted(dataset.targets, key=lambda target: target.name)
     }
 
-    # labels = dict(zip(dataset.lscd_labels.lemma, dataset.lscd_labels[config.evaluation.task.value]))
-    
-    labels_clustering = 
+    labels = dict(zip(dataset.lscd_labels.lemma, dataset.lscd_labels[config.evaluation.task.value]))
     results = Results(config, predictions, labels)
     results.score()
 

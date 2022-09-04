@@ -3,11 +3,11 @@ import numpy as np
 import scipy
 import sklearn
 
-from src.config import pairing, sampling
+from src.config import Clustering, pairing, sampling
 from src.distance_model import DistanceModel
 from src.vector_model import VectorModel
 from src.lscd.target import Target
-from src.cluster_model import ClusterModel, clustering_Spectral
+from src.clustering import clustering_spectral, split_clusters
 import logging
 
 log = logging.getLogger(__name__)
@@ -73,21 +73,12 @@ def apd_compare_all_minus_all_annotated(target: Target, model: DistanceModel) ->
 diasense = apd_compare_all_minus_all_annotated
 
 
-def cluster_jsd_merge_all(target: Target, model: DistanceModel, **clustering_params):
-    # compare_pairs, compare_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE, return_pairs=True)
-    # later_pairs, later_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.LATER, return_pairs=True)
-    # earlier_pairs, earlier_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.EARLIER, return_pairs=True)
+def cluster_jsd(target: Target, model: DistanceModel, clustering: Clustering):
+    clusters = clustering(model, target)
     
-    # cluster_model = ClusterModel(
-    #     use_pairs=compare_pairs + later_pairs + earlier_pairs, 
-    #     distances=compare_distances + later_distances + earlier_distances
-    # )
-
-    clustering = clustering_Spectral(model, target)
+    c1, c2 = split_clusters(
+        clusters, 
+        target
+    )
     
-    c1, c2 = cluster_model.split(
-            clustering, 
-            target
-        )
-
     return scipy.spatial.distance.jensenshannon(c1, c2, base=2.0)

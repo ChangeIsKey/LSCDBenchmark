@@ -20,6 +20,7 @@ from pydantic.dataclasses import dataclass
 import src.utils as utils
 
 if TYPE_CHECKING:
+    from src.vector_model import VectorModel
     from src.distance_model import DistanceModel
     from src.lscd import Target
 
@@ -208,6 +209,19 @@ class Preprocessing:
     def __call__(self, s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
         return self.__method(s, translation_table, **self.params)
 
+@dataclass
+class Clustering:
+    module: str
+    method: Optional[str]
+    params: Dict[str, Any]
+
+    def __post_init_post_parse__(self):
+        module = utils.path(self.module)
+        self.__method = load_method(module, self.method, default=None)
+        self.method = str(self.method).lower()
+
+    def __call__(self, model: VectorModel, target: Target) -> Any:
+        return self.__method(model, target, **self.params)
 
 @dataclass
 class Measure:
@@ -215,14 +229,18 @@ class Measure:
     method: str
     sampling_params: Dict[str, Any]
     method_params: Dict[str, Any]
-
+    clustering: Optional[Clustering]
+    
     def __post_init_post_parse__(self):
         module = utils.path(self.module)
         self.__method = load_method(module, self.method, default=None)
         self.method = str(self.method).lower()
 
     def __call__(self, target: Target, model: DistanceModel):
-        return self.__method(target, model, **self.method_params)
+        if self.clustering.method is None:
+            return self.__method(target, model, **self.method_params)
+        else:
+            return self.__method(target, model, self.clustering)
     
 
 class ThresholdParam(str, Enum):

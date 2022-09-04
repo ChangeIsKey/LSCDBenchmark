@@ -27,6 +27,12 @@ measure:
   method: apd_compare_all
   method_params: {}
   sampling_params: {}
+
+  clustering:
+    module: src/clustering.py
+    method: null
+    params: {}
+
 subword_aggregation: average
 
 evaluation:
