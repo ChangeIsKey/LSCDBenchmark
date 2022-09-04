@@ -96,16 +96,17 @@ class pairing(str, Enum):
             )
 
         else:
-            if self is self.COMPARE:
-                ids_1 = target.uses[target.uses.grouping == target.grouping_combination[0]].identifier.tolist()
-                ids_2 = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
-                return ids_1, ids_2
-            elif self is self.EARLIER:
-                ids = target.uses[target.uses.grouping == target.grouping_combination[0]].identifier.tolist()
-                return ids, ids
-            elif self is self.LATER:
-                ids = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
-                return ids, ids
+            match self:
+                case self.COMPARE:
+                    ids_1 = target.uses[target.uses.grouping == target.grouping_combination[0]].identifier.tolist()
+                    ids_2 = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
+                    return ids_1, ids_2
+                case self.EARLIER:
+                    ids = target.uses[target.uses.grouping == target.grouping_combination[0]].identifier.tolist()
+                    return ids, ids
+                case self.LATER:
+                    ids = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
+                    return ids, ids
 
 
 @unique
@@ -126,12 +127,13 @@ class sampling(str, Enum):
         """
         Retrieve use pairs following the specified strategy
         """
-        if self is self.annotated:
-            return self.__annotated(target, pairing)
-        elif self is self.all:
-            return self.__all(target, pairing)
-        elif self is self.sampled:
-            return self.__sampled(target, pairing, **kwargs)
+        match self:
+            case self.annotated:
+                return self.__annotated(target, pairing)
+            case self.all:
+                return self.__all(target, pairing)
+            case self.sampled:
+                return self.__sampled(target, pairing, **kwargs)
 
     def __annotated(self, target: Target, pairing: pairing) -> List[Tuple[UseID, UseID]]:
         ids1, ids2 = pairing(target, self)
@@ -155,7 +157,7 @@ class sampling(str, Enum):
             )
         return pairs
 
-        
+ 
 def load_method(module: Path, method: Optional[str], default: Callable) -> Tuple[Callable, str]:
         module = utils.path(module)
         spec = importlib.util.spec_from_file_location(
