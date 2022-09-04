@@ -26,7 +26,9 @@ def main(cfg: DictConfig):
         for target in sorted(dataset.targets, key=lambda target: target.name)
     }
 
-    labels = dict(zip(dataset.lscd_labels.lemma, dataset.lscd_labels[config.evaluation.task.value]))
+    # labels = dict(zip(dataset.lscd_labels.lemma, dataset.lscd_labels[config.evaluation.task.value]))
+    
+    labels_clustering = 
     results = Results(config, predictions, labels)
     results.score()
 
