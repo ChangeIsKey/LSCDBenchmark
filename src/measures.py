@@ -7,7 +7,7 @@ from src.config import pairing, sampling
 from src.distance_model import DistanceModel
 from src.vector_model import VectorModel
 from src.lscd.target import Target
-from src.cluster_model import ClusterModel
+from src.cluster_model import ClusterModel, clustering_Spectral
 import logging
 
 log = logging.getLogger(__name__)
@@ -74,23 +74,20 @@ diasense = apd_compare_all_minus_all_annotated
 
 
 def cluster_jsd_merge_all(target: Target, model: DistanceModel, **clustering_params):
-    compare_pairs, compare_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE, return_pairs=True)
-    later_pairs, later_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.LATER, return_pairs=True)
-    earlier_pairs, earlier_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.EARLIER, return_pairs=True)
+    # compare_pairs, compare_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE, return_pairs=True)
+    # later_pairs, later_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.LATER, return_pairs=True)
+    # earlier_pairs, earlier_distances = model.distances(target=target, sampling=sampling.all, pairing=pairing.EARLIER, return_pairs=True)
     
-    cluster_model = ClusterModel(
-        use_pairs=compare_pairs + later_pairs + earlier_pairs, 
-        distances=compare_distances + later_distances + earlier_distances
-    )
+    # cluster_model = ClusterModel(
+    #     use_pairs=compare_pairs + later_pairs + earlier_pairs, 
+    #     distances=compare_distances + later_distances + earlier_distances
+    # )
 
-    # QUESTION how does the method passed to ClusterModel.cluster look like?
-    # Is it an sklearn function? Is it a function that calls a predefined method (from sklearn or some other library)?
+    clustering = clustering_Spectral(model, target)
     
-    clusters = cluster_model.cluster(
-        # the method is an example
-        method=sklearn.cluster.KMeans,
-        **clustering_params
-    )
-    
-    c1, c2 = cluster_model.split(target.grouping_combination, clusters, target.uses_to_grouping())
+    c1, c2 = cluster_model.split(
+            clustering, 
+            target
+        )
+
     return scipy.spatial.distance.jensenshannon(c1, c2, base=2.0)
