@@ -58,3 +58,10 @@ class Target:
             for identifier, value in uses_to_grouping.items() 
             if value in self.grouping_combination
         }
+
+    def grouping_to_uses(self) -> Dict[UseID, Grouping]:
+        uses_to_groupings = self.uses_to_grouping()
+        return {
+            group: [id_ for id_, grouping in uses_to_groupings.items() if grouping == group]
+            for group in self.grouping_combination
+        }
