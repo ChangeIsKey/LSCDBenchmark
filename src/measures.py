@@ -73,7 +73,7 @@ def apd_compare_all_minus_all_annotated(target: Target, model: DistanceModel) ->
 diasense = apd_compare_all_minus_all_annotated
 
 
-def cluster_jsd(target: Target, model: DistanceModel, clustering: Clustering):
+def cluster_jsd(target: Target, model: VectorModel, clustering: Clustering):
     clusters = clustering(model, target)
     
     c1, c2 = split_clusters(

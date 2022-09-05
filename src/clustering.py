@@ -9,7 +9,7 @@ from src.lscd.target import Target
 from src.vector_model import VectorModel
 
 
-def split_clusters(clustering: Dict[UseID, int], target: Target):
+def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.ndarray, np.ndarray]:
     """
     splits clusters into two groups according to `groupings` parameter
     """
@@ -31,7 +31,7 @@ def split_clusters(clustering: Dict[UseID, int], target: Target):
     for i, cluster in enumerate(c2):
         c2[i] = counts[cluster] / n_ids
 
-    return c1, c2        
+    return np.array(c1), np.array(c2)        
 
 
 def clustering_spectral(model: VectorModel, target: Target) -> Dict[UseID, int]:
