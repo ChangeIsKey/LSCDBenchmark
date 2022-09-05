@@ -11,8 +11,8 @@ class Target:
     def __init__(self, name: str, config: Config, translation_table: Dict[str, str], path: Path) -> None:
         self.config = config
         self.name = name
-        self.translation_table = translation_table
 
+        self.__translation_table = translation_table
         self.__wug = path
         self.__csv_params = dict(
             delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
@@ -33,7 +33,7 @@ class Target:
             self._uses.grouping = self._uses.grouping.astype(Grouping)
             self._uses = self._uses[self._uses.grouping.isin(self.config.groupings)]
             # preprocess uses
-            self._uses = pd.concat([self._uses, self.uses.apply(self.config.preprocessing, axis=1, translation_table=self.translation_table)], axis=1)
+            self._uses = pd.concat([self._uses, self.uses.apply(self.config.preprocessing, axis=1, translation_table=self.__translation_table)], axis=1)
         return self._uses
 
     @property
