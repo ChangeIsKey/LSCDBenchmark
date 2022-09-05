@@ -43,5 +43,5 @@ def clustering_spectral(model: VectorModel, target: Target) -> Dict[UseID, int]:
     ids = target.uses.identifier.tolist()
     vectors_usages = np.vstack([model.vectors[id] for id in ids])
     clustering.fit(vectors_usages)
-    n_labels = clustering.labels_
-    return dict(zip(ids, n_labels))
+    labels = clustering.labels_
+    return dict(zip(ids, labels))
