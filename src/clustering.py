@@ -5,7 +5,7 @@ from sklearn.cluster import SpectralClustering
 import numpy as np
 import scipy
 import networkx as nx
-import chinese_whispers as 
+import chinese_whispers as cw
 
 from src.config import UseID, Config, pairing, sampling
 from src.target import Target
