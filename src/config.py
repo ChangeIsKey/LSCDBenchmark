@@ -22,7 +22,7 @@ import src.utils as utils
 if TYPE_CHECKING:
     from src.vector_model import VectorModel
     from src.distance_model import DistanceModel
-    from src.lscd import Target
+    from src.target import Target
 
 long2short = dict(
     english="en",
@@ -85,12 +85,11 @@ class pairing(str, Enum):
                 ),
             }
 
-            conditions = [
-                f"grouping_x == {pairing_to_grouping[self.name][0]}",
-                f"grouping_y == {pairing_to_grouping[self.name][1]}",
+            judgments = judgments[
+                (judgments.grouping_x == pairing_to_grouping[self.name][0]) & 
+                (judgments.grouping_y == pairing_to_grouping[self.name][1])
             ]
 
-            judgments = judgments.query("&".join(conditions))
             return (
                 judgments.identifier1.tolist(),
                 judgments.identifier2.tolist(),
@@ -209,6 +208,7 @@ class Preprocessing:
     def __call__(self, s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
         return self.__method(s, translation_table, **self.params)
 
+
 @dataclass
 class Clustering:
     module: str
@@ -218,10 +218,11 @@ class Clustering:
     def __post_init_post_parse__(self):
         module = utils.path(self.module)
         self.__method = load_method(module, self.method, default=None)
-        self.method = str(self.method).lower()
+        # self.method = str(self.method).lower()
 
-    def __call__(self, model: VectorModel, target: Target) -> Any:
+    def __call__(self, model: DistanceModel, target: Target) -> Any:
         return self.__method(model, target, **self.params)
+
 
 @dataclass
 class Measure:
@@ -234,7 +235,7 @@ class Measure:
     def __post_init_post_parse__(self):
         module = utils.path(self.module)
         self.__method = load_method(module, self.method, default=None)
-        self.method = str(self.method).lower()
+        self.method_name = str(self.method).lower()
 
     def __call__(self, target: Target, model: DistanceModel):
         if self.clustering.method is None:
@@ -330,6 +331,12 @@ class LayerAggregator(str, Enum):
 class EvaluationTask(str, Enum):
     GRADED_CHANGE = "change_graded"
     BINARY_CHANGE = "change_binary"
+    SEMANTIC_PROXIMITY = "semantic_proximity"
+
+
+@dataclass
+class Truncation:
+    tokens_before: float
 
 
 @dataclass
@@ -382,6 +389,7 @@ class Config(BaseModel):
     subword_aggregation: SubwordAggregator
     dataset: DatasetConfig
     model: str
+    truncation: Truncation
     evaluation: EvaluationConfig
     groupings: Tuple[Grouping, Grouping]
     task: Task

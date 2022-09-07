@@ -3,10 +3,11 @@ from collections import Counter
 
 from sklearn.cluster import SpectralClustering
 import numpy as np
+import scipy
 
 from src.config import UseID, Config
-from src.lscd.target import Target
-from src.vector_model import VectorModel
+from src.target import Target
+from src.vector_model import DistanceModel
 
 
 def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.ndarray, np.ndarray]:
@@ -17,31 +18,30 @@ def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.nda
     groupings = target.grouping_combination
     grouping_to_uses = target.grouping_to_uses()
 
+    groups = [
+        [clustering[id] for id in grouping_to_uses[groupings[0]]],
+        [clustering[id] for id in grouping_to_uses[groupings[1]]]
+    ]
 
-    clusters = list(clustering.values())
-    
-    counts = Counter(clusters)
-    n_ids = len(target.uses.identifier.tolist())
-    
-    c1 = [clustering[id] for id in grouping_to_uses[groupings[0]]]
-    for i, cluster in enumerate(c1):
-        c1[i] = counts[cluster] / n_ids
-        
-    c2 = [clustering[id] for id in grouping_to_uses[groupings[1]]]
-    for i, cluster in enumerate(c2):
-        c2[i] = counts[cluster] / n_ids
+    for i, group in enumerate(groups):
+        counts = Counter(group)
+        n = len(group)
+        for j, cluster in enumerate(group):
+            groups[i][j] = counts[cluster] / n
 
-    return np.array(c1), np.array(c2)        
+    return tuple(groups)
+ 
 
-
-def clustering_spectral(model: VectorModel, target: Target) -> Dict[UseID, int]:
+def clustering_spectral(model: DistanceModel, target: Target) -> Dict[UseID, int]:
     n_clusters = len(target.clusters.cluster.unique())
-    clustering = SpectralClustering(n_clusters=n_clusters,
-                                    assign_labels="kmeans", 
-                                    random_state=0)
+    clustering = SpectralClustering(
+        n_clusters=n_clusters, 
+        assign_labels="kmeans",
+        affinity="precomputed"
+    )
 
     ids = target.uses.identifier.tolist()
-    vectors_usages = np.vstack([model.vectors[id] for id in ids])
-    clustering.fit(vectors_usages)
-    labels = clustering.labels_
+    distance_matrix = model.distance_matrix(target)
+    labels = clustering.fit_predict(distance_matrix)
+
     return dict(zip(ids, labels))

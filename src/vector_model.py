@@ -15,7 +15,7 @@ from transformers import logging as trans_logging
 import src.utils as utils
 from src.config import UseID, Config, pairing, sampling
 from src.distance_model import DistanceModel
-from src.lscd import Target
+from src.target import Target
 
 trans_logging.set_verbosity_error()
 
@@ -44,9 +44,7 @@ class VectorModel(DistanceModel):
     def device(self):
         if self._device is None:
             self._device = torch.device(
-                "cpu"
-                if self.config.gpu is None
-                else f"cuda:{self.config.gpu}"
+                "cpu" if self.config.gpu is None else f"cuda:{self.config.gpu}"
             )
         return self._device
 
@@ -75,7 +73,15 @@ class VectorModel(DistanceModel):
                 self._index = pd.read_csv(path, engine="pyarrow")
             else:
                 self._index = DataFrame(
-                    columns=["model", "target", "id", "preprocessing", "dataset_name", "dataset_version"],
+                    columns=[
+                        "model",
+                        "target",
+                        "id",
+                        "preprocessing",
+                        "dataset_name",
+                        "dataset_version",
+                        "tokens_before",
+                    ],
                 )
             self.clean_cache()
         return self._index
@@ -90,6 +96,7 @@ class VectorModel(DistanceModel):
                     "preprocessing": self.config.preprocessing.method,
                     "dataset_name": self.config.dataset.name,
                     "dataset_version": self.config.dataset.version,
+                    "tokens_before": self.config.truncation.tokens_before,
                 }
             ]
         )
@@ -109,13 +116,12 @@ class VectorModel(DistanceModel):
     def truncation_indices(
         self,
         target_subword_indices: List[bool],
-        p_before: float = 0.95,
     ) -> Tuple[int, int]:
 
         max_tokens = 512
         n_target_subtokens = target_subword_indices.count(True)
         tokens_before = int(
-            (max_tokens - n_target_subtokens) * p_before
+            (max_tokens - n_target_subtokens) * self.config.truncation.tokens_before
         )
         tokens_after = max_tokens - tokens_before - n_target_subtokens
 
@@ -142,6 +148,7 @@ class VectorModel(DistanceModel):
                 self._distances[target.name][sampling][pairing][id_pair] = method(
                     self.vectors[id_pair[0]], self.vectors[id_pair[1]]
                 )
+
         if return_pairs:
             return list(self._distances[target.name][sampling][pairing].keys()), list(
                 self._distances[target.name][sampling][pairing].values()
@@ -156,7 +163,8 @@ class VectorModel(DistanceModel):
             & (self.index.preprocessing == self.config.preprocessing.method)
             & (self.index.dataset_name == self.config.dataset.name)
             & (self.index.dataset_version == self.config.dataset.version)
-        ) 
+            & (self.index.tokens_before == self.config.truncation.tokens_before)
+        )
         row = self.index[mask]
 
         if not row.empty:
@@ -167,7 +175,9 @@ class VectorModel(DistanceModel):
 
         return None
 
-    def store_embeddings(self, target: Target, embeddings: Dict[str, np.ndarray]) -> None:
+    def store_embeddings(
+        self, target: Target, embeddings: Dict[str, np.ndarray]
+    ) -> None:
         ids = self.index.id.tolist()
         while True:
             id_ = str(uuid.uuid4())
@@ -185,13 +195,9 @@ class VectorModel(DistanceModel):
 
                 break
 
-        
-
     def tokenize(self, use: Series) -> BatchEncoding:
         return self.tokenizer.encode_plus(
-            text=use.context_preprocessed, 
-            return_tensors="pt", 
-            add_special_tokens=True
+            text=use.context_preprocessed, return_tensors="pt", add_special_tokens=True
         ).to(self.device)
 
     def aggregate(self, embedding: np.ndarray) -> np.ndarray:
@@ -200,7 +206,6 @@ class VectorModel(DistanceModel):
             .squeeze()
             .take(self.config.layers, axis=0)
         )
-        
 
     @property
     def vectors(self) -> Dict[UseID, np.array]:

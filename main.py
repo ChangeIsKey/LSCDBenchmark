@@ -2,12 +2,12 @@ import dotenv
 dotenv.load_dotenv()
 
 import hydra
+from tqdm import tqdm
 from omegaconf import DictConfig, OmegaConf
-import os
 from src.config import Config
 from src.dataset import Dataset
 from src.deepmistake import DeepMistake
-from src.lscd.results import Results
+from src.results import Results
 from src.vector_model import VectorModel
 
 
@@ -20,13 +20,10 @@ def main(cfg: DictConfig):
         else VectorModel(config, dataset.targets)
     )
 
-    predictions = {
-        target.name: config.measure(target, model, **config.measure.method_params)
-        for target in sorted(dataset.targets, key=lambda target: target.name)
-    }
-
-    labels = dict(zip(dataset.lscd_labels.lemma, dataset.lscd_labels[config.evaluation.task.value]))
-    results = Results(config, predictions, labels)
+    predictions = [config.measure(target, model, **config.measure.method_params) 
+                   for target in tqdm(dataset.targets, desc="Computing predictions", leave=False)]
+    predictions = {k: v for d in predictions for k, v in d.items()}
+    results = Results(config=config, predictions=predictions, labels=dataset.labels)
     results.score()
 
 

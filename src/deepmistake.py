@@ -1,7 +1,7 @@
 from typing import Callable, List, Tuple, Union
 from src.config import UseID, pairing, sampling
 from src.distance_model import DistanceModel
-from src.lscd.target import Target
+from src.target import Target
 
 
 class DeepMistake(DistanceModel):
