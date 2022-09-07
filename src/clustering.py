@@ -53,9 +53,10 @@ def clustering_chinese_whispers(_: DistanceModel, target: Target) -> Dict[UseID,
     edges = []
     judgments = target.judgments.fillna(0)
     for _, item in judgments.iterrows():
+        id1, id2 = item["identifier1"], item["identifier2"]
         records = judgments[
-            ((judgments.identifier1 == item["identifier1"]) & (judgments.identifier2 == item["identifier2"])) | 
-            ((judgments.identifier1 == item["identifier2"]) & (judgments.identifier2 == item["identifier1"]))
+            ((judgments.identifier1 == id1) & (judgments.identifier2 == id2)) | 
+            ((judgments.identifier1 == id2) & (judgments.identifier2 == id1))
         ]
         mean = records["judgment"].mean()
         edges.append((item["identifier1"], item["identifier2"], mean))
