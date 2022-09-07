@@ -50,9 +50,8 @@ def clustering_spectral(model: DistanceModel, target: Target) -> Dict[UseID, int
 
 def clustering_chinese_whispers(_: DistanceModel, target: Target) -> Dict[UseID, int]:
     # create the edges with their weights
-
     edges = []
-    judgments = target.judgments.replace(np.nan, 0)
+    judgments = target.judgments.fillna(0)
     for _, item in judgments.iterrows():
         records = judgments[
             ((judgments.identifier1 == item["identifier1"]) & (judgments.identifier2 == item["identifier2"])) | 
