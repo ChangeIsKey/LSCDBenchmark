@@ -10,6 +10,8 @@ from sklearn.cluster import SpectralClustering
 from src.config import Config, UseID, pairing, sampling
 from src.target import Target
 from src.vector_model import DistanceModel, VectorModel
+from src._correlation import cluster_correlation_search
+from utils import _check_nan_weights_exits
 
 
 def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.ndarray, np.ndarray]:
@@ -74,3 +76,72 @@ def clustering_chinese_whispers(_: DistanceModel, target: Target) -> Dict[UseID,
     result = dict(zip(new_ids, new_labels))
     return result
 
+
+def correlation_clustering(
+    _: DistanceModel, 
+    target: Target,
+    **params,
+):
+
+    # max_senses: int = 10,
+    # max_attempts: int = 200,
+    # max_iters: int = 5000,
+    # initial: list = [],
+    # split_flag=True
+
+    """Clusters the graph using the correlation clustering algorithm.
+    Parameters
+    ----------
+    graph: networkx.Graph
+        The graph for which to calculate the cluster labels
+    max_senses: int
+        The maximum number of senses a word can have
+    max_attempts: int
+        Number of restarts for optimization
+    max_iters: int
+        Maximum number of iterations for optimization
+    initial: list
+        Initial cluster labels (optional)
+    split_flag: bool
+        If True, non evidence clusters will be splitted
+    Returns
+    -------
+    classes : list[Set[int]]
+        A list of sets of nodes, where each set is a cluster
+    Raises
+    ------
+    ValueError
+        If the graph contains non-value weights
+    """
+
+    edges = []
+    judgments = target.judgments.fillna(0)
+    for _, item in judgments.iterrows():
+        id1, id2 = item["identifier1"], item["identifier2"]
+        records = judgments[
+            ((judgments.identifier1 == id1) & (judgments.identifier2 == id2)) | 
+            ((judgments.identifier1 == id2) & (judgments.identifier2 == id1))
+        ]
+        mean = records["judgment"].mean()
+        edges.append((item["identifier1"], item["identifier2"], mean))
+    
+    G = nx.Graph()
+    for id1, id2, weight in edges:
+        G.add_edge(id1, id2, weight=weight)
+
+    if _check_nan_weights_exits(G):
+        raise ValueError(
+            "NaN weights are not supported by the correlation clustering method."
+        )
+
+    clusters, _ = cluster_correlation_search(
+        G, 
+        params["max_senses"], 
+        params["max_attempts"], 
+        params["max_iters"], 
+        params["initial"], 
+        params["split_flag"]
+    )
+
+    print(clusters)
+    return clusters
