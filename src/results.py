@@ -49,41 +49,6 @@ class Results:
             case EvaluationTask.SEMANTIC_PROXIMITY:
                 pass
 
-    @property
-    def aggregated_results(self):
-        if self._aggregated_results is None:
-            path = self._aggregated_results_dir / "results.tsv"
-            self._aggregated_results = (
-                pd.read_csv(path, engine="pyarrow", sep="\t")
-                if path.exists()
-                else DataFrame()
-            )
-        return self._aggregated_results
-
-    def aggregated_results_row(self, score: float):
-        # convert the config into a flat dictionary with keys ready for a csv export
-        if self.config.evaluation.task is EvaluationTask.GRADED_CHANGE:
-            self.config.evaluation.binary_threshold = None
-        [dict_cfg] = pd.json_normalize(
-            json.loads(self.config.json(exclude_none=True, exclude_unset=True)), sep="."
-        ).to_dict(orient="records")
-
-        return DataFrame(
-            [
-                {
-                    "date": date.today().strftime("%d/%m/%Y"),
-                    "time": datetime.now().strftime("%H:%M:%S"),
-                    "score": score,
-                    "n_targets": len(self.keys),
-                    **dict_cfg,
-                }
-            ]
-        )
-
-    @aggregated_results.setter
-    def aggregated_results(self, new: DataFrame):
-        self._aggregated_results = new
-
     def export(self, score: float):
         predictions = DataFrame(
             data={
@@ -94,10 +59,4 @@ class Results:
         )
 
         predictions.to_csv("predictions.tsv", sep="\t", index=False)
-        # self.aggregated_results = pd.concat(
-        #     [self.aggregated_results, self.aggregated_results_row(score)], axis=0
-        # )
-        # self.aggregated_results.to_csv(
-        #     self._aggregated_results_dir / "results.tsv", sep="\t", index=False
-        # )
         Path("score.txt").write_text(str(score))
