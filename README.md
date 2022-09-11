@@ -1,3 +1,6 @@
+WARNING: Outdated documentation
+
+
 # LSCDBenchmark
 
 ## Details on dataset:
