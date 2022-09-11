@@ -395,5 +395,5 @@ class Config(BaseModel):
     task: Task
     preprocessing: Preprocessing
     cleaning: Cleaning
-    test_targets: Optional[List[str]] = None
+    test_targets: Optional[List[str] | int] = None
     gpu: Optional[int] = Field(exclude=True)

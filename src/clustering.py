@@ -11,7 +11,7 @@ from src.config import Config, UseID, pairing, sampling
 from src.target import Target
 from src.vector_model import DistanceModel, VectorModel
 from src._correlation import cluster_correlation_search
-from utils import _check_nan_weights_exits
+from src.utils import _check_nan_weights_exits
 
 
 def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.ndarray, np.ndarray]:
@@ -45,40 +45,30 @@ def clustering_spectral(model: DistanceModel, target: Target) -> Dict[UseID, int
     )
 
     ids = target.uses.identifier.tolist()
-    distance_matrix = model.distance_matrix(target)
+    distance_matrix = model.distance_matrix(target).to_numpy()
     labels = clustering.fit_predict(distance_matrix)
     return dict(zip(ids, labels))
 
 
-def clustering_chinese_whispers(_: DistanceModel, target: Target) -> Dict[UseID, int]:
-    # create the edges with their weights
-    edges = []
-    judgments = target.judgments.fillna(0)
-    for _, item in judgments.iterrows():
-        id1, id2 = item["identifier1"], item["identifier2"]
-        records = judgments[
-            ((judgments.identifier1 == id1) & (judgments.identifier2 == id2)) | 
-            ((judgments.identifier1 == id2) & (judgments.identifier2 == id1))
-        ]
-        mean = records["judgment"].mean()
-        edges.append((item["identifier1"], item["identifier2"], mean))
-    
+def clustering_chinese_whispers(model: DistanceModel, target: Target) -> Dict[UseID, int]:
+    distance_matrix = model.distance_matrix(target)
+    ids = distance_matrix.index
     G = nx.Graph()
-    for id1, id2, weight in edges:
-        G.add_edge(id1, id2, weight=weight)
-
+    for id1 in ids:
+        for id2 in ids:
+            G.add_edge(id1, id2, weight=distance_matrix.loc[id1, id2])
     cw.chinese_whispers(G, weighting="top")
     new_ids = []
     new_labels = []
     for label, values in cw.aggregate_clusters(G).items():
         new_ids.extend(list(values))
-        new_labels.extend([label for i in range(len(list(values)))])
+        new_labels.extend([label for _ in range(len(list(values)))])
     result = dict(zip(new_ids, new_labels))
     return result
 
 
 def correlation_clustering(
-    _: DistanceModel, 
+    model: DistanceModel, 
     target: Target,
     **params,
 ):
@@ -114,34 +104,18 @@ def correlation_clustering(
         If the graph contains non-value weights
     """
 
-    edges = []
-    judgments = target.judgments.fillna(0)
-    for _, item in judgments.iterrows():
-        id1, id2 = item["identifier1"], item["identifier2"]
-        records = judgments[
-            ((judgments.identifier1 == id1) & (judgments.identifier2 == id2)) | 
-            ((judgments.identifier1 == id2) & (judgments.identifier2 == id1))
-        ]
-        mean = records["judgment"].mean()
-        edges.append((item["identifier1"], item["identifier2"], mean))
-    
+    distance_matrix = model.distance_matrix(target)
+    ids = distance_matrix.index
     G = nx.Graph()
-    for id1, id2, weight in edges:
-        G.add_edge(id1, id2, weight=weight)
+    for id1 in ids:
+        for id2 in ids:
+            G.add_edge(id1, id2, weight=distance_matrix.loc[id1, id2])
 
     if _check_nan_weights_exits(G):
         raise ValueError(
             "NaN weights are not supported by the correlation clustering method."
         )
 
-    clusters, _ = cluster_correlation_search(
-        G, 
-        params["max_senses"], 
-        params["max_attempts"], 
-        params["max_iters"], 
-        params["initial"], 
-        params["split_flag"]
-    )
+    clusters, _ = cluster_correlation_search(G, **params)
 
-    print(clusters)
-    return clusters
+    return {id_: i for i, cluster in enumerate(clusters) for id_ in cluster}

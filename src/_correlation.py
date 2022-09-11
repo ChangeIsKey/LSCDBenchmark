@@ -13,12 +13,12 @@ import mlrose
 
 
 def cluster_correlation_search(
-    G: nx.Graph, s=10, max_attempts=200, max_iters=5000, initial=[], split_flag=True
+    G: nx.Graph, max_senses=10, max_attempts=200, max_iters=5000, initial=[], split_flag=True
 ):
     """
     Apply correlation clustering. Assumes that negative edges have weights < 0, and positive edges have weights >= 0, that edges with nan have been removed and that weights are stored under edge attribute G[i][j]['weight'].
     :param G: graph
-    :param s: maximal number of senses a word can have
+    :param max_senses: maximal number of senses a word can have
     :param max_attempts: number of restarts for optimization
     :param max_iters: number of iterations for optimization
     :param initial: optional clustering for initialization
@@ -30,34 +30,20 @@ def cluster_correlation_search(
     stats = {}
     G = G.copy()
 
-    if (
-        initial == []
-    ):  # initialize with connected components unless initial clustering is provided
-        classes = cluster_connected_components(G)
-    else:
-        classes = initial
+    classes = cluster_connected_components(G) if (initial == []) else initial
 
     n2i = {node: i for i, node in enumerate(G.nodes())}
-    i2n = {i: node for i, node in enumerate(G.nodes())}
+    i2n = dict(enumerate(G.nodes()))
     n2c = {n2i[node]: i for i, cluster in enumerate(classes) for node in cluster}
 
-    edges_positive = set(
-        [
-            (n2i[i], n2i[j], G[i][j]["weight"])
-            for (i, j) in G.edges()
-            if G[i][j]["weight"] >= 0.0
-        ]
-    )
-    edges_negative = set(
-        [
-            (n2i[i], n2i[j], G[i][j]["weight"])
-            for (i, j) in G.edges()
-            if G[i][j]["weight"] < 0.0
-        ]
-    )
+    edges_positive = {(n2i[i], n2i[j], G[i][j]["weight"]) for (i, j) in G.edges() if G[i][j]["weight"] >= 0.0}
+
+    edges_negative = {(n2i[i], n2i[j], G[i][j]["weight"]) for (i, j) in G.edges() if G[i][j]["weight"] < 0.0}
 
     Linear_loss = Loss(
-        "linear_loss", edges_positive=edges_positive, edges_negative=edges_negative
+        "linear_loss", 
+        edges_positive=edges_positive, 
+        edges_negative=edges_negative
     )
     # conflict_loss = test_loss
 
@@ -70,13 +56,14 @@ def cluster_correlation_search(
         classes.sort(key=lambda x: -len(x))  # sort by size
         end_time = time.time()
         stats["runtime"] = (end_time - start_time) / 60
-        stats = stats | {
-            "s": s,
-            "max_attempts": max_attempts,
-            "max_iters": max_iters,
-            "split_flag": split_flag,
+        stats |= {
+            "max_senses": max_senses, 
+            "max_attempts": max_attempts, 
+            "max_iters": max_iters, 
+            "split_flag": split_flag, 
             "runtime": (end_time - start_time) / 60,
         }
+
         return classes, stats
 
     l2s = defaultdict(lambda: [])
@@ -92,7 +79,7 @@ def cluster_correlation_search(
         Linear_loss.optimize_simulated_annealing,
         [
             (n, classes, G.nodes(), init_state, max_attempts, max_iters)
-            for n in range(2, s)
+            for n in range(2, max_senses)
         ],
     )
     pool.close()
@@ -128,13 +115,8 @@ def cluster_correlation_search(
     classes.sort(key=lambda x: -len(x))  # sort by size
 
     end_time = time.time()
-    stats = stats | {
-        "s": s,
-        "max_attempts": max_attempts,
-        "max_iters": max_iters,
-        "split_flag": split_flag,
-        "runtime": (end_time - start_time) / 60,
-    }
+    stats |= {"max_senses": max_senses, "max_attempts": max_attempts, "max_iters": max_iters, "split_flag": split_flag, "runtime": (end_time - start_time) / 60,}
+
 
     # print(stats['runtime'])
 
@@ -175,40 +157,35 @@ class Loss(object):
         return 50.0
 
     def linear_loss(self, state):
-        loss_pos = np.sum(
-            [w for (i, j, w) in self.edges_positive if state[i] != state[j]]
-        )
-        loss_neg = np.sum(
-            [abs(w) for (i, j, w) in self.edges_negative if state[i] == state[j]]
-        )
-        loss = loss_pos + loss_neg
-        return loss
+        loss_pos = np.sum([w for i, j, w in self.edges_positive if state[i] != state[j]])
+
+        loss_neg = np.sum([abs(w) for i, j, w in self.edges_negative if state[i] == state[j]])
+
+        return loss_pos + loss_neg
 
     def binary_loss(self, state):
-        loss_pos = len([1 for (i, j, w) in self.edges_positive if state[i] != state[j]])
-        loss_neg = len([1 for (i, j, w) in self.edges_negative if state[i] == state[j]])
+        loss_pos = len([1 for i, j, w in self.edges_positive if state[i] != state[j]])
+        loss_neg = len([1 for i, j, w in self.edges_negative if state[i] == state[j]])
         if self.signs == ["pos", "neg"]:
-            loss = loss_pos + loss_neg
+            return loss_pos + loss_neg
         elif self.signs == ["pos"]:
-            loss = loss_pos
+            return loss_pos
         elif self.signs == ["neg"]:
-            loss = loss_neg
+            return loss_neg
         else:
-            loss = float("nan")
-        return loss
+            return float("nan")
 
     def binary_loss_poles(self, state):
-        loss_min = len([1 for (i, j, w) in self.edges_min if state[i] == state[j]])
-        loss_max = len([1 for (i, j, w) in self.edges_max if state[i] != state[j]])
+        loss_min = len([1 for i, j, w in self.edges_min if state[i] == state[j]])
+        loss_max = len([1 for i, j, w in self.edges_max if state[i] != state[j]])
         if self.signs == ["min", "max"]:
-            loss = loss_min + loss_max
+            return loss_min + loss_max
         elif self.signs == ["min"]:
-            loss = loss_min
+            return loss_min
         elif self.signs == ["max"]:
-            loss = loss_max
+            return loss_max
         else:
-            loss = float("nan")
-        return loss
+            return float("nan")
 
     def optimize_simulated_annealing(
         self, n, classes, nodes, init_state, max_attempts, max_iters
