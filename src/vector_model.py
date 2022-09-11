@@ -227,6 +227,8 @@ class VectorModel(DistanceModel):
                         log.info(
                             f"PROCESSING USE `{use.identifier}`: {use.context_preprocessed}"
                         )
+                        log.info(f"Target character indices: ({use.target_index_begin}, {use.target_index_end})")
+                        log.info(f"Context slice corresponding to target indices: {use.context_preprocessed[use.target_index_begin:use.target_index_end]}")
                         
                         encoding = self.tokenize(use)
                         input_ids = encoding["input_ids"].to(self.device)
@@ -243,6 +245,7 @@ class VectorModel(DistanceModel):
                             if span is not None else False
                             for span in subword_spans
                         ]
+
 
                         # truncate input if the model cannot handle it
                         if len(tokens) > 512:

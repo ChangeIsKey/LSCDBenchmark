@@ -218,7 +218,7 @@ class Clustering:
     def __post_init_post_parse__(self):
         module = utils.path(self.module)
         self.__method = load_method(module, self.method, default=None)
-        # self.method = str(self.method).lower()
+        self.method = str(self.method).lower()
 
     def __call__(self, model: DistanceModel, target: Target) -> Any:
         return self.__method(model, target, **self.params)
@@ -238,7 +238,7 @@ class Measure:
         self.method_name = str(self.method).lower()
 
     def __call__(self, target: Target, model: DistanceModel):
-        if self.clustering.method is None:
+        if self.clustering.method == "none":  # None is converted to "none" in Clustering.__post_init_post_parse__
             return self.__method(target, model, **self.method_params)
         else:
             return self.__method(target, model, self.clustering)

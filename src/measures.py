@@ -18,7 +18,7 @@ def cos(target: Target, model: VectorModel) -> Dict[str, float]:
     later = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
     earlier_vectors = np.mean([model.vectors[use] for use in earlier], axis=0)
     later_vectors = np.mean([model.vectors[use] for use in later], axis=0)
-    return scipy.spatial.distance.cosine(earlier_vectors, later_vectors)
+    return {target.name: scipy.spatial.distance.cosine(earlier_vectors, later_vectors)}
 
 def semantic_proximity(target: Target, model: DistanceModel) -> Dict[Tuple[UseID, UseID], float]:
     compare_pairs, compare_distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE, return_pairs=True)

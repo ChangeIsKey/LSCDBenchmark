@@ -8,7 +8,6 @@ src/lscd/__pycache__/
 envs/
 outputs/
 multirun/*
-results/
 *__pycache__*
 .conda/
 .env
