@@ -56,7 +56,7 @@ def clustering_chinese_whispers(model: DistanceModel, target: Target) -> Dict[Us
     G = nx.Graph()
     for id1 in ids:
         for id2 in ids:
-            G.add_edge(id1, id2, weight=distance_matrix.loc[id1, id2])
+            G.add_edge(id1, id2, weight=(-1 *(distance_matrix.loc[id1, id2]-1)))
     cw.chinese_whispers(G, weighting="top")
     new_ids = []
     new_labels = []
@@ -109,7 +109,7 @@ def correlation_clustering(
     G = nx.Graph()
     for id1 in ids:
         for id2 in ids:
-            G.add_edge(id1, id2, weight=distance_matrix.loc[id1, id2])
+            G.add_edge(id1, id2, weight=(-1 *(distance_matrix.loc[id1, id2]-1)))
 
     if _check_nan_weights_exits(G):
         raise ValueError(
