@@ -29,16 +29,16 @@ class DistanceModel(ABC):
             compare_pairs + later_pairs + earlier_pairs, 
             compare_distances + later_distances + earlier_distances
         ))
-        
-        ids = sorted(set([id_ for l in list(pairs_to_distances.keys()) for id_ in l]))
+
+        ids = sorted({id_ for l in list(pairs_to_distances.keys()) for id_ in l})
         n_ids = len(ids)
 
         distance_matrix = np.zeros((n_ids, n_ids))
         for i, id1 in enumerate(ids):
             for j, id2 in enumerate(ids):
                 try:
-                    distance_matrix[i, j] = pairs_to_distances[(id1, id2)]
+                    distance_matrix[i, j] = pairs_to_distances[id1, id2]
                 except KeyError:
-                    distance_matrix[i, j] = pairs_to_distances[(id2, id1)]
-        return distance_matrix
+                    distance_matrix[i, j] = pairs_to_distances[id2, id1]
+        return DataFrame(distance_matrix, index=ids, columns=ids)
 

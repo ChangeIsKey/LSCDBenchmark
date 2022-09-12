@@ -217,14 +217,18 @@ class Dataset:
         if self._targets is None:
             to_load = []
 
-            if self.config.test_targets is not None:
-                to_load = self.config.test_targets
-            elif len(self.config.cleaning.stats) > 0:
+            if len(self.config.cleaning.stats) > 0:
                 agreements = self.stats_agreement.iloc[1:, :].copy()  # remove "data=full" row
                 agreements = self.config.cleaning(agreements)
                 to_load = agreements.data.unique().tolist()
             else:
-                to_load = self.graded_change_labels.keys()
+                to_load = list(self.graded_change_labels.keys())
+
+            if self.config.test_targets is not None:
+                if isinstance(self.config.test_targets, int):
+                    to_load = to_load[:self.config.test_targets]
+                elif isinstance(self.config.test_targets, list):
+                    to_load = self.config.test_targets
             
             trans_table = self.translation_table
             self._targets = [
