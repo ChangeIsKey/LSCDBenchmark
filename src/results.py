@@ -46,6 +46,10 @@ class Results:
                 )
                 self.export(score=f1)
                 return f1
+            
+            case EvaluationTask.CLUSTERING:
+                pass
+            
             case EvaluationTask.SEMANTIC_PROXIMITY:
                 pass
 

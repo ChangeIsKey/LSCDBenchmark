@@ -7,7 +7,7 @@ from src.config import Clustering, UseID, pairing, sampling
 from src.distance_model import DistanceModel
 from src.vector_model import VectorModel
 from src.target import Target
-from src.clustering import clustering_spectral, split_clusters
+from src.clustering import split_clusters
 import logging
 
 log = logging.getLogger(__name__)
@@ -25,10 +25,12 @@ def semantic_proximity(target: Target, model: DistanceModel) -> Dict[Tuple[UseID
     later_pairs, later_distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER, return_pairs=True)
     earlier_pairs, earlier_distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER, return_pairs=True)
 
-    return dict(zip(
+    pairs_to_distances = dict(zip(
         compare_pairs + later_pairs + earlier_pairs, 
         compare_distances + later_distances + earlier_distances
     ))
+
+    return pairs_to_distances
 
 def apd_compare_all(target: Target, model: DistanceModel) -> Dict[str, float]:
     return {target.name: np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE)).item()}
@@ -82,7 +84,7 @@ def apd_compare_all_minus_all_annotated(target: Target, model: DistanceModel) ->
 diasense = apd_compare_all_minus_all_annotated
 
 
-def cluster_jsd(target: Target, model: VectorModel, clustering: Clustering) -> Dict[str, float]:
+def cluster_jsd(target: Target, model: DistanceModel, clustering: Clustering) -> Dict[str, float]:
     clusters = clustering(model, target)
     c1, c2 = split_clusters(
         clusters, 

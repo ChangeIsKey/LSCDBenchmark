@@ -332,6 +332,7 @@ class EvaluationTask(str, Enum):
     GRADED_CHANGE = "change_graded"
     BINARY_CHANGE = "change_binary"
     SEMANTIC_PROXIMITY = "semantic_proximity"
+    CLUSTERING = "clustering"
 
 
 @dataclass
