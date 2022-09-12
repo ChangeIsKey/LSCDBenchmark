@@ -25,12 +25,10 @@ def semantic_proximity(target: Target, model: DistanceModel) -> Dict[Tuple[UseID
     later_pairs, later_distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER, return_pairs=True)
     earlier_pairs, earlier_distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER, return_pairs=True)
 
-    pairs_to_distances = dict(zip(
+    return dict(zip(
         compare_pairs + later_pairs + earlier_pairs, 
         compare_distances + later_distances + earlier_distances
     ))
-
-    return pairs_to_distances
 
 def apd_compare_all(target: Target, model: DistanceModel) -> Dict[str, float]:
     return {target.name: np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE)).item()}

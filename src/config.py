@@ -143,19 +143,9 @@ class sampling(str, Enum):
         ids1, ids2 = pairing(target, self)
         return list(product(ids1, ids2))
 
-    def __sampled(
-        self, target: Target, pairing: pairing, n: int = 100, replace: bool = True
-    ) -> List[Tuple[UseID, UseID]]:
+    def __sampled(self, target: Target, pairing: pairing, n: int = 100, replace: bool = True) -> List[Tuple[UseID, UseID]]:
         ids_1, ids_2 = pairing(target, self)
-        pairs = []
-        for _ in range(n):
-            pairs.append(
-                (
-                    np.random.choice(ids_1, replace=replace),
-                    np.random.choice(ids_2, replace=replace),
-                )
-            )
-        return pairs
+        return [(np.random.choice(ids_1, replace=replace), np.random.choice(ids_2, replace=replace)) for _ in range(n)]
 
  
 def load_method(module: Path, method: Optional[str], default: Callable) -> Tuple[Callable, str]:
@@ -383,6 +373,13 @@ class DatasetConfig:
             self.version = time.ctime(self.path.stat().st_mtime)
     
 
+
+@dataclass
+class Orthography:
+    normalize: bool
+    translation_table: Dict[str, Dict[str, str]]
+
+
 class Config(BaseModel):
     layers: List[int]
     layer_aggregation: LayerAggregator
@@ -390,6 +387,7 @@ class Config(BaseModel):
     subword_aggregation: SubwordAggregator
     dataset: DatasetConfig
     model: str
+    orthography: Orthography
     truncation: Truncation
     evaluation: EvaluationConfig
     groupings: Tuple[Grouping, Grouping]

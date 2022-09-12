@@ -23,7 +23,6 @@ class Dataset:
     def __init__(self, config: Config):
         self.config = config
         self.groupings = self.config.groupings
-
         self._stats_groupings = None
         self._uses = None
         self._judgments = None
@@ -35,16 +34,14 @@ class Dataset:
         self._targets = None
         self._wug_to_url = None
         self._path = None
-        self.__csv_params = dict(
-            delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
-        )
+        self.__csv_params = dict(delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+
         if not self.path.exists():
-            if self.config.dataset.name in self.config.dataset.wug_to_url:
-                self.path.parent.parent.mkdir(parents=True, exist_ok=True)
-                self.__download()
-                self.__unzip(self.path.parent.parent)
-            else:
+            if self.config.dataset.name not in self.config.dataset.wug_to_url:
                 raise KeyError("dataset could not be found")
+            self.path.parent.parent.mkdir(parents=True, exist_ok=True)
+            self.__download()
+            self.__unzip(self.path.parent.parent)
 
     @property
     def path(self) -> Path:
@@ -66,26 +63,12 @@ class Dataset:
         }
         
         language = dataset2lang.get(self.config.dataset.name)
-        match language:
-            case "german":
-                translation_table = {
-                    u'aͤ': u'ä', u'oͤ': u'ö', u'uͤ': u'ü', 
-                    u'Aͤ': u'Ä', u'Oͤ': u'Ö', u'Uͤ': u'Ü',
-                    u'ſ': u's', u'\ua75b': u'r', u'm̃': u'mm', 
-                    u'æ': u'ae', u'Æ': u'Ae', u'göñ': u'gönn', 
-                    u'spañ': u'spann'
-                }
-            # case "english":
-            #     translation_table = {
-            #         u' \'s': u'\'s', u' n\'t': u'n\'t', u' \'ve': u'\'ve', 
-            #         u' \'d' : u'\'d', u' \'re': u'\'re', u' \'ll': u'\'ll'
-            #     }
-            # case "swedish":
-            #     translation_table = {u' \'s': u'\'s'}
-            case _:
-                translation_table = {}
-        return translation_table 
-
+        if self.config.orthography.normalize:
+            translation_table = self.config.orthography.translation_table.get(language, {})
+            return translation_table
+        return {}
+        
+        
     @property
     def url(self) -> str:
         return self.config.dataset.wug_to_url[self.config.dataset.name][self.config.dataset.version]

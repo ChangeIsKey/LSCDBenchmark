@@ -63,8 +63,7 @@ def clustering_chinese_whispers(model: DistanceModel, target: Target) -> Dict[Us
     for label, values in cw.aggregate_clusters(G).items():
         new_ids.extend(list(values))
         new_labels.extend([label for _ in range(len(list(values)))])
-    result = dict(zip(new_ids, new_labels))
-    return result
+    return dict(zip(new_ids, new_labels))
 
 
 def correlation_clustering(
@@ -72,13 +71,6 @@ def correlation_clustering(
     target: Target,
     **params,
 ):
-
-    # max_senses: int = 10,
-    # max_attempts: int = 200,
-    # max_iters: int = 5000,
-    # initial: list = [],
-    # split_flag=True
-
     """Clusters the graph using the correlation clustering algorithm.
     Parameters
     ----------
