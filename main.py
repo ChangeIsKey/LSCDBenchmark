@@ -20,8 +20,7 @@ def main(cfg: DictConfig):
         else VectorModel(config, dataset.targets)
     )
 
-    predictions = [config.measure(target, model, **config.measure.method_params) 
-                   for target in tqdm(dataset.targets, desc="Computing predictions", leave=False)]
+    predictions = [config.measure(target, model) for target in tqdm(dataset.targets, desc="Computing predictions", leave=False)]
     predictions = {k: v for d in predictions for k, v in d.items()}
     results = Results(config=config, predictions=predictions, labels=dataset.labels)
     results.score()
