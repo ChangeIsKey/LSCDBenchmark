@@ -16,3 +16,4 @@ conda/
 .cache/
 
 analysis/
+results/results.csv

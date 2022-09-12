@@ -55,13 +55,12 @@ if __name__ == "__main__":
                     results = process_experiment(experiment, date_time, results) 
 
 
+    results["score"] = results["score"].round(decimals=10)
     first_cols = ["time", "score", "n_targets"]
     cols = first_cols  + [col for col in results.columns.tolist() if col not in first_cols]
     results = results[cols]
-    results["time"] = results["time"].apply(pd.Timestamp)
-    results["groupings"] = results["groupings"].astype(str)
-    results["layers"] = results["layers"].astype(str)
-    results["score"] = results["score"].round(decimals=10)
+    for col in cols:
+        results[col] = results[col].astype(str)
     results.sort_values(by="time", inplace=True, ascending=False)
     results.drop(columns=["gpu", "dataset.path"] + [col for col in results.columns if col.endswith(".module")], inplace=True)
 
