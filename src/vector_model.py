@@ -1,6 +1,8 @@
 import logging
+import os
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Dict, List, Tuple, Union
 
 import numpy as np
@@ -13,7 +15,7 @@ from transformers import AutoModel, AutoTokenizer, BatchEncoding
 from transformers import logging as trans_logging
 
 import src.utils as utils
-from src.config import UseID, Config, pairing, sampling
+from src.config import Config, UseID, pairing, sampling
 from src.distance_model import DistanceModel
 from src.target import Target
 
@@ -33,12 +35,17 @@ class VectorModel(DistanceModel):
 
         self.targets = targets
         self._distances = {
-            target.name: {s: {p: dict() for p in pairing} for s in sampling}
+            target.name: {s: {p: {} for p in pairing} for s in sampling}
             for target in self.targets
         }
         self.config = config
-        self.index_dir = utils.path(".cache")
-        self.index_dir.mkdir(exist_ok=True)
+
+    @property
+    def index_dir(self) -> Path:
+        path = os.getenv("BENCHMARK_CACHE")
+        path = utils.path(".cache") if path is None else Path(path)
+        path.mkdir(exist_ok=True)
+        return path
 
     @property
     def device(self):
