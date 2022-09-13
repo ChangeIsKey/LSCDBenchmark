@@ -23,7 +23,4 @@ def _check_nan_weights_exits(graph: nx.Graph):
     flag: bool
         True if there are NaN weights, False otherwise
     """
-    for edge in graph.edges:
-        if np.isnan(graph.get_edge_data(*edge)['weight']):
-            return True
-    return False
+    return any(np.isnan(graph.get_edge_data(*edge)['weight']) for edge in graph.edges)

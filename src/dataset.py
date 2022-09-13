@@ -1,21 +1,23 @@
 import csv
-from fnmatch import translate
-from gettext import translation
 import json
 import os
-import os
-from typing import List, Dict
-from pathlib import Path
-import zipfile
-import requests
-import pandas as pd
-from pandas import DataFrame
-from tqdm import tqdm
 import shutil
+import zipfile
+from fnmatch import translate
+from gettext import translation
+from pathlib import Path
+from typing import Dict, List, Tuple
 
+import pandas as pd
+import pandera as pa
+import requests
+from pandas import DataFrame
+from pandera import Column, DataFrameSchema
+from tqdm import tqdm
+
+import src.utils as utils
 from src.config import Config, EvaluationTask, Task
 from src.target import Target
-import src.utils as utils
 
 
 class Dataset:
@@ -134,9 +136,32 @@ class Dataset:
                 path = self.path / "stats" / stats_groupings
             self._stats_groupings = pd.read_csv(path, **self.__csv_params)
         return self._stats_groupings
+    
+    @property
+    def stats_groupings_schema(self) -> DataFrameSchema:
+        def validate_grouping(s: str) -> bool:
+            parts = s.split("_")
+            return len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit()
+
+        schema = DataFrameSchema({
+            "lemma": Column(str),
+            "grouping": Column(str, checks=pa.Check(check_fn=validate_grouping))
+        })
+
+        match self.config.evaluation.task:
+            case EvaluationTask.GRADED_CHANGE:
+                return schema.add_columns({
+                    "change_graded": Column(float)
+                })
+            case EvaluationTask.BINARY_CHANGE:
+                return schema.add_columns({
+                    "change_binary": Column(float)
+                })
+            case _:
+                return schema
 
     @property
-    def graded_change_labels(self):
+    def graded_change_labels(self) -> Dict[str, float]:
         if self._gc_labels is None:
             self._gc_labels = dict(zip(
                 self.stats_groupings.lemma, 
@@ -145,7 +170,7 @@ class Dataset:
         return self._gc_labels
             
     @property
-    def binary_change_labels(self):
+    def binary_change_labels(self) -> Dict[str, float]:
         if self._bc_labels is None:
             self._bc_labels = dict(zip(
                 self.stats_groupings.lemma, 
@@ -154,20 +179,21 @@ class Dataset:
         return self._bc_labels
         
     @property
-    def semantic_proximity_labels(self):
+    def semantic_proximity_labels(self) -> Dict[Tuple[str, str], float]:
         if self._sp_labels is None:
             annotated_pairs = list(zip(self.judgments.identifier1, self.judgments.identifier2))
             self._sp_labels = dict(zip(annotated_pairs, self.judgments["judgment"]))
         return self._sp_labels
     
     @property
-    def labels(self) -> DataFrame:
+    def labels(self) -> Dict[str | Tuple[str, str], float]:
         match self.config.evaluation.task:
             case EvaluationTask.GRADED_CHANGE:
-                return self.graded_change_labels
+                return self.stats_groupings_schema.validate(self.graded_change_labels)
             case EvaluationTask.BINARY_CHANGE:
-                return self.binary_change_labels
+                return self.stats_groupings_schema.validate(self.binary_change_labels)
             case EvaluationTask.SEMANTIC_PROXIMITY:
+                # the judgments should already have been validated
                 return self.semantic_proximity_labels
 
     @property
