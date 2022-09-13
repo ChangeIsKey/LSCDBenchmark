@@ -34,7 +34,7 @@ orthography:
       Æ: Ae
       göñ: gönn
       spañ: spann
-    english:
+    # english:
     #   " \'s": "\'s" 
     #   " n\'t": "n\'t" 
     #   " \'ve": "\'ve" 
@@ -52,7 +52,7 @@ gpu: null
 truncation:
   tokens_before: 0.5
 
-model: '???'
+model: ???
 layers: [1, -1]
 layer_aggregation: average
 measure:
