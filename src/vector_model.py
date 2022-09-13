@@ -43,7 +43,7 @@ class VectorModel(DistanceModel):
     @property
     def index_dir(self) -> Path:
         path = os.getenv("BENCHMARK_CACHE")
-        path = utils.path(".cache") if path is None else Path(path)
+        path = Path(path) if path is not None else utils.path(".cache")
         path.mkdir(exist_ok=True)
         return path
 
@@ -163,7 +163,7 @@ class VectorModel(DistanceModel):
         else:
             return list(self._distances[target.name][sampling][pairing].values())
 
-    def retrieve_embeddings(self, target: Target) -> np.ndarray | None:
+    def retrieve_embeddings(self, target: Target) -> Dict[str, np.ndarray] | None:
         mask = (
             (self.index.model == self.config.model)
             & (self.index.target == target.name)
@@ -215,7 +215,7 @@ class VectorModel(DistanceModel):
         )
 
     @property
-    def vectors(self) -> Dict[UseID, np.array]:
+    def vectors(self) -> Dict[UseID, np.ndarray]:
         if self._vectors is None:
             self._vectors = {}
 
@@ -238,7 +238,7 @@ class VectorModel(DistanceModel):
                         log.info(f"Context slice corresponding to target indices: {use.context_preprocessed[use.target_index_begin:use.target_index_end]}")
                         
                         encoding = self.tokenize(use)
-                        input_ids = encoding["input_ids"].to(self.device)
+                        input_ids = encoding["input_ids"].to(self.device)  # type: ignore
                         tokens = encoding.tokens()
                         subword_spans = [
                             encoding.token_to_chars(i) for i in range(len(tokens))
