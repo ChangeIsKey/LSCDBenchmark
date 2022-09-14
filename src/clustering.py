@@ -6,12 +6,15 @@ import networkx as nx
 import numpy as np
 import scipy
 from sklearn.cluster import SpectralClustering
+import graph_tool
+from graph_tool.inference import minimize_blockmodel_dl
+from graph_tool.inference.blockmodel import BlockState
 
 from src.config import Config, UseID, pairing, sampling
 from src.target import Target
 from src.vector_model import DistanceModel, VectorModel
 from src._correlation import cluster_correlation_search
-from src.utils import _check_nan_weights_exits
+from src.utils import _check_nan_weights_exits, _negative_weights_exist
 
 
 def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.ndarray, np.ndarray]:
@@ -119,3 +122,51 @@ def correlation_clustering(
     clusters, _ = cluster_correlation_search(G, **params)
 
     return {id_: i for i, cluster in enumerate(clusters) for id_ in cluster}
+
+
+def wsbm_clustering(
+    model: DistanceModel, 
+    target: Target, 
+    distribution: str = "discrete-binomial", 
+    **params):
+
+    distance_matrix = model.distance_matrix(target)
+    ids = distance_matrix.index
+    graph = nx.Graph()
+    for id1 in ids:
+        for id2 in ids:
+            G.add_edge(id1, id2, weight=(distance_matrix.loc[id1, id2]))
+
+    if _negative_weights_exist(graph):
+        raise ValueError("Negative weights are not supported by the WSBM algorithm.")
+
+    if _check_nan_weights_exits(graph):
+        raise ValueError("NaN weights are not supported by the WSBM algorithm.")
+
+    gt_graph, _, gt2nx = _nxgraph_to_graphtoolgraph(graph.copy())
+    state: BlockState = _minimize(gt_graph, distribution)
+
+    block2clusterid_map = {}
+    for i, (k, _) in enumerate(
+        dict(
+            sorted(
+                Counter(state.get_blocks().get_array()).items(),
+                key=lambda item: item[1],
+                reverse=True,
+            )
+        ).items()
+    ):
+        block2clusterid_map[k] = i
+
+    communities = {}
+    for i, block_id in enumerate(state.get_blocks().get_array()):
+        nx_vertex_id = gt2nx[i]
+        community_id = block2clusterid_map[block_id]
+        if communities.get(community_id, None) is None:
+            communities[community_id] = []
+        communities[community_id].append(nx_vertex_id)
+
+    classes = [set(v) for _, v in communities.items()]
+    classes.sort(key=lambda x: len(x), reverse=True)
+
+    return classes
