@@ -14,7 +14,12 @@ from src.config import Config, UseID, pairing, sampling
 from src.target import Target
 from src.vector_model import DistanceModel, VectorModel
 from src._correlation import cluster_correlation_search
-from src.utils import _check_nan_weights_exits, _negative_weights_exist
+from src.utils import (
+    _check_nan_weights_exits, 
+    _negative_weights_exist, 
+    _minimize, 
+    _nxgraph_to_graphtoolgraph
+)
 
 
 def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.ndarray, np.ndarray]:
