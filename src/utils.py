@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any, Callable
 
 import hydra
 import networkx as nx
@@ -7,7 +6,7 @@ import numpy as np
 
 
 def path(path: str) -> Path:
-    return Path(hydra.utils.to_absolute_path(path))
+    return Path(hydra.utils.to_absolute_path(path)).resolve()
 
 def xor(a: bool, b: bool):
     return (a and not b) or (not a and b)

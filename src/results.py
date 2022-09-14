@@ -1,13 +1,12 @@
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, Any, Optional
 
-from datetime import date, datetime
-import json
+import numpy as np
 import scipy.stats as stats
 import sklearn.metrics as metrics
-import pandas as pd
 from pandas import DataFrame
-from src.config import Config, EvaluationConfig, EvaluationTask
+from src.config.config import Config
+from src.config.evaluation.task import EvaluationTask
 import src.utils as utils
 
 
@@ -29,6 +28,9 @@ class Results:
 
     def score(self):
         match self.config.evaluation.task:
+            case None:
+                self.export(score=None)
+                return np.nan
             case EvaluationTask.GRADED_CHANGE:
                 spearman, p = stats.spearmanr(self.labels, self.predictions)
                 self.export(score=spearman)
@@ -46,14 +48,14 @@ class Results:
                 )
                 self.export(score=f1)
                 return f1
-            
+
             case EvaluationTask.CLUSTERING:
                 pass
-            
+
             case EvaluationTask.SEMANTIC_PROXIMITY:
                 pass
 
-    def export(self, score: float):
+    def export(self, score: Optional[float]):
         predictions = DataFrame(
             data={
                 "target": self.keys,
@@ -63,4 +65,7 @@ class Results:
         )
 
         predictions.to_csv("predictions.tsv", sep="\t", index=False)
-        Path("score.txt").write_text(str(score))
+
+        if score is not None:
+            score = str(score)
+            Path("score.txt").write_text(score)

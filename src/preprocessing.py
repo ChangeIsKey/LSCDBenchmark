@@ -1,13 +1,15 @@
-from typing import Dict, List, Tuple
-
 from pandas import Series
 
-def clean_context(context: str, translation_table: Dict[str, str]) -> str:
+def keep_intact(s: Series, _: dict[str, str]) -> tuple[str, int, int]:
+    start, end = tuple(map(int, s.indexes_target_token.split(":")))
+    return s.context, start, end
+
+def clean_context(context: str, translation_table: dict[str, str]) -> str:
     for key, replacement in translation_table.items():
         context = context.replace(key, replacement)
     return context
 
-def char_indices(token_idx: int, tokens: List[str], target: str) -> Tuple[int, int]:
+def char_indices(token_idx: int, tokens: list[str], target: str) -> tuple[int, int]:
     char_idx = -1
     for i, token in enumerate(tokens):
         if i == token_idx:
@@ -21,7 +23,7 @@ def char_indices(token_idx: int, tokens: List[str], target: str) -> Tuple[int, i
     raise ValueError
 
 
-def toklem(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
+def toklem(s: Series, translation_table: dict[str, str]) -> tuple[str, int, int]:
     tokens = clean_context(s.context_tokenized, translation_table).split()
     target = s.lemma.split("_")[0]
     start, end = char_indices(
@@ -31,7 +33,7 @@ def toklem(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]
     return " ".join(tokens), start, end
 
 
-def lemmatize(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
+def lemmatize(s: Series, translation_table: dict[str, str]) -> tuple[str, int, int]:
     context_preprocessed = clean_context(s.context_lemmatized, translation_table)
     tokens = context_preprocessed.split()
 
@@ -43,7 +45,7 @@ def lemmatize(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, i
     return context_preprocessed, start, end
 
 
-def tokenize(s: Series, translation_table: Dict[str, str]) -> Tuple[str, int, int]:
+def tokenize(s: Series, translation_table: dict[str, str]) -> tuple[str, int, int]:
     tokens = clean_context(s.context_tokenized, translation_table).split()
     idx = s.indexes_target_token_tokenized
     start, end = char_indices(token_idx=idx, tokens=tokens, target=tokens[idx])

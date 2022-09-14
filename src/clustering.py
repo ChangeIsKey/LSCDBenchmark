@@ -1,15 +1,14 @@
 from collections import Counter
-from typing import Callable, Dict, List, Tuple
+from typing import Dict, Tuple
 
 import chinese_whispers as cw
 import networkx as nx
 import numpy as np
-import scipy
 from sklearn.cluster import SpectralClustering
 
-from src.config import Config, UseID, pairing, sampling
+from src.config.config import UseID
 from src.target import Target
-from src.vector_model import DistanceModel, VectorModel
+from src.vector_model import DistanceModel
 from src._correlation import cluster_correlation_search
 from src.utils import _check_nan_weights_exits
 
@@ -66,7 +65,7 @@ def clustering_chinese_whispers(model: DistanceModel, target: Target) -> Dict[Us
     return dict(zip(new_ids, new_labels))
 
 
-def correlation_clustering(
+def clustering_correlation(
     model: DistanceModel, 
     target: Target,
     **params,

@@ -1,12 +1,11 @@
 from __future__ import annotations
-from pydantic.dataclasses import dataclass, Field
+from pydantic import Field, BaseModel
 from enum import Enum
 from typing import Dict, List
 from pandas import DataFrame
 
 
-@dataclass
-class Cleaning:
+class Cleaning(BaseModel):
     stats: Dict[str, Cleaning.CleaningParam]
     method: Cleaning.BooleanMethod = Field(default_factory=lambda: Cleaning.BooleanMethod.ALL)
 
@@ -25,8 +24,7 @@ class Cleaning:
                 return agreements.query("|".join(conditions))
 
 
-    @dataclass
-    class CleaningParam:
+    class CleaningParam(BaseModel):
         threshold: float
         keep: Cleaning.ThresholdParam = Field(default_factory=lambda: Cleaning.ThresholdParam.ABOVE)
 
