@@ -13,7 +13,6 @@ from src.vector_model import VectorModel
 
 @hydra.main(version_base=None, config_path="config", config_name="defaults")
 def main(cfg: DictConfig):
-    print(cfg)
     config = Config(**OmegaConf.to_object(cfg))
     dataset = Dataset(config)
     model = (
@@ -21,8 +20,7 @@ def main(cfg: DictConfig):
         else VectorModel(config, dataset.targets)
     )
 
-    predictions = [config.model.measure(target, model) for target in tqdm(dataset.targets, desc="Computing predictions", leave=False)]
-    predictions = {k: v for d in predictions for k, v in d.items()}
+    predictions = model.predict(dataset.targets)
     results = Results(config=config, predictions=predictions, labels=dataset.labels)
     results.score()
 

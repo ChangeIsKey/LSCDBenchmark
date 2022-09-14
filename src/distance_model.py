@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Callable, TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING, Any
 from pandas import DataFrame
 import numpy as np
 from src.target import Target, Sampling, Pairing
-
-
-if TYPE_CHECKING:
-    from src.config.config import UseID 
+from src.config.config import Config, UseID
+from tqdm import tqdm
 
 class DistanceModel(ABC):
+    @property
+    @abstractmethod
+    def config(self) -> Config:
+        pass
+
     @abstractmethod
     def distances(
         self,
@@ -18,7 +21,7 @@ class DistanceModel(ABC):
         method: Callable,
         return_pairs: bool,
         **kwargs
-    ) -> tuple[list[tuple["UseID", "UseID"]], list[float]] | list[float]:
+    ) -> tuple[list[tuple[UseID, UseID]], list[float]] | list[float]:
         pass
 
     def distance_matrix(self, target: Target) -> DataFrame:
@@ -43,3 +46,6 @@ class DistanceModel(ABC):
                     distance_matrix[i, j] = pairs_to_distances[id2, id1]
         return DataFrame(distance_matrix, index=ids, columns=ids)
 
+    def predict(self, targets: list[Target]) -> dict[Any, float]:
+        predictions = [self.config.model.measure(target, self) for target in tqdm(targets, desc="Computing predictions", leave=False)]
+        return {k: v for d in predictions for k, v in d.items()}

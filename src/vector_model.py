@@ -41,6 +41,14 @@ class VectorModel(DistanceModel):
         self.config = config
 
     @property
+    def config(self) -> Config:
+        return self._config
+    
+    @config.setter
+    def config(self, other: Config) -> None:
+        self._config = other
+
+    @property
     def index_dir(self) -> Path:
         path = os.getenv("BENCHMARK_CACHE")
         path = Path(path) if path is not None else utils.path(".cache")
