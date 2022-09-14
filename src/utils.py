@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any, Callable
 
 import hydra
 import networkx as nx
@@ -7,7 +6,7 @@ import numpy as np
 
 
 def path(path: str) -> Path:
-    return Path(hydra.utils.to_absolute_path(path))
+    return Path(hydra.utils.to_absolute_path(path)).resolve()
 
 def xor(a: bool, b: bool):
     return (a and not b) or (not a and b)
@@ -23,7 +22,4 @@ def _check_nan_weights_exits(graph: nx.Graph):
     flag: bool
         True if there are NaN weights, False otherwise
     """
-    for edge in graph.edges:
-        if np.isnan(graph.get_edge_data(*edge)['weight']):
-            return True
-    return False
+    return any(np.isnan(graph.get_edge_data(*edge)['weight']) for edge in graph.edges)

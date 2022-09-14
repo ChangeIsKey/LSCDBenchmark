@@ -15,9 +15,9 @@ from transformers import AutoModel, AutoTokenizer, BatchEncoding
 from transformers import logging as trans_logging
 
 import src.utils as utils
-from src.config import Config, UseID, pairing, sampling
+from src.config.config import Config, UseID
 from src.distance_model import DistanceModel
-from src.target import Target
+from src.target import Target, Sampling, Pairing
 
 trans_logging.set_verbosity_error()
 
@@ -35,7 +35,7 @@ class VectorModel(DistanceModel):
 
         self.targets = targets
         self._distances = {
-            target.name: {s: {p: {} for p in pairing} for s in sampling}
+            target.name: {s: {p: {} for p in Pairing} for s in Sampling}
             for target in self.targets
         }
         self.config = config
@@ -143,34 +143,36 @@ class VectorModel(DistanceModel):
     def distances(
         self,
         target: Target,
-        sampling: sampling,
-        pairing: pairing,
+        sampling: Sampling,
+        pairing: Pairing,
         method: Callable = distance.cosine,
         return_pairs: bool = False,
     ) -> Union[Tuple[List[Tuple[UseID, UseID]], List[float]], List[float]]:
 
-        ids = sampling(pairing, target, **self.config.measure.sampling_params)
-        for id_pair in ids:
-            if id_pair not in self._distances[target.name][sampling][pairing]:
-                self._distances[target.name][sampling][pairing][id_pair] = method(
-                    self.vectors[id_pair[0]], self.vectors[id_pair[1]]
+        use_pairs = target.use_pairs(pairing, sampling, **self.config.model.measure.params)
+        for id1, id2 in use_pairs:
+            if (id1, id2) not in self._distances[target.name][sampling][pairing]:
+                self._distances[target.name][sampling][pairing][(id1, id2)] = method(
+                    self.vectors[id1], 
+                    self.vectors[id2]
                 )
 
         if return_pairs:
-            return list(self._distances[target.name][sampling][pairing].keys()), list(
-                self._distances[target.name][sampling][pairing].values()
+            return (
+                list(self._distances[target.name][sampling][pairing].keys()), 
+                list(self._distances[target.name][sampling][pairing].values())
             )
         else:
             return list(self._distances[target.name][sampling][pairing].values())
 
     def retrieve_embeddings(self, target: Target) -> Dict[str, np.ndarray] | None:
         mask = (
-            (self.index.model == self.config.model)
+            (self.index.model == self.config.model.name)
             & (self.index.target == target.name)
-            & (self.index.preprocessing == self.config.preprocessing.method)
+            & (self.index.preprocessing == self.config.dataset.preprocessing.method)
             & (self.index.dataset_name == self.config.dataset.name)
             & (self.index.dataset_version == self.config.dataset.version)
-            & (self.index.tokens_before == self.config.truncation.tokens_before)
+            & (self.index.tokens_before == self.config.model.truncation.tokens_before)
         )
         row = self.index[mask]
 
@@ -208,10 +210,10 @@ class VectorModel(DistanceModel):
         ).to(self.device)
 
     def aggregate(self, embedding: np.ndarray) -> np.ndarray:
-        return self.config.layer_aggregation(
-            self.config.subword_aggregation(embedding)
+        return self.config.model.layer_aggregation(
+            self.config.model.subword_aggregation(embedding)
             .squeeze()
-            .take(self.config.layers, axis=0)
+            .take(self.config.model.layers, axis=0)
         )
 
     @property

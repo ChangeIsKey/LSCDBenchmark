@@ -1,12 +1,12 @@
-from typing import Callable, Dict, Tuple
+from typing import Dict, Tuple
 import numpy as np
 import scipy
-import sklearn
 
-from src.config import Clustering, UseID, pairing, sampling
+from src.config.model.clustering import Clustering
+from src.config.config import UseID
 from src.distance_model import DistanceModel
 from src.vector_model import VectorModel
-from src.target import Target
+from src.target import Target, Sampling, Pairing
 from src.clustering import split_clusters
 import logging
 
@@ -21,9 +21,9 @@ def cos(target: Target, model: VectorModel) -> Dict[str, float]:
     return {target.name: scipy.spatial.distance.cosine(earlier_vectors, later_vectors)}
 
 def semantic_proximity(target: Target, model: DistanceModel) -> Dict[Tuple[UseID, UseID], float]:
-    compare_pairs, compare_distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE, return_pairs=True)
-    later_pairs, later_distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER, return_pairs=True)
-    earlier_pairs, earlier_distances = model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER, return_pairs=True)
+    compare_pairs, compare_distances = model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.COMPARE, return_pairs=True)
+    later_pairs, later_distances = model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.LATER, return_pairs=True)
+    earlier_pairs, earlier_distances = model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.EARLIER, return_pairs=True)
 
     return dict(zip(
         compare_pairs + later_pairs + earlier_pairs, 
@@ -31,28 +31,28 @@ def semantic_proximity(target: Target, model: DistanceModel) -> Dict[Tuple[UseID
     ))
 
 def apd_compare_all(target: Target, model: DistanceModel) -> Dict[str, float]:
-    return {target.name: np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE)).item()}
+    return {target.name: np.mean(model.distances(target=target, sampling=Sampling.all, pairing=Pairing.COMPARE)).item()}
 
 def apd_earlier_all(target: Target, model: DistanceModel) -> Dict[str, float]:
-    return {target.name: np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.EARLIER)).item()}
+    return {target.name: np.mean(model.distances(target=target, sampling=Sampling.all, pairing=Pairing.EARLIER)).item()}
 
 def apd_later_all(target: Target, model: DistanceModel) -> Dict[str, float]:
-    return {target.name: np.mean(model.distances(target=target, sampling=sampling.all, pairing=pairing.LATER)).item()}
+    return {target.name: np.mean(model.distances(target=target, sampling=Sampling.all, pairing=Pairing.LATER)).item()}
 
 def apd_compare_annotated(target: Target, model: DistanceModel) -> Dict[str, float]:
-    return {target.name: np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE)).item()}
+    return {target.name: np.mean(model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.COMPARE)).item()}
 
 def apd_later_annotated(target: Target, model: DistanceModel) -> Dict[str, float]:
-    return {target.name: np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER)).item()}
+    return {target.name: np.mean(model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.LATER)).item()}
 
 
 def apd_earlier_annotated(target: Target, model: DistanceModel) -> Dict[str, float]:
-    return {target.name: np.mean(model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER)).item()}
+    return {target.name: np.mean(model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.EARLIER)).item()}
 
 def apd_compare_sampled(
         target: Target, model: DistanceModel, n: int, replace: bool
 ) -> Dict[str, float]:
-    return {target.name: np.mean(model.distances(target=target, sampling=sampling.sampled, pairing=pairing.COMPARE, n=n, replace=replace)).item()}
+    return {target.name: np.mean(model.distances(target=target, sampling=Sampling.sampled, pairing=Pairing.COMPARE, n=n, replace=replace)).item()}
 
 def apd_earlier_sampled(
         target: Target, model: DistanceModel, n: int, replace: bool
@@ -68,12 +68,12 @@ def apd_compare_all_minus_all_annotated(target: Target, model: DistanceModel) ->
     return {
         target.name: (
             np.mean(
-                model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE)
+                model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.COMPARE)
             ) \
             - np.mean(
-                model.distances(target=target, sampling=sampling.annotated, pairing=pairing.COMPARE) \
-                + model.distances(target=target, sampling=sampling.annotated, pairing=pairing.LATER) \
-                + model.distances(target=target, sampling=sampling.annotated, pairing=pairing.EARLIER)
+                model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.COMPARE) \
+                + model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.LATER) \
+                + model.distances(target=target, sampling=Sampling.annotated, pairing=Pairing.EARLIER)
             )
         )
     }

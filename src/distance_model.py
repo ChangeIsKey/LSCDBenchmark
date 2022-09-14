@@ -1,29 +1,30 @@
 from abc import ABC, abstractmethod
-from src.config import UseID, pairing, sampling
-from typing import Callable, List, Tuple, Union
+from typing import Callable, TYPE_CHECKING
 from pandas import DataFrame
 import numpy as np
+from src.target import Target, Sampling, Pairing
 
-from src.target import Target
 
+if TYPE_CHECKING:
+    from src.config.config import UseID 
 
 class DistanceModel(ABC):
     @abstractmethod
     def distances(
         self,
         target: Target,
-        sampling: sampling,
-        pairing: pairing,
+        sampling: Sampling,
+        pairing: Pairing,
         method: Callable,
         return_pairs: bool,
         **kwargs
-    ) -> Tuple[List[Tuple[UseID, UseID]], List[float]] | List[float]:
+    ) -> tuple[list[tuple["UseID", "UseID"]], list[float]] | list[float]:
         pass
 
     def distance_matrix(self, target: Target) -> DataFrame:
-        compare_pairs, compare_distances = self.distances(target=target, sampling=sampling.all, pairing=pairing.COMPARE, return_pairs=True)
-        later_pairs, later_distances = self.distances(target=target, sampling=sampling.all, pairing=pairing.LATER, return_pairs=True)
-        earlier_pairs, earlier_distances = self.distances(target=target, sampling=sampling.all, pairing=pairing.EARLIER, return_pairs=True)
+        compare_pairs, compare_distances = self.distances(target=target, sampling=Sampling.all, pairing=Pairing.COMPARE, return_pairs=True)
+        later_pairs, later_distances = self.distances(target=target, sampling=Sampling.all, pairing=Pairing.LATER, return_pairs=True)
+        earlier_pairs, earlier_distances = self.distances(target=target, sampling=Sampling.all, pairing=Pairing.EARLIER, return_pairs=True)
 
         pairs_to_distances = dict(zip(
             compare_pairs + later_pairs + earlier_pairs, 

@@ -6,75 +6,65 @@ dataset:
   name: null
   version: 'latest'
   path: null
-task: lscd
-groupings: [1, 2]
-test_targets: null
-preprocessing:
-  module: src/preprocessing.py
-  method: null
-  params: {}
-cleaning:
-  stats: {}
-  method: all
-
-orthography: 
-  normalize: true
-  translation_table:
-    german:
-      aͤ: ä 
-      oͤ: ö 
-      uͤ: ü 
-      Aͤ: Ä 
-      Oͤ: Ö 
-      Uͤ: Ü
-      ſ: s 
-      \ua75b: r 
-      m̃: mm 
-      æ: ae 
-      Æ: Ae
-      göñ: gönn
-      spañ: spann
-    english:
-    #   " \'s": "\'s" 
-    #   " n\'t": "n\'t" 
-    #   " \'ve": "\'ve" 
-    #   " \'d' : "\'d" 
-    #   " \'re": "\'re" 
-    #   " \'ll": "\'ll'
-    # swedish:
-    #   " \'s": "\'s'
+  groupings: [1, 2]
+  targets: null
+  preprocessing:
+    module: src/preprocessing.py
+    method: toklem
+  cleaning:
+    stats: {}
+    method: all
+  orthography: 
+    normalize: true
+    translation_table:
+      german:
+        aͤ: ä 
+        oͤ: ö 
+        uͤ: ü 
+        Aͤ: Ä 
+        Oͤ: Ö 
+        Uͤ: Ü
+        ſ: s 
+        \ua75b: r 
+        m̃: mm 
+        æ: ae 
+        Æ: Ae
+        göñ: gönn
+        spañ: spann
+      # english:
+      #   " \'s": "\'s" 
+      #   " n\'t": "n\'t" 
+      #   " \'ve": "\'ve" 
+      #   " \'d' : "\'d" 
+      #   " \'re": "\'re" 
+      #   " \'ll": "\'ll'
+      # swedish:
+      #   " \'s": "\'s'
 
 
 
 
 gpu: null
 
-truncation:
-  tokens_before: 0.5
 
-model: '???'
-layers: [1, -1]
-layer_aggregation: average
-measure:
-  module: src/measures.py
-  method: apd_compare_all
-  method_params: {}
-  sampling_params: {}
+model: 
+  name: ???
+  truncation:
+    tokens_before: 0.5
+  layers: [1, -1]
+  layer_aggregation: average
+  subword_aggregation: average
+  measure:
+    module: src/measures.py
+    method: apd_compare_all
+    # clustering:
+    #   module: src/clustering.py
+    #   method: clustering_spectral
 
-  clustering:
-    module: src/clustering.py
-    method: null
-    params: {}
 
-subword_aggregation: average
 
 evaluation:
-  task: '???'
-  binary_threshold:
-    module: src/threshold.py
-    method: mean_std
-    params:
-      t: 0.1
+  task: ???
 
 hydra:
   job:

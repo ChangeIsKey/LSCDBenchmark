@@ -1,15 +1,15 @@
 from typing import Callable, List, Tuple, Union
-from src.config import UseID, pairing, sampling
+from src.config.config import UseID
 from src.distance_model import DistanceModel
-from src.target import Target
+from src.target import Target, Sampling, Pairing
 
 
 class DeepMistake(DistanceModel):
     def distances(
         self,
         target: Target,
-        sampling: sampling,
-        pairing: pairing,
+        sampling: Sampling,
+        pairing: Pairing,
         method: Callable,
         return_pairs: bool = False,
         **kwargs
