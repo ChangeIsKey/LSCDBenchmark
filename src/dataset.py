@@ -4,6 +4,7 @@ import zipfile
 from pathlib import Path
 from typing import Dict, List
 
+import json
 import pandas as pd
 import pandera as pa
 import requests
@@ -55,15 +56,19 @@ class Dataset:
 
     @property
     def translation_table(self) -> Dict[str, str]:
-        dataset2lang = {
-            "dwug_de": "german",
-            "dwug_en": "english",
-            "dwug_sv": "swedish"
-        }
+        orthography = self.config.dataset.orthography
+        if orthography is not None:
+            if orthography.translation_table is not None and orthography.normalize:
+                dataset2lang = {
+                    "dwug_de": "german",
+                    "dwug_en": "english",
+                    "dwug_sv": "swedish"
+                }
 
-        language = dataset2lang.get(self.config.dataset.name)
-        if self.config.dataset.orthography.normalize:
-            return self.config.dataset.orthography.translation_table.get(language, {})
+                language = dataset2lang.get(self.config.dataset.name)
+                with orthography.translation_table.open(mode="r") as f:
+                    table = json.load(f)
+                    return table.get(language, {})
         return {}
         
         

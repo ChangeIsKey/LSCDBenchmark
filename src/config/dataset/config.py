@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class DatasetConfig(BaseModel):
     cleaning: Cleaning | None
-    orthography: Orthography
+    orthography: Orthography | None
     preprocessing: Preprocessing
     targets: list[str] | int | None
     groupings: tuple[str, str]

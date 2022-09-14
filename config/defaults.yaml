@@ -16,30 +16,7 @@ dataset:
     method: all
   orthography: 
     normalize: true
-    translation_table:
-      german:
-        aͤ: ä 
-        oͤ: ö 
-        uͤ: ü 
-        Aͤ: Ä 
-        Oͤ: Ö 
-        Uͤ: Ü
-        ſ: s 
-        \ua75b: r 
-        m̃: mm 
-        æ: ae 
-        Æ: Ae
-        göñ: gönn
-        spañ: spann
-      # english:
-      #   " \'s": "\'s" 
-      #   " n\'t": "n\'t" 
-      #   " \'ve": "\'ve" 
-      #   " \'d' : "\'d" 
-      #   " \'re": "\'re" 
-      #   " \'ll": "\'ll'
-      # swedish:
-      #   " \'s": "\'s'
+    translation_table: config/spelling_normalization.json
 
 
 
@@ -48,7 +25,7 @@ gpu: null
 
 
 model: 
-  name: ???
+  name: "???"
   truncation:
     tokens_before: 0.5
   layers: [1, -1]
