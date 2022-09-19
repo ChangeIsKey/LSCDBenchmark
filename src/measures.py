@@ -5,7 +5,7 @@ import scipy
 from src.config.model.clustering import Clustering
 from src.config.config import UseID
 from src.distance_model import DistanceModel
-from src.vector_model import VectorModel
+from src.wic.vector_model import VectorModel
 from src.target import Target, Sampling, Pairing
 from src.clustering import split_clusters
 import logging
