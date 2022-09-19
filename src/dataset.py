@@ -4,6 +4,7 @@ import zipfile
 from pathlib import Path
 from typing import Dict, List
 
+import os
 import json
 import pandas as pd
 import pandera as pa
@@ -49,7 +50,11 @@ class Dataset:
             if self.config.dataset.path is not None:
                 self._path = self.config.dataset.path
             else:
-                self._path = utils.path("wug") / self.config.dataset.name / self.config.dataset.version
+                path = os.getenv("DATA_DIR")
+                if path is None:
+                    path = utils.path("wug") 
+                path = path / self.config.dataset.name / self.config.dataset.version
+                
         return self._path
             
 
@@ -203,7 +208,6 @@ class Dataset:
             case EvaluationTask.BINARY_CHANGE:
                 return self.binary_change_labels
             case EvaluationTask.SEMANTIC_PROXIMITY:
-                # the judgments should already have been validated
                 return self.semantic_proximity_labels
 
     @property
