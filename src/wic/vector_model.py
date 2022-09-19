@@ -19,6 +19,7 @@ from src.config.config import Config, UseID
 from src.distance_model import DistanceModel
 from src.target import Target, Sampling, Pairing
 from src.use import Use
+from src.wic.model import Model as WicModel
 
 trans_logging.set_verbosity_error()
 
@@ -26,7 +27,7 @@ log = logging.getLogger(__name__)
 
 
 @dataclass
-class VectorModel(DistanceModel):
+class VectorModel(WicModel):
     def __init__(self, config: Config):
         self.config = config
 
@@ -136,12 +137,13 @@ class VectorModel(DistanceModel):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    def distances(self, use_pairs: list[tuple[Use, Use]]) -> dict[tuple[Use, Use], float]:
-        distances = [
-            distance.cosine(self.vectors[u1.identifier], self.vectors[u2.identifier]) 
-            for u1, u2 in use_pairs
-        ]
-        return dict(zip(use_pairs, distances))
+    def distances(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
+        distances = []
+        for u1, u2 in use_pairs:
+            e1 = self.encode(u1)
+            e2 = self.encode(u2)
+            distances.append(distance.cosine(e1, e2))
+        return distances
 
     def retrieve_embedding(self, use: Use) -> np.ndarray | None:
         mask = (
