@@ -55,44 +55,15 @@ class Target:
             self._uses.grouping = self._uses.grouping.astype(str)
             self._uses = self._uses[self._uses.grouping.isin(self.config.dataset.groupings)]
             # preprocess uses
-            self._uses = self.__uses_pre_schema.validate(self._uses)
             self._uses = pd.concat([self._uses, self._uses.apply(self.config.dataset.preprocessing.__call__, axis=1, translation_table=self.__translation_table)], axis=1)
-            self._uses = self.__uses_post_schema.validate(self._uses)
+            self._uses = self.__uses_schema.validate(self._uses)
         return self._uses
-
-    @property
-    def __uses_pre_schema(self) -> DataFrameSchema:
-        schema = DataFrameSchema({
-            "identifier": Column(dtype=str, unique=True),
-            "grouping": Column(dtype=str)
-        })
-
-        if self.config.dataset.preprocessing.method in {"toklem", "tokenize"}:
-            schema = schema.add_columns({
-                "context_tokenized": Column(dtype=str),
-                "indexes_target_token_tokenized": Column(dtype=int)
-            })
-        elif self.config.preprocessing.method in {"lemmatize"}:
-            schema = schema.add_columns({
-                "context_lemmatized": Column(dtype=str),
-                "indexes_target_token_tokenized": Column(dtype=int),
-                "indexes_target_token_lemmatized": Column(dtype=int, required=False)
-            })
-        elif self.config.preprocessing.method is None:
-            def validate_indices(s: str) -> bool:
-                parts = s.split(":")
-                return len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit()
-
-            schema = schema.add_columns({
-                "context": Column(dtype=str),
-                "indexes_target_token": Column(dtype=str, checks=pa.Check(check_fn=validate_indices))
-            })
-        
-        return schema
     
     @property
-    def __uses_post_schema(self) -> DataFrameSchema:
-        return self.__uses_pre_schema.add_columns({
+    def __uses_schema(self) -> DataFrameSchema:
+        return DataFrameSchema({
+            "identifier": Column(dtype=str, unique=True),
+            "grouping": Column(dtype=str),
             "context_preprocessed": Column(str),
             "target_index_begin": Column(int),
             "target_index_end": Column(int),

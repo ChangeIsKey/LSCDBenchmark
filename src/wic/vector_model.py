@@ -18,6 +18,7 @@ import src.utils as utils
 from src.config.config import Config, UseID
 from src.distance_model import DistanceModel
 from src.target import Target, Sampling, Pairing
+from src.use import Use
 
 trans_logging.set_verbosity_error()
 
@@ -26,27 +27,14 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class VectorModel(DistanceModel):
-    def __init__(self, config: Config, targets: List[Target]):
+    def __init__(self, config: Config):
+        self.config = config
+
         self._device = None
         self._tokenizer = None
         self._model = None
         self._index = None
         self._vectors = None
-
-        self.targets = targets
-        self._distances = {
-            target.name: {s: {p: {} for p in Pairing} for s in Sampling}
-            for target in self.targets
-        }
-        self.config = config
-
-    @property
-    def config(self) -> Config:
-        return self._config
-    
-    @config.setter
-    def config(self, other: Config) -> None:
-        self._config = other
 
     @property
     def index_dir(self) -> Path:
@@ -59,7 +47,8 @@ class VectorModel(DistanceModel):
     def device(self):
         if self._device is None:
             self._device = torch.device(
-                "cpu" if self.config.gpu is None else f"cuda:{self.config.gpu}"
+                f"cuda:{self.config.gpu}" if self.config.gpu is not None and torch.cuda.is_available() 
+                else "cpu"
             )
         return self._device
 
@@ -87,34 +76,33 @@ class VectorModel(DistanceModel):
             if path.exists():
                 self._index = pd.read_csv(path, engine="pyarrow")
             else:
-                self._index = DataFrame(
-                    columns=[
-                        "model",
-                        "target",
-                        "id",
-                        "preprocessing",
-                        "dataset_name",
-                        "dataset_version",
-                        "tokens_before",
-                    ],
-                )
+                self._index = DataFrame(columns=self.index_row(use=None, id=None))
             self.clean_cache()
         return self._index
 
-    def index_row(self, target_name: str, id: str):
-        return DataFrame(
-            [
-                {
-                    "model": self.config.model,
-                    "target": target_name,
-                    "id": id,
-                    "preprocessing": self.config.preprocessing.method,
-                    "dataset_name": self.config.dataset.name,
-                    "dataset_version": self.config.dataset.version,
-                    "tokens_before": self.config.truncation.tokens_before,
-                }
-            ]
-        )
+    def index_row(self, use: Use, id: str):
+        headers = [
+            "model",
+            "use",
+            "id",
+            "preprocessing",
+            "dataset_name",
+            "dataset_version",
+            "tokens_before",
+        ]
+        if use is None and id is None:
+            return headers
+        
+        values = [
+            self.config.model,
+            use.identifier,
+            id,
+            self.config.preprocessing.method,
+            self.config.dataset.name,
+            self.config.dataset.version,
+            self.config.truncation.tokens_before,
+        ]
+        return DataFrame([dict(zip(headers, values))])
 
     @index.setter
     def index(self, new: DataFrame):
@@ -148,35 +136,17 @@ class VectorModel(DistanceModel):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    def distances(
-        self,
-        target: Target,
-        sampling: Sampling,
-        pairing: Pairing,
-        method: Callable = distance.cosine,
-        return_pairs: bool = False,
-    ) -> Union[Tuple[List[Tuple[UseID, UseID]], List[float]], List[float]]:
+    def distances(self, use_pairs: list[tuple[Use, Use]]) -> dict[tuple[Use, Use], float]:
+        distances = [
+            distance.cosine(self.vectors[u1.identifier], self.vectors[u2.identifier]) 
+            for u1, u2 in use_pairs
+        ]
+        return dict(zip(use_pairs, distances))
 
-        use_pairs = target.use_pairs(pairing, sampling, **self.config.model.measure.params)
-        for id1, id2 in use_pairs:
-            if (id1, id2) not in self._distances[target.name][sampling][pairing]:
-                self._distances[target.name][sampling][pairing][(id1, id2)] = method(
-                    self.vectors[id1], 
-                    self.vectors[id2]
-                )
-
-        if return_pairs:
-            return (
-                list(self._distances[target.name][sampling][pairing].keys()), 
-                list(self._distances[target.name][sampling][pairing].values())
-            )
-        else:
-            return list(self._distances[target.name][sampling][pairing].values())
-
-    def retrieve_embeddings(self, target: Target) -> Dict[str, np.ndarray] | None:
+    def retrieve_embedding(self, use: Use) -> np.ndarray | None:
         mask = (
             (self.index.model == self.config.model.name)
-            & (self.index.target == target.name)
+            & (self.index.use == use.identifier)
             & (self.index.preprocessing == self.config.dataset.preprocessing.method)
             & (self.index.dataset_name == self.config.dataset.name)
             & (self.index.dataset_version == self.config.dataset.version)
@@ -186,35 +156,30 @@ class VectorModel(DistanceModel):
 
         if not row.empty:
             assert len(row) == 1
-            id_ = row.id.iloc[0]
-            path = self.index_dir / f"{id_}.npz"
-            return np.load(path, mmap_mode="r")
+            id_ = row.id.iat[0]
+            path = self.index_dir / f"{id_}.npy"
+            return np.load(path)
 
         return None
 
-    def store_embeddings(
-        self, target: Target, embeddings: Dict[str, np.ndarray]
-    ) -> None:
+    def store_embedding(self, use: Use, embedding: np.ndarray) -> None:
         ids = self.index.id.tolist()
         while True:
             id_ = str(uuid.uuid4())
             if id_ not in ids:
-                with open(file=self.index_dir / f"{id_}.npz", mode="wb") as f:
-                    np.savez(f, **embeddings)
-                    log.info(f"Saved embeddings to disk as {id_}.npz")
+                with open(file=self.index_dir / f"{id_}.npy", mode="wb") as f:
+                    np.save(f, embedding)
 
                 self.index = pd.concat(
-                    [self.index, self.index_row(target_name=target.name, id=id_)],
+                    [self.index, self.index_row(use=use, id=id_)],
                     ignore_index=True,
                 )
 
-                log.info("Logged record of new embedding file")
-
                 break
 
-    def tokenize(self, use: Series) -> BatchEncoding:
+    def tokenize(self, use: Use) -> BatchEncoding:
         return self.tokenizer.encode_plus(
-            text=use.context_preprocessed, return_tensors="pt", add_special_tokens=True
+            text=use.context, return_tensors="pt", add_special_tokens=True
         ).to(self.device)
 
     def aggregate(self, embedding: np.ndarray) -> np.ndarray:
@@ -224,85 +189,68 @@ class VectorModel(DistanceModel):
             .take(self.config.model.layers, axis=0)
         )
 
-    @property
-    def vectors(self) -> Dict[UseID, np.ndarray]:
+    def encode(self, use: Use) -> np.ndarray:
         if self._vectors is None:
             self._vectors = {}
 
-            pbar = tqdm(self.targets, leave=False)
-
-            for target in pbar:
-                pbar.set_description(f"Processing target {target.name}", refresh=True)
-                log.info(f"PROCESSING TARGET: {target.name}")
-
-                
-                token_embeddings = self.retrieve_embeddings(target)
-
-                if token_embeddings is None:
-                    token_embeddings = {}
-                    for _, use in target.uses.iterrows():
-                        log.info(
-                            f"PROCESSING USE `{use.identifier}`: {use.context_preprocessed}"
-                        )
-                        log.info(f"Target character indices: ({use.target_index_begin}, {use.target_index_end})")
-                        log.info(f"Context slice corresponding to target indices: {use.context_preprocessed[use.target_index_begin:use.target_index_end]}")
+        embedding = self.retrieve_embedding(use)
+        if embedding is None:
+            log.info(
+                f"PROCESSING USE `{use.identifier}`: {use.context_preprocessed}"
+            )
+            log.info(f"Target character indices: {use.indices}")
+            log.info(f"Context slice corresponding to target indices: {use.context[use.indices[0]:use.indices[1]]}")
                         
-                        encoding = self.tokenize(use)
-                        input_ids = encoding["input_ids"].to(self.device)  # type: ignore
-                        tokens = encoding.tokens()
-                        subword_spans = [
-                            encoding.token_to_chars(i) for i in range(len(tokens))
-                        ]
+            encoding = self.tokenize(use)
+            input_ids = encoding["input_ids"].to(self.device)  # type: ignore
+            tokens = encoding.tokens()
+            subword_spans = [
+                encoding.token_to_chars(i) for i in range(len(tokens))
+            ]
 
-                        log.info(f"Extracted {len(tokens)} tokens: {tokens}")
+            log.info(f"Extracted {len(tokens)} tokens: {tokens}")
 
-                        target_indices = [
-                            span.start >= use.target_index_begin and 
-                            span.end <= use.target_index_end
-                            if span is not None else False
-                            for span in subword_spans
-                        ]
-
-
-                        # truncate input if the model cannot handle it
-                        if len(tokens) > 512:
-                            lindex, rindex = self.truncation_indices(target_indices)
-                            tokens = tokens[lindex:rindex]
-                            input_ids = input_ids[:, lindex:rindex]
-                            target_indices = target_indices[lindex:rindex]
-
-                            log.info(f"Truncated input")
-                            log.info(f"New tokens: {tokens}")
-
-                        extracted_subwords = [tokens[i] for i, value in enumerate(target_indices) if value]
-
-                        log.info(f"Selected subwords: {extracted_subwords}")
-                        log.info(f"Size of input_ids: {input_ids.size()}")
+            target_indices = [
+                span.start >= use.indices[0] and span.end <= use.indices[1]
+                if span is not None else False
+                for span in subword_spans
+            ]
 
 
-                        with torch.no_grad():
-                            outputs = self.model(input_ids, torch.ones_like(input_ids))
+            # truncate input if the model cannot handle it
+            if len(tokens) > 512:
+                lindex, rindex = self.truncation_indices(target_indices)
+                tokens = tokens[lindex:rindex]
+                input_ids = input_ids[:, lindex:rindex]
+                target_indices = target_indices[lindex:rindex]
+
+                log.info(f"Truncated input")
+                log.info(f"New tokens: {tokens}")
+
+            extracted_subwords = [tokens[i] for i, value in enumerate(target_indices) if value]
+            log.info(f"Selected subwords: {extracted_subwords}")
+            log.info(f"Size of input_ids: {input_ids.size()}")
+
+            with torch.no_grad():
+                outputs = self.model(input_ids, torch.ones_like(input_ids))
                         
-                        token_embeddings[use.identifier] = (
-                            # stack the layers
-                            torch.stack(outputs[2], dim=0)  
-                            # we don't vectorize in batches, so we can get rid of the batches dimension
-                            .squeeze(dim=1)  
-                            # swap the subwords and layers dimension
-                            .permute(1, 0, 2)
-                            # select the target's subwords' embeddings
-                            [torch.tensor(target_indices), :, :]
-                            # convert to numpy array
-                            .cpu().numpy()
-                        )
+            embedding = (
+                # stack the layers
+                torch.stack(outputs[2], dim=0)  
+                # we don't vectorize in batches, so we can get rid of the batches dimension
+                .squeeze(dim=1)  
+                # swap the subwords and layers dimension
+                .permute(1, 0, 2)
+                # select the target's subwords' embeddings
+                [torch.tensor(target_indices), :, :]
+                # convert to numpy array
+                .cpu().numpy()
+            )
                         
-                        log.info(f"Size of pre-subword-agregated tensor: {token_embeddings[use.identifier].shape}")
+            log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
+            self.store_embedding(use, embedding)
 
-                    self.store_embeddings(target, token_embeddings)
+        embedding = self.aggregate(embedding) 
+        self._vectors[use.identifier] = embedding
 
-                self._vectors.update({
-                    identifier: self.aggregate(embedding)
-                    for identifier, embedding in token_embeddings.items()
-                })
-
-        return self._vectors
+        return embedding
