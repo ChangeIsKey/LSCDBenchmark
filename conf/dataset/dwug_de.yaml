@@ -1,0 +1,12 @@
+defaults:
+  - _self_
+  - optional preprocessing/spelling_normalization: german
+
+name: dwug_de
+version: 'latest'
+groupings: [1, 2]
+preprocessing:
+  _target_: src.preprocessing.toklem
+  spelling_normalization: german
+
+

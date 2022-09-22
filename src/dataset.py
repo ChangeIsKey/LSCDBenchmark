@@ -52,31 +52,11 @@ class Dataset:
             else:
                 path = os.getenv("DATA_DIR")
                 if path is None:
-                    path = utils.path("wug") 
-                path = path / self.config.dataset.name / self.config.dataset.version
+                    path = "wug"
+                self._path = utils.path(path) / self.config.dataset.name / self.config.dataset.version
                 
         return self._path
             
-
-
-    @property
-    def translation_table(self) -> Dict[str, str]:
-        orthography = self.config.dataset.orthography
-        if orthography is not None:
-            if orthography.translation_table is not None and orthography.normalize:
-                dataset2lang = {
-                    "dwug_de": "german",
-                    "dwug_en": "english",
-                    "dwug_sv": "swedish"
-                }
-
-                language = dataset2lang.get(self.config.dataset.name)
-                with orthography.translation_table.open(mode="r") as f:
-                    table = json.load(f)
-                    return table.get(language, {})
-        return {}
-        
-        
     @property
     def url(self) -> str:
         return self.config.dataset.wug_to_url[self.config.dataset.name][self.config.dataset.version]
@@ -168,7 +148,7 @@ class Dataset:
                 })
             case EvaluationTask.BINARY_CHANGE:
                 return schema.add_columns({
-                    "change_binary": Column(float)
+                    "change_binary": Column(int)
                 })
             case _:
                 return schema
@@ -203,6 +183,8 @@ class Dataset:
     @property
     def labels(self) -> dict[str | tuple[str, str], float]:
         match self.config.evaluation.task:
+            case None:
+                return {}
             case EvaluationTask.GRADED_CHANGE:
                 return self.graded_change_labels
             case EvaluationTask.BINARY_CHANGE:
@@ -240,22 +222,21 @@ class Dataset:
         if self._targets is None:
             to_load = []
 
-            if len(self.config.dataset.cleaning.stats) > 0:
+            if self.config.dataset.cleaning is not None and len(self.config.dataset.cleaning.stats) > 0:
                 agreements = self.stats_agreement.iloc[1:, :].copy()  # remove "data=full" row
                 agreements = self.config.dataset.cleaning(agreements)
                 to_load = agreements.data.unique().tolist()
             else:
-                to_load = list(self.graded_change_labels.keys())
+                to_load = [folder.name for folder in (self.path / "data").iterdir()]
 
             if self.config.dataset.targets is not None:
                 if isinstance(self.config.dataset.targets, int):
-                    to_load = to_load[:self.config.test_targets]
+                    to_load = to_load[:self.config.dataset.targets]
                 elif isinstance(self.config.dataset.targets, list):
                     to_load = self.config.dataset.targets
             
-            trans_table = self.translation_table
             self._targets = [
-                Target(config=self.config, name=target, translation_table=trans_table, path=self.path)
+                Target(config=self.config, name=target, path=self.path)
                 for target in tqdm(to_load, desc="Building targets", leave=False)
             ]
 

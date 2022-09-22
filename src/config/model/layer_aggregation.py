@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 from enum import Enum
 
 class LayerAggregator(str, Enum):
@@ -6,13 +6,13 @@ class LayerAggregator(str, Enum):
     CONCAT = "concat"
     SUM = "sum"
 
-    def __call__(self, layers: np.ndarray) -> np.ndarray:
+    def __call__(self, layers: torch.Tensor) -> torch.Tensor:
         match self:
             case self.AVERAGE:
-                return np.mean(layers, axis=0)
+                return torch.mean(layers, dim=0)
             case self.SUM:
-                return np.sum(layers, axis=0)
+                return torch.sum(layers, dim=0)
             case self.CONCAT:
-                return np.ravel(layers)
+                return torch.ravel(layers)
 
 

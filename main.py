@@ -2,24 +2,22 @@ import dotenv
 dotenv.load_dotenv()
 
 import hydra
-from tqdm import tqdm
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
+
 from src.config.config import Config
 from src.dataset import Dataset
-from src.wic.deepmistake import DeepMistake
 from src.results import Results
-from src.wic.vector_model import VectorModel
 
 
-@hydra.main(version_base=None, config_path="config", config_name="defaults")
-def main(cfg: DictConfig):
-    config = Config(**OmegaConf.to_object(cfg))
+@hydra.main(
+    version_base=None,
+    config_path="conf",
+    config_name="config"
+)
+def main(config: DictConfig):
+    config: Config = Config.from_dictconfig(config)
+    model = config.model.instantiate(config)
     dataset = Dataset(config)
-    model = (
-        DeepMistake() if config.model.name.lower() == "deep_mistake" 
-        else VectorModel(config, dataset.targets)
-    )
-
     predictions = model.predict(dataset.targets)
     results = Results(config=config, predictions=predictions, labels=dataset.labels)
     results.score()

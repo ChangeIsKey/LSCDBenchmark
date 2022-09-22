@@ -1,17 +1,7 @@
-from typing import Callable, List, Tuple, Union
-from src.config.config import UseID
-from src.distance_model import DistanceModel
-from src.target import Target, Sampling, Pairing
+from src.wic.model import WICModel
+from src.use import Use
 
 
-class DeepMistake(DistanceModel):
-    def distances(
-        self,
-        target: Target,
-        sampling: Sampling,
-        pairing: Pairing,
-        method: Callable,
-        return_pairs: bool = False,
-        **kwargs
-    ) -> Union[Tuple[List[Tuple[UseID, UseID]], List[float]], List[float]]:
+class DeepMistakeWIC(WICModel):
+    def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         pass

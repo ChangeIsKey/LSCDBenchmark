@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import csv
+from hydra import utils
 from enum import Enum
+from itertools import product
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict
 
@@ -12,15 +14,13 @@ from pandas import DataFrame
 from pandera import Column, DataFrameSchema
 
 from src.config.config import Config
-
-if TYPE_CHECKING:
-    from src.config.config import UseID
+from src.use import Use, UseID
 
 
 class Sampling(str, Enum):
-    annotated = "annotated"
-    sampled = "sampled"
-    all = "all"
+    ANNOTATED = "annotated"
+    SAMPLED = "sampled"
+    ALL = "all"
 
 
 class Pairing(str, Enum):
@@ -30,11 +30,11 @@ class Pairing(str, Enum):
 
 
 class Target:
-    def __init__(self, name: str, config: Config, translation_table: Dict[str, str], path: Path) -> None:
+    def __init__(self, name: str, config: Config, path: Path) -> None:
         self.config = config
         self.name = name
 
-        self.__translation_table = translation_table
+        self.__translation_table = self.config.dataset.preprocessing.spelling_normalization
         self.__wug = path
         self.__csv_params = dict(
             delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
@@ -117,48 +117,56 @@ class Target:
             for group in self.grouping_combination
         }
     
-    def use_pairs(self, pairing: Pairing, sampling: Sampling, **params) -> list[tuple[UseID, UseID]]:
-        if sampling is Sampling.annotated:
-            ids1, ids2 = self.__split_annotated_uses(target)
+    def use_pairs(self, pairing: Pairing, sampling: Sampling, **params) -> list[tuple[Use, Use]]:
+
+        if sampling is Sampling.ANNOTATED:
+            ids1, ids2 = self.__split_annotated_uses(pairing)
         else:
             match pairing:
                 case Pairing.COMPARE:
-                    ids1 = target.uses[target.uses.grouping == target.grouping_combination[0]].identifier.tolist()
-                    ids2 = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
+                    ids1 = self.uses[self.uses.grouping == self.grouping_combination[0]].identifier.tolist()
+                    ids2 = self.uses[self.uses.grouping == self.grouping_combination[1]].identifier.tolist()
                 case Pairing.EARLIER:
-                    ids1 = target.uses[target.uses.grouping == target.grouping_combination[0]].identifier.tolist()
+                    ids1 = self.uses[self.uses.grouping == self.grouping_combination[0]].identifier.tolist()
                     ids2 = ids1
                 case Pairing.LATER:
-                    ids1 = target.uses[target.uses.grouping == target.grouping_combination[1]].identifier.tolist()
+                    ids1 = self.uses[self.uses.grouping == self.grouping_combination[1]].identifier.tolist()
                     ids2 = ids1
 
         match sampling:
-            case Sampling.annotated:
-                return list(zip(ids1, ids2))
-            case Sampling.all:
-                return list(product(ids1, ids2))
-            case Sampling.sampled:
-                return [(np.random.choice(ids1, replace=params["replace"]), np.random.choice(ids2, replace=params["replace"])) for _ in range(params["n"])]
+            case Sampling.ANNOTATED:
+                pairs = list(zip(ids1, ids2))
+            case Sampling.ALL:
+                pairs = list(product(ids1, ids2))
+            case Sampling.SAMPLED:
+                pairs = [(np.random.choice(ids1, replace=params["replace"]), np.random.choice(ids2, replace=params["replace"])) for _ in range(params["n"])]
         
-    def __split_annotated_uses(self, target: Target) -> tuple[list[UseID], list[UseID]]:
-        judgments = pd.merge(target.judgments, target.uses, left_on="identifier1", right_on="identifier", how="left")
-        judgments = pd.merge(judgments, target.uses, left_on="identifier2", right_on="identifier", how="left")
+        use_pairs = []
+        for id1, id2 in pairs:
+            u1 = Use.from_series(self.uses[self.uses.identifier == id1].iloc[0])
+            u2 = Use.from_series(self.uses[self.uses.identifier == id2].iloc[0])
+            use_pairs.append((u1, u2))
+        return use_pairs
+        
+    def __split_annotated_uses(self, pairing: Pairing) -> tuple[list[UseID], list[UseID]]:
+        judgments = pd.merge(self.judgments, self.uses, left_on="identifier1", right_on="identifier", how="left")
+        judgments = pd.merge(judgments, self.uses, left_on="identifier2", right_on="identifier", how="left")
 
         pairing_to_grouping = {
-            "COMPARE": target.grouping_combination,
+            "COMPARE": self.grouping_combination,
             "LATER": (
-                target.grouping_combination[1],
-                target.grouping_combination[1],
+                self.grouping_combination[1],
+                self.grouping_combination[1],
             ),
             "EARLIER": (
-                target.grouping_combination[0],
-                target.grouping_combination[0],
+                self.grouping_combination[0],
+                self.grouping_combination[0],
             ),
         }
 
         judgments = judgments[
-            (judgments.grouping_x == pairing_to_grouping[self.name][0]) & 
-            (judgments.grouping_y == pairing_to_grouping[self.name][1])
+            (judgments.grouping_x == pairing_to_grouping[pairing.name][0]) & 
+            (judgments.grouping_y == pairing_to_grouping[pairing.name][1])
         ]
 
         return (

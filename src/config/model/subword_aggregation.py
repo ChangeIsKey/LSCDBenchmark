@@ -1,5 +1,5 @@
 from enum import Enum
-import numpy as np
+import torch
 
 class SubwordAggregator(str, Enum):
     AVERAGE = "average"
@@ -7,12 +7,12 @@ class SubwordAggregator(str, Enum):
     LAST = "last"
     SUM = "sum"
 
-    def __call__(self, vectors: np.ndarray) -> np.ndarray:
+    def __call__(self, vectors: torch.Tensor) -> torch.Tensor:
         match self:
             case self.AVERAGE:
-                return np.mean(vectors, axis=0, keepdims=True)
+                return torch.mean(vectors, dim=0, keepdim=True)
             case self.SUM:
-                return np.sum(vectors, axis=0, keepdims=True)
+                return torch.sum(vectors, dim=0, keepdim=True)
             case self.FIRST:
                 return vectors[0]
             case self.LAST:

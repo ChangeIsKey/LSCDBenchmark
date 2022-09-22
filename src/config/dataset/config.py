@@ -1,27 +1,33 @@
-from pydantic import BaseModel
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Any
 from pathlib import Path
+import json
+from pydantic import BaseModel, Field
+
 from src.config.dataset.cleaning import Cleaning
-from src.config.dataset.orthography import Orthography
 from src.config.dataset.preprocessing import Preprocessing
 import src.utils as utils
-import json
-import time
-
-
-if TYPE_CHECKING:
-    from src.config.config import str
 
 
 class DatasetConfig(BaseModel):
-    cleaning: Cleaning | None
-    orthography: Orthography | None
-    preprocessing: Preprocessing
-    targets: list[str] | int | None
-    groupings: tuple[str, str]
-    version: str
-    name: Optional[str] = None
-    path: Optional[Path] = None
+    name: str
+    cleaning: Optional[Cleaning] = Field(default_factory=lambda: None)
+    preprocessing: Optional[Preprocessing] = Field(default_factory=lambda: None)
+    targets: Optional[list[str] | int] = Field(default_factory=lambda: None)
+    groupings: tuple[str, str] = Field(default_factory=lambda: [1, 2])
+    version: Optional[str] = Field(default_factory=lambda: "latest", alias="version")
+    path: Optional[Path] = Field(default_factory=lambda: None)
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+
+        wug_to_url = self.wug_to_url
+        if self.version is None:
+            self.version = "latest"
+        
+        if self.version == "latest" and self.name in wug_to_url:
+            versions = sorted(wug_to_url[self.name].keys(), reverse=True)
+            self.version = versions[0]
+        
 
     @property
     def wug_to_url(self) -> dict[str, dict[str, str]]:
@@ -29,22 +35,3 @@ class DatasetConfig(BaseModel):
         with path.open(mode="r") as f:
             return json.load(f)
     
-    def __init__(self, **data) -> None:
-        
-        if data["version"] is None:
-            data["version"] = "latest"
-
-        if data["path"] is not None and data["name"] is None:
-            data["path"] = utils.path(data["path"])
-            data["name"] = data["path"].name
-            data["version"] = time.ctime(data["path"].stat().st_mtime)
-
-        if data["version"] == "latest" and data["name"] is not None:
-            versions = sorted(self.wug_to_url[data["name"]].keys(), reverse=True)
-            data["version"] = versions[0]
-            data["path"] = utils.path("wug") / data["name"] / data["version"]
-        
-        super().__init__(**data)
-
-    
-

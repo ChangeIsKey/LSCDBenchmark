@@ -1,13 +1,19 @@
 from __future__ import annotations
-from pydantic import Field, BaseModel
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List
+from typing import Any, Dict, List
 from pandas import DataFrame
+from omegaconf import MISSING
 
 
-class Cleaning(BaseModel):
-    stats: Dict[str, Cleaning.CleaningParam]
-    method: Cleaning.BooleanMethod = Field(default_factory=lambda: Cleaning.BooleanMethod.ALL)
+@dataclass
+class Cleaning:
+    defaults: list[Any] = field(default_factory=lambda: [{
+        "stats": MISSING,
+        "method": Cleaning.BooleanMethod.ALL
+    }])
+    stats: dict[str, Cleaning.CleaningParam] = MISSING
+    method: Cleaning.BooleanMethod = MISSING
 
     def __call__(self, agreements: DataFrame) -> List[str]:
         conditions = [
@@ -24,9 +30,10 @@ class Cleaning(BaseModel):
                 return agreements.query("|".join(conditions))
 
 
-    class CleaningParam(BaseModel):
+    @dataclass
+    class CleaningParam:
         threshold: float
-        keep: Cleaning.ThresholdParam = Field(default_factory=lambda: Cleaning.ThresholdParam.ABOVE)
+        keep: Cleaning.ThresholdParam = field(default_factory=lambda: Cleaning.ThresholdParam.ABOVE)
 
     class ThresholdParam(str, Enum):
         ABOVE = "above"
