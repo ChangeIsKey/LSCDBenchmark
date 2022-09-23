@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 import numpy as np
 from tqdm import tqdm
 
@@ -13,16 +14,15 @@ class ApdCompareAll(LSCDModel):
     wic: WICModel
     threshold_fn: ThresholdFn | None
 
-    def predict(self, targets: list[Target]) -> list[float | int]:
-        predictions = []
+    def predict(self, targets: list[Target]) -> tuple[list[str], list[float | int]]:
+        predictions = {}
         for target in targets:
             use_pairs = target.use_pairs(pairing=Pairing.COMPARE, sampling=Sampling.ALL)
             similarities = self.wic.predict(use_pairs)
-            mean = np.mean(similarities)
-            predictions.append(mean)
+            predictions[target.name] = np.mean(similarities)
 
         if self.threshold_fn is not None:
             threshold = self.threshold_fn(predictions)
-            predictions = [int(p >= threshold) for p in predictions]
+            predictions = {target_name: int(p >= threshold) for target_name, p in predictions.items()}
 
-        return predictions
+        return list(predictions.keys()), list(predictions.values())

@@ -17,8 +17,8 @@ def main(config: DictConfig):
     model = utils.instantiate(config.model)
     evaluation = utils.instantiate(config.evaluation)
 
-    predictions = model.predict(dataset.targets)
-    labels = dataset.get_labels(evaluation.task)
+    keys, predictions = model.predict(dataset.targets)
+    labels = dataset.get_labels(evaluation.task, keys)
     score = evaluation(labels, predictions)
     print(predictions)
     print(labels)

@@ -16,8 +16,8 @@ class Cos(LSCDModel):
     wic: ContextualEmbedderWIC
     threshold_fn: ThresholdFn | None
 
-    def predict(self, targets: list[Target]) -> list[float | int]:
-        predictions = []
+    def predict(self, targets: list[Target]) -> tuple[list[str], list[float | int]]:
+        predictions = {}
         for target in targets:
             earlier = (
                 target.uses[target.uses.grouping == target.groupings[0]]
@@ -36,11 +36,11 @@ class Cos(LSCDModel):
             earlier_avg = earlier_vectors.mean(axis=0)
             later_avg = later_vectors.mean(axis=0)
 
-            predictions.append(-distance.cosine(earlier_avg, later_avg))
+            predictions[target.name] = -distance.cosine(earlier_avg, later_avg)
 
         if self.threshold_fn is not None:
             threshold = self.threshold_fn(predictions)
-            predictions = [int(p >= threshold) for p in predictions]
+            predictions = {target_name: int(p >= threshold) for target_name, p in predictions.items()}
 
 
-        return predictions
+        return list(predictions.keys()), list(predictions.values())

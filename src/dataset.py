@@ -1,4 +1,3 @@
-from contextvars import Context
 import csv
 from dataclasses import dataclass, field
 import shutil
@@ -180,42 +179,45 @@ class Dataset:
             case _:
                 return schema
 
-    def get_graded_change_labels(
-        self, evaluation_task: EvaluationTask
-    ) -> dict[str, float]:
-        stats_groupings = self.get_stats_groupings_schema(evaluation_task).validate(
-            self.stats_groupings
-        )
+    def get_graded_change_labels(self) -> dict[str, float]:
+        stats_groupings = self.get_stats_groupings_schema(
+            EvaluationTask.CHANGE_GRADED
+        ).validate(self.stats_groupings)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_graded))
 
-    def get_binary_change_labels(
-        self, evaluation_task: EvaluationTask
-    ) -> dict[str, float]:
-        stats_groupings = self.get_stats_groupings_schema(evaluation_task).validate(
-            self.stats_groupings
-        )
-        return dict(zip(stats_groupings.lemma, stats_groupings["change_binary"]))
+    def get_binary_change_labels(self) -> dict[str, int]:
+        stats_groupings = self.get_stats_groupings_schema(
+            EvaluationTask.CHANGE_BINARY
+        ).validate(self.stats_groupings)
+        return dict(zip(stats_groupings.lemma, stats_groupings.change_binary))
 
     def get_semantic_proximity_labels(self) -> dict[tuple[str, str], float]:
         annotated_pairs = list(
             zip(self.judgments.identifier1, self.judgments.identifier2)
         )
-        return dict(zip(annotated_pairs, self.judgments["judgment"]))
+        return dict(zip(annotated_pairs, self.judgments.judgment))
+
+    def get_clustering_labels(self) -> dict[str, int]:
+        return dict(zip(self.clusters.identifier, self.clusters.cluster))
 
     def get_labels(
-        self, evaluation_task: EvaluationTask
+        self, evaluation_task: EvaluationTask, keys: list[Any]
     ) -> dict[str | tuple[str, str], float]:
+        # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
+        # to be able to return the correct subset, we need the `keys` parameter
+        # this value should be a list returned by any of the models
         match evaluation_task:
             case None:
                 return []
             case EvaluationTask.CHANGE_GRADED:
-                target_to_label = self.get_graded_change_labels(evaluation_task)
+                target_to_label = self.get_graded_change_labels()
             case EvaluationTask.CHANGE_BINARY:
-                target_to_label = self.get_binary_change_labels(evaluation_task)
+                target_to_label = self.get_binary_change_labels()
             case EvaluationTask.SEMANTIC_PROXIMITY:
                 target_to_label = self.get_semantic_proximity_labels()
-
-        return [target_to_label[target.name] for target in self.targets]
+            case EvaluationTask.CLUSTERING:
+                target_to_label = self.get_clustering_labels()
+        return [target_to_label[key] for key in keys]
 
     @property
     def stats_agreement(self) -> DataFrame:

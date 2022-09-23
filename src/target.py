@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pandera import Column, DataFrameSchema
-from src.preprocessing import ContextPreprocessor
 
+from src.preprocessing import ContextPreprocessor
 from src.use import Use, UseID
 
 
