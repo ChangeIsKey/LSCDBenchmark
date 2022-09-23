@@ -1,56 +1,58 @@
+from dataclasses import dataclass, field
 import logging
-import os
-import uuid
-from dataclasses import dataclass
-from pathlib import Path
-from typing import TYPE_CHECKING, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
-import pandas as pd
-import scipy.spatial.distance as distance
 import torch
-import torch.nn.functional as F
-from pandas import DataFrame
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer, BatchEncoding
 from transformers import logging as trans_logging
+from src.distance_metric import DistanceMetric
+from src.layer_aggregation import LayerAggregator
+from src.subword_aggregation import SubwordAggregator
 
-import src.utils as utils
 from src.use import Use
-from src.wic.model import WICModel as WicModel
 
 trans_logging.set_verbosity_error()
-
-if TYPE_CHECKING:
-    from src.config.config import Config
 
 log = logging.getLogger(__name__)
 
 
 @dataclass
-class ContextualEmbedderWIC(WicModel):
-    def __init__(self, config: "Config"):
-        self.config = config
+class ContextualEmbedderWIC:
+    layers: list[int] | torch.Tensor
+    layer_aggregation: LayerAggregator | str
+    subword_aggregation: SubwordAggregator | str
+    truncation_tokens_before_target: float
+    distance_metric: DistanceMetric
+    id: str
+    gpu: int | None
 
+    _device: torch.device = field(init=False)
+    _tokenizer: AutoTokenizer = field(init=False)
+    _model: AutoModel = field(init=False)
+    _vectors: dict[str, np.ndarray] = field(init=False)
+
+    def __post_init__(self) -> None:
         self._device = None
         self._tokenizer = None
         self._model = None
-        self._index = None
         self._vectors = None
 
-    @property
-    def index_dir(self) -> Path:
-        path = os.getenv("BENCHMARK_CACHE")
-        path = Path(path) if path is not None else utils.path(".cache")
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+        self.layers = torch.tensor(self.layers, dtype=torch.int32)
+        self.subword_aggregation: SubwordAggregator = SubwordAggregator.from_str(
+            self.subword_aggregation
+        )
+        self.layer_aggregation: LayerAggregator = LayerAggregator.from_str(
+            self.layer_aggregation
+        )
 
     @property
     def device(self) -> torch.device:
         if self._device is None:
             self._device = torch.device(
-                f"cuda:{self.config.gpu}"
-                if self.config.gpu is not None and torch.cuda.is_available()
+                f"cuda:{self.gpu}"
+                if self.gpu is not None and torch.cuda.is_available()
                 else "cpu"
             )
         return self._device
@@ -59,7 +61,7 @@ class ContextualEmbedderWIC(WicModel):
     def tokenizer(self) -> AutoTokenizer:
         if self._tokenizer is None:
             self._tokenizer = AutoTokenizer.from_pretrained(
-                self.config.model.wic.id, use_fast=True, model_max_length=int(1e30)
+                self.id, use_fast=True, model_max_length=int(1e30)
             )
         return self._tokenizer
 
@@ -67,57 +69,10 @@ class ContextualEmbedderWIC(WicModel):
     def model(self) -> AutoModel:
         if self._model is None:
             self._model = AutoModel.from_pretrained(
-                self.config.model.wic.id, output_hidden_states=True
+                self.id, output_hidden_states=True
             ).to(self.device)
             self._model.eval()
         return self._model
-
-    @property
-    def index(self) -> DataFrame:
-        if self._index is None:
-            path = self.index_dir / "index.csv"
-            if path.exists():
-                self._index = pd.read_csv(path, engine="pyarrow")
-            else:
-                self._index = DataFrame(columns=self.index_row(use=None, id=None))
-            self.clean_cache()
-        return self._index
-
-    def index_row(self, use: Use, id: str) -> DataFrame:
-        headers = [
-            "model",
-            "use",
-            "id",
-            "preprocessing",
-            "dataset_name",
-            "dataset_version",
-            "tokens_before",
-        ]
-        if use is None and id is None:
-            return headers
-
-        values = [
-            self.config.model.wic.id,
-            use.identifier,
-            id,
-            self.config.dataset.preprocessing.target,
-            self.config.dataset.name,
-            self.config.dataset.version,
-            self.config.model.wic.truncation_tokens_before_target,
-        ]
-        return DataFrame([dict(zip(headers, values))])
-
-    @index.setter
-    def index(self, new: DataFrame):
-        path = self.index_dir / "index.csv"
-        self._index = new
-        self._index.to_csv(path, index=False)
-
-    def clean_cache(self):
-        valid_ids = set(self._index.id.tolist())
-        for file in self.index_dir.iterdir():
-            if file.stem != "index" and file.stem not in valid_ids:
-                file.unlink()
 
     def truncation_indices(
         self,
@@ -127,7 +82,7 @@ class ContextualEmbedderWIC(WicModel):
         max_tokens = 512
         n_target_subtokens = target_subword_indices.count(True)
         tokens_before = int(
-            (max_tokens - n_target_subtokens) * self.config.truncation.tokens_before
+            (max_tokens - n_target_subtokens) * self.truncation_tokens_before_target
         )
         tokens_after = max_tokens - tokens_before - n_target_subtokens
 
@@ -142,49 +97,12 @@ class ContextualEmbedderWIC(WicModel):
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         similarities = []
         for use_1, use_2 in tqdm(
-            use_pairs, desc="Encoding and calculating distances", leave=False
+            use_pairs, desc="Calculating use-pair distances", leave=False
         ):
             enc_1 = self.encode(use_1)
             enc_2 = self.encode(use_2)
-            similarities.append(-self.config.model.wic.distance_metric(enc_1, enc_2))
+            similarities.append(-self.distance_metric(enc_1, enc_2))
         return similarities
-
-    def retrieve_embedding(self, use: Use) -> np.ndarray | None:
-        mask = (
-            (self.index.model == self.config.model.wic.id)
-            & (self.index.use == use.identifier)
-            & (self.index.preprocessing == self.config.dataset.preprocessing.target)
-            & (self.index.dataset_name == self.config.dataset.name)
-            & (self.index.dataset_version == self.config.dataset.version)
-            & (
-                self.index.tokens_before
-                == self.config.model.wic.truncation_tokens_before_target
-            )
-        )
-        row = self.index[mask]
-
-        if not row.empty:
-            assert len(row) == 1
-            id_ = row.id.iat[0]
-            path = self.index_dir / f"{id_}.npy"
-            return np.load(path, mmap="r")
-
-        return None
-
-    def store_embedding(self, use: Use, embedding: np.ndarray) -> None:
-        ids = self.index.id.tolist()
-        while True:
-            id_ = str(uuid.uuid4())
-            if id_ not in ids:
-                with open(file=self.index_dir / f"{id_}.npy", mode="wb") as f:
-                    np.save(f, embedding)
-
-                self.index = pd.concat(
-                    [self.index, self.index_row(use=use, id=id_)],
-                    ignore_index=True,
-                )
-
-                break
 
     def tokenize(self, use: Use) -> BatchEncoding:
         return self.tokenizer.encode_plus(
@@ -192,10 +110,10 @@ class ContextualEmbedderWIC(WicModel):
         ).to(self.device)
 
     def aggregate(self, embedding: torch.Tensor) -> torch.Tensor:
-        return self.config.model.wic.layer_aggregation(
-            self.config.model.wic.subword_aggregation(embedding)
+        return self.layer_aggregation(
+            self.subword_aggregation(embedding)
             .squeeze()
-            .index_select(index=self.config.model.wic.layers, dim=0)
+            .index_select(index=self.layers, dim=0)
         )
 
     def encode(self, use: Use) -> np.ndarray:

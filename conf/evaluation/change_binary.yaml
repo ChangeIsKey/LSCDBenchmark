@@ -1,0 +1,9 @@
+_target_: src.evaluation.Evaluation
+task: change_binary
+metric: 
+  _target_: src.evaluation.EvaluationMetric
+  method:
+    _target_: sklearn.metrics.f1_score
+    _partial_: true
+  params: {}
+keep: null

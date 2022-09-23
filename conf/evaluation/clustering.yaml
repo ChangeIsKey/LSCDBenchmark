@@ -1,0 +1,10 @@
+_target_: src.evaluation.Evaluation
+task: change_graded
+metric: 
+  _target_: src.evaluation.EvaluationMetric
+  method:
+    _target_: sklearn.metrics.adjusted_rand_score
+    _partial_: true
+  params: {}
+
+keep: null

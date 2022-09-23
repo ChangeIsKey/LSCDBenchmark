@@ -1,13 +1,13 @@
 defaults:
-  - _self_
-  - optional preprocessing/spelling_normalization: null
+  - preprocessing/spelling_normalization: null
 
 name: dwug_sv
-version: 'latest'
-groupings: [1, 2]
+cleaning: null
 preprocessing:
-  _target_: src.preprocessing.toklem
-  spelling_normalization: null
+  _target_: src.preprocessing.Toklem
+  params: {}
+test_targets: null
+groupings: ["1", "2"]
+version: 'latest'
 
-
-
+_target_: src.dataset.Dataset

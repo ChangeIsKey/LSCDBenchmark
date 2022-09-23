@@ -1,3 +1,4 @@
+from typing_extensions import Self
 import torch
 from enum import Enum
 
@@ -15,4 +16,6 @@ class LayerAggregator(str, Enum):
             case self.CONCAT:
                 return torch.ravel(layers)
 
-
+    @classmethod
+    def from_str(cls, s: str) -> Self:
+        return cls[s.upper()]

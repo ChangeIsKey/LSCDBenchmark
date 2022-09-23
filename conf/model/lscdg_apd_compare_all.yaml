@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - /wic: ???
+  - wic: ???
 
 _target_: src.lscd.apd_compare_all.ApdCompareAll
-wic: ???
+threshold_fn: null

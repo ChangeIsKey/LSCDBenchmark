@@ -1,7 +1,0 @@
-task: change_binary
-metric:
-  _target_: sklearn.metrics.f1_score
-threshold_fn:
-  _target_: src.threshold.mean_std
-  params:
-    t: 0.1

@@ -1,4 +1,5 @@
 from enum import Enum
+from typing_extensions import Self
 import torch
 
 class SubwordAggregator(str, Enum):
@@ -18,5 +19,6 @@ class SubwordAggregator(str, Enum):
             case self.LAST:
                 return vectors[-1]
 
-
-
+    @classmethod
+    def from_str(cls, s: str) -> Self:
+        return cls[s.upper()]

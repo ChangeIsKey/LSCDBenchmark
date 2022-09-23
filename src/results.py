@@ -22,10 +22,6 @@ class Results:
         self.predictions = predictions
         self.labels = labels
 
-        self._aggregated_results_dir = utils.path("results")
-        self._aggregated_results_dir.mkdir(exist_ok=True)
-        self._aggregated_results = None
-
     def score(self):
         labels = [self.labels[key] for key in self.keys]
         predictions = [self.predictions[key] for key in self.keys]

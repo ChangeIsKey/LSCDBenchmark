@@ -1,10 +1,8 @@
 defaults:
   - _self_
-  - /wic: ???
+  - wic: ???
 
 _target_: src.lscd.apd_compare_all.ApdCompareAll
-/wic: ???
 threshold_fn: 
-  _target_: src.threshold.mean_std
-  params:
-    t: 0.1
+  _target_: src.threshold.MeanStd
+  t: 0.1

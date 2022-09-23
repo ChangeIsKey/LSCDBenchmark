@@ -3,3 +3,4 @@ defaults:
   - wic: bert
 
 _target_: src.lscd.cos.Cos
+threshold_fn: null

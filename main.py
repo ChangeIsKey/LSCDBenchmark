@@ -1,12 +1,10 @@
 import dotenv
-dotenv.load_dotenv()
-
 import hydra
+from hydra import utils
 from omegaconf import DictConfig
 
-from src.config.config import Config
-from src.dataset import Dataset
-from src.results import Results
+
+dotenv.load_dotenv()
 
 
 @hydra.main(
@@ -15,12 +13,16 @@ from src.results import Results
     config_name="config"
 )
 def main(config: DictConfig):
-    config: Config = Config.from_dictconfig(config)
-    model = config.model.instantiate(config)
-    dataset = Dataset(config)
+    dataset = utils.instantiate(config.dataset)
+    model = utils.instantiate(config.model)
+    evaluation = utils.instantiate(config.evaluation)
+
     predictions = model.predict(dataset.targets)
-    results = Results(config=config, predictions=predictions, labels=dataset.labels)
-    results.score()
+    labels = dataset.get_labels(evaluation.task)
+    score = evaluation(labels, predictions)
+    print(predictions)
+    print(labels)
+    print(score)
 
 
 if __name__ == "__main__":

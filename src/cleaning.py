@@ -1,19 +1,14 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List
+from typing import List
 from pandas import DataFrame
-from omegaconf import MISSING
 
 
 @dataclass
 class Cleaning:
-    defaults: list[Any] = field(default_factory=lambda: [{
-        "stats": MISSING,
-        "method": Cleaning.BooleanMethod.ALL
-    }])
-    stats: dict[str, Cleaning.CleaningParam] = MISSING
-    method: Cleaning.BooleanMethod = MISSING
+    stats: dict[str, Cleaning.CleaningParam] 
+    method: Cleaning.BooleanMethod
 
     def __call__(self, agreements: DataFrame) -> List[str]:
         conditions = [
@@ -28,7 +23,6 @@ class Cleaning:
                 return agreements.query("&".join(conditions))
             case self.BooleanMethod.ANY:
                 return agreements.query("|".join(conditions))
-
 
     @dataclass
     class CleaningParam:

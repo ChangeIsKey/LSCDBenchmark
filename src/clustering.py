@@ -13,17 +13,19 @@ from src._correlation import cluster_correlation_search
 from src.utils import _check_nan_weights_exits
 
 
-def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.ndarray, np.ndarray]:
+def split_clusters(
+    clustering: Dict[UseID, int], target: Target
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     splits clusters into two groups according to `groupings` parameter
     """
 
-    groupings = target.grouping_combination
+    groupings = target.groupings
     grouping_to_uses = target.grouping_to_uses()
 
     groups = [
         [clustering[id] for id in grouping_to_uses[groupings[0]]],
-        [clustering[id] for id in grouping_to_uses[groupings[1]]]
+        [clustering[id] for id in grouping_to_uses[groupings[1]]],
     ]
 
     for i, group in enumerate(groups):
@@ -33,14 +35,12 @@ def split_clusters(clustering: Dict[UseID, int], target: Target) -> Tuple[np.nda
             groups[i][j] = counts[cluster] / n
 
     return tuple(groups)
- 
+
 
 def clustering_spectral(model: DistanceModel, target: Target) -> Dict[UseID, int]:
     n_clusters = len(target.clusters.cluster.unique())
     clustering = SpectralClustering(
-        n_clusters=n_clusters, 
-        assign_labels="kmeans",
-        affinity="precomputed"
+        n_clusters=n_clusters, assign_labels="kmeans", affinity="precomputed"
     )
 
     ids = target.uses.identifier.tolist()
@@ -49,7 +49,9 @@ def clustering_spectral(model: DistanceModel, target: Target) -> Dict[UseID, int
     return dict(zip(ids, labels))
 
 
-def clustering_chinese_whispers(model: DistanceModel, target: Target) -> Dict[UseID, int]:
+def clustering_chinese_whispers(
+    model: DistanceModel, target: Target
+) -> Dict[UseID, int]:
     distance_matrix = model.distance_matrix(target)
     ids = distance_matrix.index
     G = nx.Graph()
@@ -66,7 +68,7 @@ def clustering_chinese_whispers(model: DistanceModel, target: Target) -> Dict[Us
 
 
 def clustering_correlation(
-    model: DistanceModel, 
+    model: DistanceModel,
     target: Target,
     **params,
 ):

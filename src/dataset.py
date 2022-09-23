@@ -1,45 +1,68 @@
+from contextvars import Context
 import csv
+from dataclasses import dataclass, field
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, List
 
-import os
 import json
+import os
 import pandas as pd
 import pandera as pa
 import requests
 from pandas import DataFrame, Series
 from pandera import Column, DataFrameSchema
 from tqdm import tqdm
+from src.preprocessing import ContextPreprocessor
+from src.cleaning import Cleaning
 
 import src.utils as utils
-from src.config.config import Config
-from src.config.evaluation.task import EvaluationTask
+from src.evaluation import EvaluationTask
 from src.target import Target
 
 
-class Dataset:
+class UnknownDataset(Exception):
+    pass
 
-    def __init__(self, config: Config):
-        self.config = config
-        self.groupings = self.config.dataset.groupings
+
+@dataclass
+class Dataset:
+    name: str
+    cleaning: Cleaning | None
+    preprocessing: ContextPreprocessor
+    groupings: tuple[str, str]
+    version: str | None
+    test_targets: list[str] | int | None
+
+    _stats_groupings: DataFrame = field(init=False)
+    _uses: DataFrame = field(init=False)
+    _judgments: DataFrame = field(init=False)
+    _agreements: DataFrame = field(init=False)
+    _clusters: DataFrame = field(init=False)
+    _labels: DataFrame = field(init=False)
+    _targets: DataFrame = field(init=False)
+    _path: Path = field(init=False)
+    _csv_params: dict[str, Any] = field(init=False)
+
+    def __post_init__(self):
         self._stats_groupings = None
         self._uses = None
         self._judgments = None
         self._agreements = None
+        self._clusters = None
         self._labels = None
-        self._gc_labels = None
-        self._bc_labels = None
-        self._sp_labels = None
         self._targets = None
-        self._wug_to_url = None
         self._path = None
-        self.__csv_params = dict(delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+        self._csv_params = dict(delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+
+        if self.version == "latest":
+            versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
+            self.version = versions[0]
 
         if not self.path.exists():
-            if self.config.dataset.name not in self.config.dataset.wug_to_url:
-                raise KeyError("dataset could not be found")
+            if self.name not in self.wug_to_url:
+                raise UnknownDataset
             self.path.parent.parent.mkdir(parents=True, exist_ok=True)
             self.__download()
             self.__unzip(self.path.parent.parent)
@@ -47,34 +70,36 @@ class Dataset:
     @property
     def path(self) -> Path:
         if self._path is None:
-            if self.config.dataset.path is not None:
-                self._path = self.config.dataset.path
-            else:
-                path = os.getenv("DATA_DIR")
-                if path is None:
-                    path = "wug"
-                self._path = utils.path(path) / self.config.dataset.name / self.config.dataset.version
-                
+            path = os.getenv("DATA_DIR")
+            if path is None:
+                path = "wug"
+            self._path = utils.path(path) / self.name / self.version
         return self._path
-            
+
+    @property
+    def wug_to_url(self) -> dict[str, dict[str, str]]:
+        path = utils.path("datasets.json")
+        with path.open(mode="r") as f:
+            return json.load(f)
+
     @property
     def url(self) -> str:
-        return self.config.dataset.wug_to_url[self.config.dataset.name][self.config.dataset.version]
-        
+        return self.wug_to_url[self.name][self.version]
+
     @property
     def __zipped_filename(self) -> Path:
-        return utils.path(f"{self.config.dataset.name}-{self.config.dataset.version}.zip")
-    
+        return utils.path(f"{self.name}-{self.version}.zip")
+
     def __download(self) -> None:
         r = requests.get(self.url, stream=True)
         with open(file=self.__zipped_filename, mode="wb") as f:
             pbar = tqdm(
-                desc=f"Downloading dataset '{self.config.dataset.name}' (version {self.config.dataset.version})",
+                desc=f"Downloading dataset '{self.name}' (version {self.version})",
                 unit="B",
                 unit_scale=True,
                 unit_divisor=1024,
                 total=int(r.headers["Content-Length"]),
-                leave=False
+                leave=False,
             )
             pbar.clear()  # clear 0% info
             for chunk in r.iter_content(chunk_size=1024):
@@ -92,7 +117,10 @@ class Dataset:
             root = output_dir / namelist[0]
             root.mkdir(parents=True, exist_ok=True)
 
-            for filename in tqdm(namelist, desc=f"Unzipping dataset '{self.config.dataset.name}' (version {self.config.dataset.version})"):
+            for filename in tqdm(
+                namelist,
+                desc=f"Unzipping dataset '{self.name}' (version {self.version})",
+            ):
 
                 filename_fixed = filename
                 for k, v in trans_table.items():
@@ -100,105 +128,102 @@ class Dataset:
 
                 path = Path(filename_fixed)
                 f_parts = list(path.parts)
-                
-                f_parts[f_parts.index(root.name)] = self.config.dataset.version
+
+                f_parts[f_parts.index(root.name)] = self.version
                 target_path = root.joinpath(*f_parts)
-                
+
                 if not filename.endswith("/"):
                     target_path.parent.mkdir(parents=True, exist_ok=True)
                     with target_path.open(mode="wb") as file_obj:
                         shutil.copyfileobj(z.open(filename, mode="r"), file_obj)
-                    
+
         zipped.unlink()
 
     @property
     def stats_groupings(self) -> DataFrame:
         if self._stats_groupings is None:
-            stats_groupings =  "stats_groupings.csv"
+            stats_groupings = "stats_groupings.csv"
             path = self.path / "stats" / "semeval" / stats_groupings
             if not path.exists():
                 path = self.path / "stats" / "opt" / stats_groupings
             if not path.exists():
                 path = self.path / "stats" / stats_groupings
-            self._stats_groupings = pd.read_csv(path, **self.__csv_params)
+            self._stats_groupings = pd.read_csv(path, **self._csv_params)
         return self._stats_groupings
-    
+
     @stats_groupings.setter
     def stats_groupings(self, other: DataFrame) -> None:
         self._stats_groupings = other
-    
-    @property
-    def stats_groupings_schema(self) -> DataFrameSchema:
+
+    def get_stats_groupings_schema(
+        self, evaluation_task: EvaluationTask
+    ) -> DataFrameSchema:
         def validate_grouping(s: Series) -> bool:
             for _, item in s.items():
                 parts = item.split("_")
-                if len(parts) != 2: 
+                if len(parts) != 2:
                     return False
             return True
 
-        schema = DataFrameSchema({
-            "lemma": Column(str),
-            "grouping": Column(str, checks=pa.Check(check_fn=validate_grouping))
-        })
+        schema = DataFrameSchema(
+            {
+                "lemma": Column(str),
+                "grouping": Column(str, checks=pa.Check(check_fn=validate_grouping)),
+            }
+        )
 
-        match self.config.evaluation.task:
-            case EvaluationTask.GRADED_CHANGE:
-                return schema.add_columns({
-                    "change_graded": Column(float)
-                })
-            case EvaluationTask.BINARY_CHANGE:
-                return schema.add_columns({
-                    "change_binary": Column(int)
-                })
+        match evaluation_task:
+            case EvaluationTask.CHANGE_GRADED:
+                return schema.add_columns({"change_graded": Column(float)})
+            case EvaluationTask.CHANGE_BINARY:
+                return schema.add_columns({"change_binary": Column(int)})
             case _:
                 return schema
 
-    @property
-    def graded_change_labels(self) -> dict[str, float]:
-        if self._gc_labels is None:
-            self.stats_groupings = self.stats_groupings_schema.validate(self.stats_groupings)
-            self._gc_labels = dict(zip(
-                self.stats_groupings.lemma, 
-                self.stats_groupings.change_graded
-            )) 
-        return self._gc_labels
-            
-    @property
-    def binary_change_labels(self) -> dict[str, float]:
-        if self._bc_labels is None:
-            self.stats_groupings = self.stats_groupings_schema.validate(self.stats_groupings)
-            self._bc_labels = dict(zip(
-                self.stats_groupings.lemma, 
-                self.stats_groupings["change_binary"]
-            )) 
-        return self._bc_labels
-        
-    @property
-    def semantic_proximity_labels(self) -> dict[tuple[str, str], float]:
-        if self._sp_labels is None:
-            annotated_pairs = list(zip(self.judgments.identifier1, self.judgments.identifier2))
-            self._sp_labels = dict(zip(annotated_pairs, self.judgments["judgment"]))
-        return self._sp_labels
-    
-    @property
-    def labels(self) -> dict[str | tuple[str, str], float]:
-        match self.config.evaluation.task:
+    def get_graded_change_labels(
+        self, evaluation_task: EvaluationTask
+    ) -> dict[str, float]:
+        stats_groupings = self.get_stats_groupings_schema(evaluation_task).validate(
+            self.stats_groupings
+        )
+        return dict(zip(stats_groupings.lemma, stats_groupings.change_graded))
+
+    def get_binary_change_labels(
+        self, evaluation_task: EvaluationTask
+    ) -> dict[str, float]:
+        stats_groupings = self.get_stats_groupings_schema(evaluation_task).validate(
+            self.stats_groupings
+        )
+        return dict(zip(stats_groupings.lemma, stats_groupings["change_binary"]))
+
+    def get_semantic_proximity_labels(self) -> dict[tuple[str, str], float]:
+        annotated_pairs = list(
+            zip(self.judgments.identifier1, self.judgments.identifier2)
+        )
+        return dict(zip(annotated_pairs, self.judgments["judgment"]))
+
+    def get_labels(
+        self, evaluation_task: EvaluationTask
+    ) -> dict[str | tuple[str, str], float]:
+        match evaluation_task:
             case None:
-                return {}
-            case EvaluationTask.GRADED_CHANGE:
-                return self.graded_change_labels
-            case EvaluationTask.BINARY_CHANGE:
-                return self.binary_change_labels
+                return []
+            case EvaluationTask.CHANGE_GRADED:
+                target_to_label = self.get_graded_change_labels(evaluation_task)
+            case EvaluationTask.CHANGE_BINARY:
+                target_to_label = self.get_binary_change_labels(evaluation_task)
             case EvaluationTask.SEMANTIC_PROXIMITY:
-                return self.semantic_proximity_labels
+                target_to_label = self.get_semantic_proximity_labels()
+
+        return [target_to_label[target.name] for target in self.targets]
 
     @property
     def stats_agreement(self) -> DataFrame:
         if self._agreements is None:
             path = self.path / "stats" / "stats_agreement.csv"
-            self._agreements = pd.read_csv(path, **self.__csv_params)
+            self._agreements = pd.read_csv(path, **self._csv_params)
         return self._agreements
-    
+
     @property
     def uses(self):
         if self._uses is None:
@@ -222,21 +247,27 @@ class Dataset:
         if self._targets is None:
             to_load = []
 
-            if self.config.dataset.cleaning is not None and len(self.config.dataset.cleaning.stats) > 0:
-                agreements = self.stats_agreement.iloc[1:, :].copy()  # remove "data=full" row
-                agreements = self.config.dataset.cleaning(agreements)
+            if self.cleaning is not None and len(self.cleaning.stats) > 0:
+                agreements = self.stats_agreement.iloc[
+                    1:, :
+                ].copy()  # remove "data=full" row
+                agreements = self.cleaning(agreements)
                 to_load = agreements.data.unique().tolist()
             else:
-                to_load = [folder.name for folder in (self.path / "data").iterdir()]
+                if utils.is_str_list(self.test_targets):
+                    to_load = self.test_targets
+                else:
+                    to_load = [folder.name for folder in (self.path / "data").iterdir()]
+                    if utils.is_int(self.test_targets):
+                        to_load = to_load[: self.test_targets]
 
-            if self.config.dataset.targets is not None:
-                if isinstance(self.config.dataset.targets, int):
-                    to_load = to_load[:self.config.dataset.targets]
-                elif isinstance(self.config.dataset.targets, list):
-                    to_load = self.config.dataset.targets
-            
             self._targets = [
-                Target(config=self.config, name=target, path=self.path)
+                Target(
+                    name=target,
+                    groupings=self.groupings,
+                    path=self.path,
+                    preprocessing=self.preprocessing,
+                )
                 for target in tqdm(to_load, desc="Building targets", leave=False)
             ]
 
