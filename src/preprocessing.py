@@ -10,7 +10,9 @@ class ContextPreprocessor(BaseModel, ABC):
     spelling_normalization: dict[str, str] | None
     params: dict[str, Any] | None
 
-    def __post_init__(self) -> None:
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+
         if self.spelling_normalization is not None:
             self.spelling_normalization = {
                 k.replace("_", " "): v for k, v in self.spelling_normalization.items()
