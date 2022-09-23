@@ -1,5 +1,5 @@
 _target_: src.evaluation.Evaluation
-task: change_graded
+task: clustering
 metric: 
   _target_: src.evaluation.EvaluationMetric
   method:
