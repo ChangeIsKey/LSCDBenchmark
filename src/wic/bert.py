@@ -1,13 +1,16 @@
 from dataclasses import dataclass, field
 import logging
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 import numpy as np
 import torch
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer, BatchEncoding
+from transformers.models.auto.modeling_auto import AutoModel
+from transformers.models.auto.tokenization_auto import AutoTokenizer
+from transformers.tokenization_utils_base import BatchEncoding
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+from transformers.modeling_utils import PreTrainedModel
 from transformers import logging as trans_logging
-from src.distance_metric import DistanceMetric
 from src.layer_aggregation import LayerAggregator
 from src.subword_aggregation import SubwordAggregator
 
@@ -20,18 +23,18 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class ContextualEmbedderWIC:
-    layers: list[int] | torch.Tensor
-    layer_aggregation: LayerAggregator | str
-    subword_aggregation: SubwordAggregator | str
+    layers: list[int] | torch.Tensor  # type: ignore
+    layer_aggregation: LayerAggregator | str  # type: ignore
+    subword_aggregation: SubwordAggregator | str  # type: ignore
     truncation_tokens_before_target: float
-    distance_metric: DistanceMetric
+    distance_metric: Callable[..., float]
     id: str
     gpu: int | None
 
-    _device: torch.device = field(init=False)
-    _tokenizer: AutoTokenizer = field(init=False)
-    _model: AutoModel = field(init=False)
-    _vectors: dict[str, np.ndarray] = field(init=False)
+    _device: torch.device | None = field(init=False)
+    _tokenizer: PreTrainedTokenizerFast | None = field(init=False)
+    _model: PreTrainedModel | None = field(init=False)
+    _vectors: dict[str, torch.Tensor] | None = field(init=False)
 
     def __post_init__(self) -> None:
         self._device = None
@@ -39,7 +42,7 @@ class ContextualEmbedderWIC:
         self._model = None
         self._vectors = None
 
-        self.layers = torch.tensor(self.layers, dtype=torch.int32)
+        self.layers: torch.Tensor = torch.tensor(self.layers, dtype=torch.int32)
         self.subword_aggregation: SubwordAggregator = SubwordAggregator.from_str(
             self.subword_aggregation
         )
@@ -58,17 +61,17 @@ class ContextualEmbedderWIC:
         return self._device
 
     @property
-    def tokenizer(self) -> AutoTokenizer:
+    def tokenizer(self) -> PreTrainedTokenizerFast:
         if self._tokenizer is None:
-            self._tokenizer = AutoTokenizer.from_pretrained(
+            self._tokenizer: PreTrainedTokenizerFast = AutoTokenizer.from_pretrained(
                 self.id, use_fast=True, model_max_length=int(1e30)
             )
         return self._tokenizer
 
     @property
-    def model(self) -> AutoModel:
+    def model(self) -> PreTrainedModel:
         if self._model is None:
-            self._model = AutoModel.from_pretrained(
+            self._model: PreTrainedModel = AutoModel.from_pretrained(
                 self.id, output_hidden_states=True
             ).to(self.device)
             self._model.eval()
@@ -160,7 +163,7 @@ class ContextualEmbedderWIC:
             log.info(f"Size of input_ids: {input_ids.size()}")
 
             with torch.no_grad():
-                outputs = self.model(input_ids, torch.ones_like(input_ids))
+                outputs = self.model(input_ids, torch.ones_like(input_ids)) 
 
             embedding = (
                 # stack the layers
@@ -176,7 +179,7 @@ class ContextualEmbedderWIC:
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
 
-        self._vectors[use.identifier] = embedding
-        embedding = self.aggregate(embedding).cpu().numpy()
+            embedding = self.aggregate(embedding)
+            self._vectors[use.identifier] = embedding
 
-        return embedding
+        return embedding.cpu().numpy()

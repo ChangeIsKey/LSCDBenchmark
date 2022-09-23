@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, TypeGuard
+from typing import Any, Sequence, TypeGuard
 
 import hydra
 import networkx as nx
@@ -30,25 +30,30 @@ def _check_nan_weights_exits(graph: nx.Graph):
 
 # Typeguards
 
-def is_str_list(obj: list[Any] | None) -> TypeGuard[list[str]]:
+def is_list(obj: Any) -> TypeGuard[list[Any]]:
+    return hasattr(obj, "__len__")
+    
+
+def is_str_list(obj: Any) -> TypeGuard[list[str]]:
     try:
         return obj is not None and all(isinstance(s, str) for s in obj)
     except TypeError:
         return False
 
-def is_float(obj: object | None) -> TypeGuard[float]:
+def is_number(obj: Any) -> TypeGuard[float | int]:
     try:
-        return isinstance(obj, float)
+        return isinstance(obj, float) or isinstance(obj, int)
     except TypeError:
         return False
 
-def is_int(obj: object | None) -> TypeGuard[int]:
+
+def is_int(obj: Any) -> TypeGuard[int]:
     try:
         return isinstance(obj, int)
     except TypeError:
         return False
 
-def is_lscd_model(obj: object) -> TypeGuard[LSCDModel]:
+def is_lscd_model(obj: Any) -> TypeGuard[LSCDModel]:
     try:
         return isinstance(obj, LSCDModel)
     except TypeError:

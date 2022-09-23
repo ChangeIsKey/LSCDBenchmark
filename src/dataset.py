@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any, List
+from typing import Any, Iterable, List
 
 import json
 import os
@@ -18,7 +18,7 @@ from src.cleaning import Cleaning
 
 import src.utils as utils
 from src.evaluation import EvaluationTask
-from src.target import Target
+from src.target import Target, CsvParams
 
 
 class UnknownDataset(Exception):
@@ -31,18 +31,18 @@ class Dataset:
     cleaning: Cleaning | None
     preprocessing: ContextPreprocessor
     groupings: tuple[str, str]
-    version: str | None
+    version: str
     test_targets: list[str] | int | None
 
-    _stats_groupings: DataFrame = field(init=False)
-    _uses: DataFrame = field(init=False)
-    _judgments: DataFrame = field(init=False)
-    _agreements: DataFrame = field(init=False)
-    _clusters: DataFrame = field(init=False)
-    _labels: DataFrame = field(init=False)
-    _targets: DataFrame = field(init=False)
-    _path: Path = field(init=False)
-    _csv_params: dict[str, Any] = field(init=False)
+    _stats_groupings: DataFrame | None = field(init=False)
+    _uses: DataFrame | None = field(init=False)
+    _judgments: DataFrame | None = field(init=False)
+    _agreements: DataFrame | None = field(init=False)
+    _clusters: DataFrame | None = field(init=False)
+    _labels: DataFrame | None = field(init=False)
+    _targets: list[Target] | None = field(init=False)
+    _path: Path | None = field(init=False)
+    _csv_params: CsvParams = field(init=False)
 
     def __post_init__(self):
         self._stats_groupings = None
@@ -53,7 +53,11 @@ class Dataset:
         self._labels = None
         self._targets = None
         self._path = None
-        self._csv_params = dict(delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+        self._csv_params = CsvParams(
+            delimiter="\t", 
+            encoding="utf8", 
+            quoting=csv.QUOTE_NONE
+        )
 
         if self.version == "latest":
             versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
@@ -201,22 +205,24 @@ class Dataset:
         return dict(zip(self.clusters.identifier, self.clusters.cluster))
 
     def get_labels(
-        self, evaluation_task: EvaluationTask, keys: list[Any]
-    ) -> dict[str | tuple[str, str], float]:
+        self, evaluation_task: EvaluationTask, keys: Iterable[Any]
+    ) -> list[float | int]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
         # this value should be a list returned by any of the models
         match evaluation_task:
             case None:
-                return []
+                return {}
             case EvaluationTask.CHANGE_GRADED:
                 target_to_label = self.get_graded_change_labels()
             case EvaluationTask.CHANGE_BINARY:
                 target_to_label = self.get_binary_change_labels()
             case EvaluationTask.SEMANTIC_PROXIMITY:
                 target_to_label = self.get_semantic_proximity_labels()
-            case EvaluationTask.CLUSTERING:
+            case EvaluationTask.WSI:
                 target_to_label = self.get_clustering_labels()
+            case _:
+                raise ValueError
         return [target_to_label[key] for key in keys]
 
     @property

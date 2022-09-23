@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from itertools import product
 from pathlib import Path
-from typing import Any, Dict
+from typing import Dict, Literal, TypedDict
 
 import numpy as np
 import pandas as pd
@@ -25,6 +25,10 @@ class Pairing(str, Enum):
     EARLIER = "EARLIER"
     LATER = "LATER"
 
+class CsvParams(TypedDict):
+    delimiter: str
+    encoding: str
+    quoting: Literal[0, 1, 2, 3]
 
 @dataclass
 class Target:
@@ -33,16 +37,16 @@ class Target:
     path: Path
     preprocessing: ContextPreprocessor
 
-    _uses: DataFrame = field(init=False)
-    _judgments: DataFrame = field(init=False)
-    _clusters: DataFrame = field(init=False)
-    _csv_params: dict[str, Any] = field(init=False)
+    _uses: DataFrame | None = field(init=False)
+    _judgments: DataFrame | None = field(init=False)
+    _clusters: DataFrame | None = field(init=False)
+    _csv_params: CsvParams = field(init=False)
 
     def __post_init__(self) -> None:
         self._uses = None
         self._judgments = None
         self._clusters = None
-        self._csv_params = dict(
+        self._csv_params = CsvParams(
             delimiter="\t",
             encoding="utf8",
             quoting=csv.QUOTE_NONE
@@ -125,7 +129,7 @@ class Target:
             if value in self.groupings
         }
 
-    def grouping_to_uses(self) -> Dict[UseID, str]:
+    def grouping_to_uses(self) -> dict[str, list[UseID]]:
         uses_to_groupings = self.uses_to_grouping()
         return {
             group: [

@@ -4,11 +4,8 @@ layer_aggregation: average
 subword_aggregation: average
 truncation_tokens_before_target: 0.5
 distance_metric:
-  _target_: src.distance_metric.DistanceMetric
-  params: {}
-  method:
-    _target_: scipy.spatial.distance.cosine
-    _partial_: true
+  _target_: scipy.spatial.distance.cosine
+  _partial_: true
 
 gpu: null
 id: '???'

@@ -4,37 +4,39 @@ from enum import Enum
 from typing import List
 from pandas import DataFrame
 
+class ThresholdParam(str, Enum):
+    ABOVE = "above"
+    BELOW = "below"
+
+@dataclass
+class CleaningParam:
+    threshold: float
+    keep: ThresholdParam = field(default_factory=lambda: ThresholdParam.ABOVE)
+
+
+class BooleanMethod(str, Enum):
+    ALL = "all"
+    ANY = "any"
 
 @dataclass
 class Cleaning:
-    stats: dict[str, Cleaning.CleaningParam] 
-    method: Cleaning.BooleanMethod
+    stats: dict[str, CleaningParam] 
+    method: BooleanMethod
 
-    def __call__(self, agreements: DataFrame) -> List[str]:
+    def __call__(self, agreements: DataFrame) -> DataFrame:
         conditions = [
             f"{column} >= {cleaning_param.threshold}"
-            if cleaning_param.keep is self.ThresholdParam.ABOVE
+            if cleaning_param.keep is ThresholdParam.ABOVE
             else f"{column} <= {cleaning_param.threshold}"
             for column, cleaning_param in self.stats.items()
         ]
 
         match self.method:
-            case self.BooleanMethod.ALL:
+            case BooleanMethod.ALL:
                 return agreements.query("&".join(conditions))
-            case self.BooleanMethod.ANY:
+            case BooleanMethod.ANY:
                 return agreements.query("|".join(conditions))
 
-    @dataclass
-    class CleaningParam:
-        threshold: float
-        keep: Cleaning.ThresholdParam = field(default_factory=lambda: Cleaning.ThresholdParam.ABOVE)
 
-    class ThresholdParam(str, Enum):
-        ABOVE = "above"
-        BELOW = "below"
-
-    class BooleanMethod(str, Enum):
-        ALL = "all"
-        ANY = "any"
 
 
