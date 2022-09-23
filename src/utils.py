@@ -7,6 +7,9 @@ import numpy as np
 
 from src.lscd.lscd_model import LSCDModel
 
+class ShouldNotHappen(Exception):
+    ...
+
 
 def path(path: str) -> Path:
     return Path(hydra.utils.to_absolute_path(path)).resolve()

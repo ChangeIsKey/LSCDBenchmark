@@ -2,12 +2,12 @@ from pydantic import BaseModel
 from abc import ABC, abstractmethod
 from typing import Any, Callable
 from src.target import Target
-from src.wic.bert import ContextualEmbedderWIC
-from src.wic.deepmistake import DeepMistakeWIC
+from src.wic import ContextualEmbedder, DeepMistake
+from src.wic import WICModel
 
 
 class LSCDModel(BaseModel, ABC):
-    wic: ContextualEmbedderWIC | DeepMistakeWIC
+    wic: WICModel
     threshold_fn: Callable[[list[float]], float] | None
 
     @abstractmethod

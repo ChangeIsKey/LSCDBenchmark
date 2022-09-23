@@ -2,5 +2,5 @@ defaults:
   - _self_
   - wic: bert
 
-_target_: src.lscd.cos.Cos
+_target_: src.lscd.Cos
 threshold_fn: null

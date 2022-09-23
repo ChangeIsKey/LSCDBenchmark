@@ -2,28 +2,30 @@ import logging
 from typing import Callable, List, Tuple
 
 import numpy as np
-from pydantic import BaseModel, Field, PrivateAttr, conint, conlist
+from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist
 import torch
 from tqdm import tqdm
-from transformers.models.auto.modeling_auto import AutoModel
-from transformers.models.auto.tokenization_auto import AutoTokenizer
-from transformers.tokenization_utils_base import BatchEncoding
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
-from transformers.modeling_utils import PreTrainedModel
-from transformers import logging as trans_logging
+from transformers import (
+    AutoModel,
+    AutoTokenizer,
+    BatchEncoding,
+    PreTrainedTokenizerFast,
+    PreTrainedModel,
+    logging as trans_logging,
+)
+
 from src.layer_aggregation import LayerAggregator
 from src.subword_aggregation import SubwordAggregator
 
 from src.use import Use
-from src.wic.model import WICModel
 
 trans_logging.set_verbosity_error()
 
 log = logging.getLogger(__name__)
 
 
-class ContextualEmbedderWIC(BaseModel):
-    layers: conlist(item_type=conint(gt=0), unique_items=True)  # type: ignore
+class ContextualEmbedder(BaseModel):
+    layers: conlist(item_type=PositiveInt, unique_items=True)  # type: ignore
     layer_aggregation: LayerAggregator
     subword_aggregation: SubwordAggregator
     truncation_tokens_before_target: float
@@ -124,7 +126,7 @@ class ContextualEmbedderWIC(BaseModel):
             )
 
             encoding = self.tokenize(use)
-            input_ids = encoding["input_ids"].to(self.device) 
+            input_ids = encoding["input_ids"].to(self.device)
             tokens = encoding.tokens()
             subword_spans = [encoding.token_to_chars(i) for i in range(len(tokens))]
 
@@ -154,7 +156,7 @@ class ContextualEmbedderWIC(BaseModel):
             log.info(f"Size of input_ids: {input_ids.size()}")
 
             with torch.no_grad():
-                outputs = self.model(input_ids, torch.ones_like(input_ids)) 
+                outputs = self.model(input_ids, torch.ones_like(input_ids))
 
             embedding = (
                 # stack the layers

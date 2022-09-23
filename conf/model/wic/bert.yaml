@@ -1,4 +1,4 @@
-_target_: src.wic.bert.ContextualEmbedderWIC
+_target_: src.wic.ContextualEmbedder
 layers: [1, 12]
 layer_aggregation: average
 subword_aggregation: average

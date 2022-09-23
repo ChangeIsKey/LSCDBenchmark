@@ -1,39 +1,30 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field
-from enum import Enum
-from typing import List
+from typing import Literal
 from pandas import DataFrame
 
-class ThresholdParam(str, Enum):
-    ABOVE = "above"
-    BELOW = "below"
 
 class CleaningParam(BaseModel):
     threshold: float
-    keep: ThresholdParam = Field(default_factory=lambda: ThresholdParam.ABOVE)
-
-
-class BooleanMethod(str, Enum):
-    ALL = "all"
-    ANY = "any"
+    keep: Literal["above", "below"] = Field(default="above")
 
 
 class Cleaning(BaseModel):
     stats: dict[str, CleaningParam] 
-    method: BooleanMethod
+    match: Literal["all", "any"]
 
     def __call__(self, agreements: DataFrame) -> DataFrame:
         conditions = [
             f"{column} >= {cleaning_param.threshold}"
-            if cleaning_param.keep is ThresholdParam.ABOVE
+            if cleaning_param.keep == "above"
             else f"{column} <= {cleaning_param.threshold}"
             for column, cleaning_param in self.stats.items()
         ]
 
-        match self.method:
-            case BooleanMethod.ALL:
+        match self.match:
+            case "all":
                 return agreements.query("&".join(conditions))
-            case BooleanMethod.ANY:
+            case "any":
                 return agreements.query("|".join(conditions))
 
 

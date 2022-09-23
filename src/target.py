@@ -1,4 +1,5 @@
 import csv
+from doctest import UnexpectedException
 from enum import Enum
 from itertools import product
 from pathlib import Path
@@ -8,22 +9,12 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pandera import Column, DataFrameSchema
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, PrivateAttr, validate_arguments
 
 from src.preprocessing import ContextPreprocessor
 from src.use import Use, UseID
+from src.utils import ShouldNotHappen
 
-
-class Sampling(str, Enum):
-    ANNOTATED = "annotated"
-    SAMPLED = "sampled"
-    ALL = "all"
-
-
-class Pairing(str, Enum):
-    COMPARE = "COMPARE"
-    EARLIER = "EARLIER"
-    LATER = "LATER"
 
 class CsvParams(TypedDict):
     delimiter: str
@@ -39,6 +30,7 @@ class Target(BaseModel):
 
     _uses: DataFrame | None = PrivateAttr(default=None)
     _judgments: DataFrame | None = PrivateAttr(default=None)
+    _augmented_judgments: DataFrame | None = PrivateAttr(default=None)
     _clusters: DataFrame | None = PrivateAttr(default=None)
     _csv_params: CsvParams = PrivateAttr(default_factory=lambda: CsvParams(
         delimiter="\t",
@@ -89,6 +81,25 @@ class Target(BaseModel):
             self._judgments["judgment"] = self._judgments["judgment"].replace(to_replace=0, value=np.nan)
             self.judgments_schema.validate(self._judgments)
         return self._judgments
+    
+    @property
+    def augmented_judgments(self) -> DataFrame:
+        if self._augmented_judgments is None:
+            self._augmented_judgments = pd.merge(
+                self.judgments,
+                self.uses,
+                left_on="identifier1",
+                right_on="identifier",
+                how="left",
+            )
+            self._augmented_judgments = pd.merge(
+                self._augmented_judgments,
+                self.uses,
+                left_on="identifier2",
+                right_on="identifier",
+                how="left",
+            )
+        return self._augmented_judgments
 
     @property
     def judgments_schema(self) -> DataFrameSchema:
@@ -131,86 +142,81 @@ class Target(BaseModel):
             for group in self.groupings
         }
 
+
+    def _split_compare_uses(self) -> tuple[list[UseID], list[UseID]]:
+        ids1 = self.uses[self.uses.grouping == self.groupings[0]]
+        ids2 = self.uses[self.uses.grouping == self.groupings[1]]
+        return ids1.identifier.tolist(), ids2.identifier.tolist()
+
+    def _split_earlier_uses(self) -> tuple[list[UseID], list[UseID]]:
+        ids = self.uses[self.uses.grouping == self.groupings[0]]
+        return ids.identifier.tolist(), ids.identifier.tolist()
+
+    def _split_later_uses(self) -> tuple[list[UseID], list[UseID]]:
+        ids = self.uses[self.uses.grouping == self.groupings[1]]
+        return ids.identifier.tolist(), ids.identifier.tolist()
+
+    def split_uses(self, pairing: Literal["COMPARE", "EARLIER", "LATER"]) -> tuple[list[UseID], list[UseID]]:
+        match pairing:
+            case "COMPARE":
+                return self._split_compare_uses()
+            case "EARLIER":
+                return self._split_earlier_uses()
+            case "LATER":
+                return self._split_later_uses()
+
+    @validate_arguments
     def use_pairs(
-        self, pairing: Pairing, sampling: Sampling, **params
+        self, pairing: Literal["COMPARE", "EARLIER", "LATER"], 
+        sampling: Literal["all", "sampled", "annotated"], 
+        n: int | None = None,
+        replace: bool | None = None
     ) -> list[tuple[Use, Use]]:
+        
+        match (sampling, pairing):
+            case ("annotated", p):
+                ids1, ids2 = self._split_annotated_uses(p)
+                use_pairs = list(zip(ids1, ids2)) 
+            case ("all", p):
+                ids1, ids2 = self.split_uses(p)
+                use_pairs = list(product(ids1, ids2))
+            case ("sampled", p):
+                if replace is None: 
+                    raise ValueError("'replace' parameter not provided for sampling")
+                if n is None: 
+                    raise ValueError("'n' parameter not provided for sampling")
 
-        if sampling is Sampling.ANNOTATED:
-            ids1, ids2 = self.__split_annotated_uses(pairing)
-        else:
-            match pairing:
-                case Pairing.COMPARE:
-                    ids1 = self.uses[
-                        self.uses.grouping == self.groupings[0]
-                    ].identifier.tolist()
-                    ids2 = self.uses[
-                        self.uses.grouping == self.groupings[1]
-                    ].identifier.tolist()
-                case Pairing.EARLIER:
-                    ids1 = self.uses[
-                        self.uses.grouping == self.groupings[0]
-                    ].identifier.tolist()
-                    ids2 = ids1
-                case Pairing.LATER:
-                    ids1 = self.uses[
-                        self.uses.grouping == self.groupings[1]
-                    ].identifier.tolist()
-                    ids2 = ids1
+                ids1, ids2 = self.split_uses(p)
+                ids1 = [np.random.choice(ids1, replace=replace) for _ in range(n)]
+                ids2 = [np.random.choice(ids2, replace=replace) for _ in range(n)]
+                use_pairs = list(zip(ids1, ids2))
+            
+            case _:
+                raise ShouldNotHappen
 
-        match sampling:
-            case Sampling.ANNOTATED:
-                pairs = list(zip(ids1, ids2))
-            case Sampling.ALL:
-                pairs = list(product(ids1, ids2))
-            case Sampling.SAMPLED:
-                pairs = [
-                    (
-                        np.random.choice(ids1, replace=params["replace"]),
-                        np.random.choice(ids2, replace=params["replace"]),
-                    )
-                    for _ in range(params["n"])
-                ]
-
-        use_pairs = []
-        for id1, id2 in pairs:
+        use_pairs_instances = []
+        for id1, id2 in use_pairs:
             u1 = Use.from_series(self.uses[self.uses.identifier == id1].iloc[0])
             u2 = Use.from_series(self.uses[self.uses.identifier == id2].iloc[0])
-            use_pairs.append((u1, u2))
-        return use_pairs
+            use_pairs_instances.append((u1, u2))
 
-    def __split_annotated_uses(
-        self, pairing: Pairing
+        return use_pairs_instances
+
+    def _split_annotated_uses(
+        self, 
+        pairing: Literal["COMPARE", "EARLIER", "LATER"], 
     ) -> tuple[list[UseID], list[UseID]]:
-        judgments = pd.merge(
-            self.judgments,
-            self.uses,
-            left_on="identifier1",
-            right_on="identifier",
-            how="left",
-        )
-        judgments = pd.merge(
-            judgments,
-            self.uses,
-            left_on="identifier2",
-            right_on="identifier",
-            how="left",
-        )
+        match pairing:
+            case "COMPARE":
+                group_0, group_1 = self.groupings
+            case "EARLIER":
+                group_0, group_1 = self.groupings[0], self.groupings[0]
+            case "LATER":
+                group_0, group_1 = self.groupings[1], self.groupings[1]
 
-        pairing_to_grouping = {
-            "COMPARE": self.groupings,
-            "LATER": (
-                self.groupings[1],
-                self.groupings[1],
-            ),
-            "EARLIER": (
-                self.groupings[0],
-                self.groupings[0],
-            ),
-        }
-
-        judgments = judgments[
-            (judgments.grouping_x == pairing_to_grouping[pairing.name][0])
-            & (judgments.grouping_y == pairing_to_grouping[pairing.name][1])
+        judgments = self.augmented_judgments[
+            (self.augmented_judgments.grouping_x == group_0)
+            & (self.augmented_judgments.grouping_y == group_1)
         ]
 
         return (
