@@ -13,15 +13,14 @@ dotenv.load_dotenv()
     config_name="config"
 )
 def main(config: DictConfig):
-    dataset = utils.instantiate(config.dataset)
-    model = utils.instantiate(config.model)
-    evaluation = utils.instantiate(config.evaluation)
+    dataset = utils.instantiate(config.dataset, _convert_="all")
+    model = utils.instantiate(config.model, _convert_="all")
+    evaluation = utils.instantiate(config.evaluation, _convert_="all")
 
     keys, predictions = model.predict(dataset.targets)
     labels = dataset.get_labels(evaluation.task, keys)
     score = evaluation(labels, predictions)
-    print(predictions)
-    print(labels)
+  
     print(score)
 
 

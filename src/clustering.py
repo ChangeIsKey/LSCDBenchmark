@@ -8,7 +8,6 @@ from sklearn.cluster import SpectralClustering
 
 from src.use import UseID
 from src.target import Target
-from src.wic.bert import DistanceModel
 from src._correlation import cluster_correlation_search
 from src.utils import _check_nan_weights_exits
 

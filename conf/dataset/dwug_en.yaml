@@ -7,7 +7,9 @@ preprocessing:
   _target_: src.preprocessing.Toklem
   params: {}
 test_targets: null
-groupings: ["1", "2"]
+groupings: 
+  - "1"
+  - "2"
 version: 'latest'
 
 _target_: src.dataset.Dataset

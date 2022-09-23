@@ -1,5 +1,4 @@
 import csv
-from dataclasses import dataclass, field
 from enum import Enum
 from itertools import product
 from pathlib import Path
@@ -9,6 +8,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pandera import Column, DataFrameSchema
+from pydantic import BaseModel, PrivateAttr
 
 from src.preprocessing import ContextPreprocessor
 from src.use import Use, UseID
@@ -30,28 +30,21 @@ class CsvParams(TypedDict):
     encoding: str
     quoting: Literal[0, 1, 2, 3]
 
-@dataclass
-class Target:
+
+class Target(BaseModel):
     name: str
     groupings: tuple[str, str]
     path: Path
     preprocessing: ContextPreprocessor
 
-    _uses: DataFrame | None = field(init=False)
-    _judgments: DataFrame | None = field(init=False)
-    _clusters: DataFrame | None = field(init=False)
-    _csv_params: CsvParams = field(init=False)
-
-    def __post_init__(self) -> None:
-        self._uses = None
-        self._judgments = None
-        self._clusters = None
-        self._csv_params = CsvParams(
-            delimiter="\t",
-            encoding="utf8",
-            quoting=csv.QUOTE_NONE
-        )
-
+    _uses: DataFrame | None = PrivateAttr(default=None)
+    _judgments: DataFrame | None = PrivateAttr(default=None)
+    _clusters: DataFrame | None = PrivateAttr(default=None)
+    _csv_params: CsvParams = PrivateAttr(default_factory=lambda: CsvParams(
+        delimiter="\t",
+        encoding="utf8",
+        quoting=csv.QUOTE_NONE
+    ))
 
     @property
     def uses(self) -> DataFrame:

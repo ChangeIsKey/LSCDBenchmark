@@ -3,19 +3,24 @@ from typing import Any
 from pandas import Series
 from abc import ABC, abstractmethod
 
+from pydantic import BaseModel
 
-@dataclass
-class ContextPreprocessor(ABC):
+
+class ContextPreprocessor(BaseModel, ABC):
     spelling_normalization: dict[str, str] | None
     params: dict[str, Any] | None
 
     def __post_init__(self) -> None:
         if self.spelling_normalization is not None:
-            self.spelling_normalization = {k.replace("_", " "): v for k, v in self.spelling_normalization.items()}
+            self.spelling_normalization = {
+                k.replace("_", " "): v for k, v in self.spelling_normalization.items()
+            }
         else:
             self.spelling_normalization = {}
 
-    def character_indices(self, token_index: int, tokens: list[str], target: str) -> tuple[int, int]:
+    def character_indices(
+        self, token_index: int, tokens: list[str], target: str
+    ) -> tuple[int, int]:
         char_idx = -1
         for i, token in enumerate(tokens):
             if i == token_index:
@@ -35,7 +40,7 @@ class ContextPreprocessor(ABC):
     @abstractmethod
     def preprocess_context(self, s: Series) -> tuple[str, int, int]:
         raise NotImplementedError
-    
+
     def __call__(self, s: Series) -> Series:
         context, start, end = self.preprocess_context(s)
         return Series(
@@ -45,24 +50,24 @@ class ContextPreprocessor(ABC):
                 "target_index_end": end,
             }
         )
-    
+
 
 class Toklem(ContextPreprocessor):
     def preprocess_context(self, s: Series) -> tuple[str, int, int]:
         tokens = self.normalize_spelling(s.context_tokenized).split()
         target = s.lemma.split("_")[0]
         start, end = self.character_indices(
-            token_index=s.indexes_target_token_tokenized,
-            tokens=tokens,
-            target=target
+            token_index=s.indexes_target_token_tokenized, tokens=tokens, target=target
         )
         tokens[int(s.indexes_target_token_tokenized)] = target
         return " ".join(tokens), start, end
+
 
 class KeepIntact(ContextPreprocessor):
     def preprocess_context(self, s: Series) -> tuple[str, int, int]:
         start, end = tuple(map(int, s.indexes_target_token.split(":")))
         return s.context, start, end
+
 
 class Lemmatize(ContextPreprocessor):
     def preprocess_context(self, s: Series) -> tuple[str, int, int]:
@@ -70,15 +75,20 @@ class Lemmatize(ContextPreprocessor):
         tokens = context_preprocessed.split()
 
         # the spanish dataset has an index column for the lemmatized contexts, but all the others don't
-        idx = s.get(
+        idx: int = s.get(
             "indexes_target_token_lemmatized", default=s.indexes_target_token_tokenized
+        )  # type: ignore
+        start, end = self.character_indices(
+            token_index=idx, tokens=tokens, target=tokens[idx]
         )
-        start, end = self.character_indices(token_index=idx, tokens=tokens, target=tokens[idx])
         return context_preprocessed, start, end
+
 
 class Tokenize(ContextPreprocessor):
     def preprocess_context(self, s: Series) -> tuple[str, int, int]:
         tokens = self.normalize_spelling(s.context_tokenized).split()
         idx = s.indexes_target_token_tokenized
-        start, end = self.character_indices(token_index=idx, tokens=tokens, target=tokens[idx])
+        start, end = self.character_indices(
+            token_index=idx, tokens=tokens, target=tokens[idx]
+        )
         return " ".join(tokens), start, end

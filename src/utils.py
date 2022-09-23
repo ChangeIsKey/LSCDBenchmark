@@ -55,6 +55,6 @@ def is_int(obj: Any) -> TypeGuard[int]:
 
 def is_lscd_model(obj: Any) -> TypeGuard[LSCDModel]:
     try:
-        return isinstance(obj, LSCDModel)
+        return issubclass(obj, LSCDModel)
     except TypeError:
         return False

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from pydantic import BaseModel, Field
 from enum import Enum
 from typing import List
 from pandas import DataFrame
@@ -8,18 +8,17 @@ class ThresholdParam(str, Enum):
     ABOVE = "above"
     BELOW = "below"
 
-@dataclass
-class CleaningParam:
+class CleaningParam(BaseModel):
     threshold: float
-    keep: ThresholdParam = field(default_factory=lambda: ThresholdParam.ABOVE)
+    keep: ThresholdParam = Field(default_factory=lambda: ThresholdParam.ABOVE)
 
 
 class BooleanMethod(str, Enum):
     ALL = "all"
     ANY = "any"
 
-@dataclass
-class Cleaning:
+
+class Cleaning(BaseModel):
     stats: dict[str, CleaningParam] 
     method: BooleanMethod
 

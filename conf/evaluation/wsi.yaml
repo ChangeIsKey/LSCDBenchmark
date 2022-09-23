@@ -1,6 +1,7 @@
 _target_: src.evaluation.Evaluation
-task: change_binary
+task: clustering
 metric: 
-  _target_: sklearn.metrics.f1_score
+  _target_: sklearn.metrics.adjusted_rand_score
   _partial_: true
+
 keep: null

@@ -1,12 +1,10 @@
-from __future__ import annotations
-from dataclasses import dataclass
-from typing import TypeAlias
+from typing import NewType, TypeVar
 from pandas import Series
+from pydantic import BaseModel
 
-UseID: TypeAlias = str
+UseID = NewType("UseID", str)
 
-@dataclass
-class Use:
+class Use(BaseModel):
     # unique id for this specific use
     identifier: UseID
     # grouping id for the specific time period/dialect this use belongs to
@@ -20,7 +18,7 @@ class Use:
     indices: tuple[int, int]
 
     @classmethod
-    def from_series(cls, use: Series) -> Use:
+    def from_series(cls, use: Series) -> "Use":
         return cls(
             identifier=use.identifier,
             grouping=use.grouping,

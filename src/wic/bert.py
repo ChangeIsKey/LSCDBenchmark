@@ -1,8 +1,8 @@
-from dataclasses import dataclass, field
 import logging
 from typing import Callable, List, Tuple
 
 import numpy as np
+from pydantic import BaseModel, Field, PrivateAttr, conint, conlist
 import torch
 from tqdm import tqdm
 from transformers.models.auto.modeling_auto import AutoModel
@@ -15,40 +15,31 @@ from src.layer_aggregation import LayerAggregator
 from src.subword_aggregation import SubwordAggregator
 
 from src.use import Use
+from src.wic.model import WICModel
 
 trans_logging.set_verbosity_error()
 
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class ContextualEmbedderWIC:
-    layers: list[int] | torch.Tensor  # type: ignore
-    layer_aggregation: LayerAggregator | str  # type: ignore
-    subword_aggregation: SubwordAggregator | str  # type: ignore
+class ContextualEmbedderWIC(BaseModel):
+    layers: conlist(item_type=conint(gt=0), unique_items=True)  # type: ignore
+    layer_aggregation: LayerAggregator
+    subword_aggregation: SubwordAggregator
     truncation_tokens_before_target: float
     distance_metric: Callable[..., float]
     id: str
     gpu: int | None
 
-    _device: torch.device | None = field(init=False)
-    _tokenizer: PreTrainedTokenizerFast | None = field(init=False)
-    _model: PreTrainedModel | None = field(init=False)
-    _vectors: dict[str, torch.Tensor] | None = field(init=False)
+    _device: torch.device = PrivateAttr(default=None)
+    _tokenizer: PreTrainedTokenizerFast = PrivateAttr(default=None)
+    _model: PreTrainedModel = PrivateAttr(default=None)
+    _vectors: dict[str, torch.Tensor] = PrivateAttr(default=None)
+    _layer_mask: torch.Tensor = PrivateAttr(default=None)
 
-    def __post_init__(self) -> None:
-        self._device = None
-        self._tokenizer = None
-        self._model = None
-        self._vectors = None
-
-        self.layers: torch.Tensor = torch.tensor(self.layers, dtype=torch.int32)
-        self.subword_aggregation: SubwordAggregator = SubwordAggregator.from_str(
-            self.subword_aggregation
-        )
-        self.layer_aggregation: LayerAggregator = LayerAggregator.from_str(
-            self.layer_aggregation
-        )
+    def __init__(self, **data) -> None:
+        super().__init__(**data)
+        self._layer_mask = torch.tensor(self.layers, dtype=torch.int32).to(self.device)
 
     @property
     def device(self) -> torch.device:
@@ -116,7 +107,7 @@ class ContextualEmbedderWIC:
         return self.layer_aggregation(
             self.subword_aggregation(embedding)
             .squeeze()
-            .index_select(index=self.layers, dim=0)
+            .index_select(index=self._layer_mask, dim=0)
         )
 
     def encode(self, use: Use) -> np.ndarray:
@@ -133,7 +124,7 @@ class ContextualEmbedderWIC:
             )
 
             encoding = self.tokenize(use)
-            input_ids = encoding["input_ids"].to(self.device)  # type: ignore
+            input_ids = encoding["input_ids"].to(self.device) 
             tokens = encoding.tokens()
             subword_spans = [encoding.token_to_chars(i) for i in range(len(tokens))]
 

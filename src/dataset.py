@@ -1,9 +1,9 @@
 import csv
-from dataclasses import dataclass, field
+from pydantic import BaseModel, PrivateAttr
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any, Iterable, List
+from typing import Any, List, Sequence
 
 import json
 import os
@@ -25,39 +25,29 @@ class UnknownDataset(Exception):
     pass
 
 
-@dataclass
-class Dataset:
+class Dataset(BaseModel):
     name: str
+    groupings: tuple[str, str]
     cleaning: Cleaning | None
     preprocessing: ContextPreprocessor
-    groupings: tuple[str, str]
     version: str
     test_targets: list[str] | int | None
 
-    _stats_groupings: DataFrame | None = field(init=False)
-    _uses: DataFrame | None = field(init=False)
-    _judgments: DataFrame | None = field(init=False)
-    _agreements: DataFrame | None = field(init=False)
-    _clusters: DataFrame | None = field(init=False)
-    _labels: DataFrame | None = field(init=False)
-    _targets: list[Target] | None = field(init=False)
-    _path: Path | None = field(init=False)
-    _csv_params: CsvParams = field(init=False)
+    _stats_groupings: DataFrame = PrivateAttr(default=None)
+    _uses: DataFrame = PrivateAttr(default=None)
+    _judgments: DataFrame = PrivateAttr(default=None)
+    _agreements: DataFrame = PrivateAttr(default=None)
+    _clusters: DataFrame = PrivateAttr(default=None)
+    _targets: list[Target] = PrivateAttr(default=None)
+    _path: Path = PrivateAttr(default=None)
+    _csv_params: CsvParams = PrivateAttr(default_factory=lambda: CsvParams(
+        delimiter="\t", 
+        encoding="utf8", 
+        quoting=csv.QUOTE_NONE
+    ))
 
-    def __post_init__(self):
-        self._stats_groupings = None
-        self._uses = None
-        self._judgments = None
-        self._agreements = None
-        self._clusters = None
-        self._labels = None
-        self._targets = None
-        self._path = None
-        self._csv_params = CsvParams(
-            delimiter="\t", 
-            encoding="utf8", 
-            quoting=csv.QUOTE_NONE
-        )
+    def __init__(self, **data):
+        super().__init__(**data)
 
         if self.version == "latest":
             versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
@@ -183,46 +173,53 @@ class Dataset:
             case _:
                 return schema
 
-    def get_graded_change_labels(self) -> dict[str, float]:
+    @property
+    def graded_change_labels(self) -> dict[str, float]:
         stats_groupings = self.get_stats_groupings_schema(
             EvaluationTask.CHANGE_GRADED
         ).validate(self.stats_groupings)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_graded))
 
-    def get_binary_change_labels(self) -> dict[str, int]:
+    @property
+    def binary_change_labels(self) -> dict[str, int]:
         stats_groupings = self.get_stats_groupings_schema(
             EvaluationTask.CHANGE_BINARY
         ).validate(self.stats_groupings)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_binary))
 
-    def get_semantic_proximity_labels(self) -> dict[tuple[str, str], float]:
+    @property
+    def semantic_proximity_labels(self) -> dict[tuple[str, str], float]:
         annotated_pairs = list(
             zip(self.judgments.identifier1, self.judgments.identifier2)
         )
         return dict(zip(annotated_pairs, self.judgments.judgment))
 
-    def get_clustering_labels(self) -> dict[str, int]:
+    @property
+    def wsi_labels(self) -> dict[str, int]:
         return dict(zip(self.clusters.identifier, self.clusters.cluster))
 
     def get_labels(
-        self, evaluation_task: EvaluationTask, keys: Iterable[Any]
-    ) -> list[float | int]:
+        self, evaluation_task: EvaluationTask, keys: Sequence[Any]
+    ) -> list[float] | list[int]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
         # this value should be a list returned by any of the models
+        target_to_label: dict[str, float] | dict[str, int] | dict[tuple[str, str], float]
+
         match evaluation_task:
             case None:
-                return {}
+                return []
             case EvaluationTask.CHANGE_GRADED:
-                target_to_label = self.get_graded_change_labels()
+                target_to_label = self.graded_change_labels
             case EvaluationTask.CHANGE_BINARY:
-                target_to_label = self.get_binary_change_labels()
+                target_to_label = self.binary_change_labels
             case EvaluationTask.SEMANTIC_PROXIMITY:
-                target_to_label = self.get_semantic_proximity_labels()
+                target_to_label = self.semantic_proximity_labels
             case EvaluationTask.WSI:
-                target_to_label = self.get_clustering_labels()
+                target_to_label = self.wsi_labels
             case _:
                 raise ValueError
+
         return [target_to_label[key] for key in keys]
 
     @property

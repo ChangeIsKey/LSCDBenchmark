@@ -5,4 +5,5 @@ defaults:
 _target_: src.lscd.apd_compare_all.ApdCompareAll
 threshold_fn: 
   _target_: src.threshold.mean_std
+  _partial_: true
   t: 0.1

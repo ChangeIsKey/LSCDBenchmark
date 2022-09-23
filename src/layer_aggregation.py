@@ -1,6 +1,6 @@
-from typing_extensions import Self
-import torch
 from enum import Enum
+import torch
+
 
 class LayerAggregator(str, Enum):
     AVERAGE = "average"
@@ -15,7 +15,5 @@ class LayerAggregator(str, Enum):
                 return torch.sum(layers, dim=0)
             case self.CONCAT:
                 return torch.ravel(layers)
-
-    @classmethod
-    def from_str(cls, s: str) -> Self:
-        return cls[s.upper()]
+            case _:
+                raise ValueError
