@@ -1,11 +1,10 @@
 from pathlib import Path
-from typing import Any, Sequence, TypeGuard
+from typing import Any, TypeGuard
 
 import hydra
 import networkx as nx
 import numpy as np
 
-from src.lscd.lscd_model import LSCDModel
 
 class ShouldNotHappen(Exception):
     ...
@@ -53,11 +52,5 @@ def is_number(obj: Any) -> TypeGuard[float | int]:
 def is_int(obj: Any) -> TypeGuard[int]:
     try:
         return isinstance(obj, int)
-    except TypeError:
-        return False
-
-def is_lscd_model(obj: Any) -> TypeGuard[LSCDModel]:
-    try:
-        return issubclass(obj, LSCDModel)
     except TypeError:
         return False

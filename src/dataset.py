@@ -3,7 +3,7 @@ from pydantic import BaseModel, PrivateAttr
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any, List, Sequence
+from typing import Any
 
 import json
 import os
@@ -40,11 +40,11 @@ class Dataset(BaseModel):
     _clusters: DataFrame = PrivateAttr(default=None)
     _targets: list[Target] = PrivateAttr(default=None)
     _path: Path = PrivateAttr(default=None)
-    _csv_params: CsvParams = PrivateAttr(default_factory=lambda: CsvParams(
-        delimiter="\t", 
-        encoding="utf8", 
-        quoting=csv.QUOTE_NONE
-    ))
+    _csv_params: CsvParams = PrivateAttr(
+        default_factory=lambda: CsvParams(
+            delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+        )
+    )
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -199,12 +199,14 @@ class Dataset(BaseModel):
         return dict(zip(self.clusters.identifier, self.clusters.cluster))
 
     def get_labels(
-        self, evaluation_task: EvaluationTask, keys: Sequence[Any]
+        self, evaluation_task: EvaluationTask, keys: list[Any]
     ) -> list[float] | list[int]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
         # this value should be a list returned by any of the models
-        target_to_label: dict[str, float] | dict[str, int] | dict[tuple[str, str], float]
+        target_to_label: dict[str, float] | dict[str, int] | dict[
+            tuple[str, str], float
+        ]
 
         match evaluation_task:
             case None:
@@ -232,23 +234,25 @@ class Dataset(BaseModel):
     @property
     def uses(self):
         if self._uses is None:
-            self._uses = pd.concat([target.uses for target in self.targets])
+            self._uses = pd.concat([target.uses_df for target in self.targets])
         return self._uses
 
     @property
     def judgments(self):
         if self._judgments is None:
-            self._judgments = pd.concat([target.judgments for target in self.targets])
+            self._judgments = pd.concat(
+                [target.judgments_df for target in self.targets]
+            )
         return self._judgments
 
     @property
     def clusters(self):
         if self._clusters is None:
-            self._clusters = pd.concat([target.clusters for target in self.targets])
+            self._clusters = pd.concat([target.clusters_df for target in self.targets])
         return self._clusters
 
     @property
-    def targets(self) -> List[Target]:
+    def targets(self) -> list[Target]:
         if self._targets is None:
             to_load = []
 

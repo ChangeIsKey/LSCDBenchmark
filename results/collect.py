@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 from pandas import json_normalize
 from datetime import datetime
 from tqdm import tqdm
@@ -37,7 +37,7 @@ def collect_results() -> pd.DataFrame:
     return results
 
 
-def process_experiment(experiment: Path, date_time: datetime, results: pd.DataFrame, datasets: Dict[str, Any]):
+def process_experiment(experiment: Path, date_time: datetime, results: pd.DataFrame, datasets: dict[str, Any]):
     try:
         score = (experiment / "score.txt").read_text()
         if score == "nan":

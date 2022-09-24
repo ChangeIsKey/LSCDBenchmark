@@ -1,4 +1,4 @@
-from typing import NewType, TypeVar
+from typing import NewType
 from pandas import Series
 from pydantic import BaseModel
 
@@ -27,3 +27,8 @@ class Use(BaseModel):
             indices=(use.target_index_begin, use.target_index_end)
         )
     
+    def __hash__(self) -> int:
+        return hash(self.identifier)
+    
+    def __lt__(self, other: "Use") -> bool:
+        return self.identifier < other.identifier

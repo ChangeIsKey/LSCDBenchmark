@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Any
 from pandas import Series
 from abc import ABC, abstractmethod

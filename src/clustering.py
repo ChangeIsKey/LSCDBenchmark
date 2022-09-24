@@ -20,7 +20,7 @@ def split_clusters(
     """
 
     groupings = target.groupings
-    grouping_to_uses = target.grouping_to_uses()
+    grouping_to_uses = target.grouping_to_useid()
 
     groups = [
         [clustering[id] for id in grouping_to_uses[groupings[0]]],
@@ -37,12 +37,12 @@ def split_clusters(
 
 
 def clustering_spectral(model: DistanceModel, target: Target) -> Dict[UseID, int]:
-    n_clusters = len(target.clusters.cluster.unique())
+    n_clusters = len(target.clusters_df.cluster.unique())
     clustering = SpectralClustering(
         n_clusters=n_clusters, assign_labels="kmeans", affinity="precomputed"
     )
 
-    ids = target.uses.identifier.tolist()
+    ids = target.uses_df.identifier.tolist()
     distance_matrix = model.distance_matrix(target).to_numpy()
     labels = clustering.fit_predict(distance_matrix)
     return dict(zip(ids, labels))

@@ -1,4 +1,4 @@
-from typing import Callable, Sequence
+from typing import Callable
 from enum import Enum
 
 from pydantic import BaseModel

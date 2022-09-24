@@ -1,22 +1,21 @@
 import logging
-from typing import Callable, List, Tuple
+from typing import Callable
+from enum import Enum
 
 import numpy as np
-from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist
+from pydantic import PositiveInt, PrivateAttr, conlist
 import torch
 from tqdm import tqdm
 from transformers import (
     AutoModel,
     AutoTokenizer,
     BatchEncoding,
-    PreTrainedTokenizerFast,
+    PreTrainedTokenizerBase,
     PreTrainedModel,
     logging as trans_logging,
 )
 
-from src.layer_aggregation import LayerAggregator
-from src.subword_aggregation import SubwordAggregator
-
+from src.wic.model import Model
 from src.use import Use
 
 trans_logging.set_verbosity_error()
@@ -24,7 +23,44 @@ trans_logging.set_verbosity_error()
 log = logging.getLogger(__name__)
 
 
-class ContextualEmbedder(BaseModel):
+class LayerAggregator(str, Enum):
+    AVERAGE = "average"
+    CONCAT = "concat"
+    SUM = "sum"
+
+    def __call__(self, layers: torch.Tensor) -> torch.Tensor:
+        match self:
+            case self.AVERAGE:
+                return torch.mean(layers, dim=0)
+            case self.SUM:
+                return torch.sum(layers, dim=0)
+            case self.CONCAT:
+                return torch.ravel(layers)
+            case _:
+                raise ValueError
+
+
+class SubwordAggregator(str, Enum):
+    AVERAGE = "average"
+    FIRST = "first"
+    LAST = "last"
+    SUM = "sum"
+
+    def __call__(self, vectors: torch.Tensor) -> torch.Tensor:
+        match self:
+            case self.AVERAGE:
+                return torch.mean(vectors, dim=0, keepdim=True)
+            case self.SUM:
+                return torch.sum(vectors, dim=0, keepdim=True)
+            case self.FIRST:
+                return vectors[0]
+            case self.LAST:
+                return vectors[-1]
+            case _:
+                raise ValueError
+
+
+class ContextualEmbedder(Model):
     layers: conlist(item_type=PositiveInt, unique_items=True)  # type: ignore
     layer_aggregation: LayerAggregator
     subword_aggregation: SubwordAggregator
@@ -34,7 +70,7 @@ class ContextualEmbedder(BaseModel):
     gpu: int | None
 
     _device: torch.device = PrivateAttr(default=None)
-    _tokenizer: PreTrainedTokenizerFast = PrivateAttr(default=None)
+    _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
     _vectors: dict[str, torch.Tensor] = PrivateAttr(default=None)
     _layer_mask: torch.Tensor = PrivateAttr(default=None)
@@ -54,9 +90,9 @@ class ContextualEmbedder(BaseModel):
         return self._device
 
     @property
-    def tokenizer(self) -> PreTrainedTokenizerFast:
+    def tokenizer(self) -> PreTrainedTokenizerBase:
         if self._tokenizer is None:
-            self._tokenizer: PreTrainedTokenizerFast = AutoTokenizer.from_pretrained(
+            self._tokenizer: PreTrainedTokenizerBase = AutoTokenizer.from_pretrained(
                 self.id, use_fast=True, model_max_length=int(1e30)
             )
         return self._tokenizer
@@ -70,10 +106,7 @@ class ContextualEmbedder(BaseModel):
             self._model.eval()
         return self._model
 
-    def truncation_indices(
-        self,
-        target_subword_indices: List[bool],
-    ) -> Tuple[int, int]:
+    def truncation_indices(self, target_subword_indices: list[bool]) -> tuple[int, int]:
 
         max_tokens = 512
         n_target_subtokens = target_subword_indices.count(True)
@@ -97,7 +130,7 @@ class ContextualEmbedder(BaseModel):
         ):
             enc_1 = self.encode(use_1)
             enc_2 = self.encode(use_2)
-            similarities.append(-self.distance_metric(enc_1, enc_2))
+            similarities.append(self.distance_metric(enc_1, enc_2))
         return similarities
 
     def tokenize(self, use: Use) -> BatchEncoding:

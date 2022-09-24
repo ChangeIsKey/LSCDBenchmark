@@ -1,0 +1,4 @@
+defaults:
+  - wic: bert
+
+_target_: src.wsi.ClusterSpectral

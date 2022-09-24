@@ -1,21 +1,23 @@
+from typing import Callable
 import numpy as np
 from scipy.spatial import distance
 from tqdm import tqdm
-from src.lscd.lscd_model import LSCDModel
 
+from src.lscd.model import Model
 from src.target import Target
 from src.use import Use
 from src.wic import ContextualEmbedder
 
 
-class Cos(LSCDModel):
+class Cos(Model):
     wic: ContextualEmbedder
+    threshold_fn: Callable[[list[float]], float] | None
 
     def predict(self, targets: list[Target]) -> tuple[list[str], list[float | int]]:
         predictions = {}
         for target in tqdm(targets):
-            earlier_df = target.uses[target.uses.grouping == target.groupings[0]]
-            later_df = target.uses[target.uses.grouping == target.groupings[1]]
+            earlier_df = target.uses_df[target.uses_df.grouping == target.groupings[0]]
+            later_df = target.uses_df[target.uses_df.grouping == target.groupings[1]]
 
             earlier = [Use.from_series(s) for _, s in earlier_df.iterrows()]
             later = [Use.from_series(s) for _, s in later_df.iterrows()]
