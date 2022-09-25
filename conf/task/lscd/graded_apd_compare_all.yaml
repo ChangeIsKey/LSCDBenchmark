@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - wic: /model/wic/bert
+  - /task/wic@wic: ???
 
 _target_: src.lscd.ApdCompareAll
 threshold_fn: null

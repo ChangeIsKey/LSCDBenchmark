@@ -199,7 +199,7 @@ class Dataset(BaseModel):
         return dict(zip(self.clusters.identifier, self.clusters.cluster))
 
     def get_labels(
-        self, evaluation_task: EvaluationTask, keys: list[Any]
+        self, evaluation_task: EvaluationTask | None, keys: list[Any]
     ) -> list[float] | list[int]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter

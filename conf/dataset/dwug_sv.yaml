@@ -5,7 +5,6 @@ name: dwug_sv
 cleaning: null
 preprocessing:
   _target_: src.preprocessing.Toklem
-  params: {}
 test_targets: null
 groupings: ["1", "2"]
 version: 'latest'

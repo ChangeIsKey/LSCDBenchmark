@@ -1,6 +1,7 @@
+
 defaults:
   - _self_
-  - wsi: wsi_cluster_spectral
+  - /task/wsi@wsi: ???
 
 _target_: src.lscd.ClusterJSD
 threshold_fn: null

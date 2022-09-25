@@ -1,4 +1,4 @@
 defaults:
-  - wic: bert
+  - /task/wic@wic: ???
 
 _target_: src.wsi.ClusterSpectral

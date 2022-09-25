@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - wic: bert
+  - /task/wic@wic: ???
 
 _target_: src.lscd.Cos
 threshold_fn: null
