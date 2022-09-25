@@ -7,7 +7,6 @@ from pydantic import BaseModel
 
 class ContextPreprocessor(BaseModel, ABC):
     spelling_normalization: dict[str, str] | None
-    params: dict[str, Any] | None
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
