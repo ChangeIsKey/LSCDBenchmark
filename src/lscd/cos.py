@@ -13,7 +13,7 @@ class Cos(Model):
     wic: ContextualEmbedder
     threshold_fn: Callable[[list[float]], float] | None
 
-    def predict(self, targets: list[Target]) -> tuple[list[str], list[float | int]]:
+    def predict(self, targets: list[Target]) -> list[float | int]:
         predictions = {}
         for target in tqdm(targets):
             earlier_df = target.uses_df[target.uses_df.grouping == target.groupings[0]]
@@ -37,4 +37,4 @@ class Cos(Model):
                 for target_name, p in predictions.items()
             }
 
-        return list(predictions.keys()), list(predictions.values())
+        return list(predictions.values())

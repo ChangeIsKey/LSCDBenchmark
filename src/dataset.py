@@ -178,6 +178,7 @@ class Dataset(BaseModel):
         stats_groupings = self.get_stats_groupings_schema(
             EvaluationTask.CHANGE_GRADED
         ).validate(self.stats_groupings)
+        stats_groupings.sort_values(by="lemma", inplace=True)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_graded))
 
     @property
@@ -185,10 +186,12 @@ class Dataset(BaseModel):
         stats_groupings = self.get_stats_groupings_schema(
             EvaluationTask.CHANGE_BINARY
         ).validate(self.stats_groupings)
+        stats_groupings.sort_values(by="lemma", inplace=True)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_binary))
 
     @property
     def semantic_proximity_labels(self) -> dict[tuple[str, str], float]:
+        self.judgments.sort_values(by=["identifier1", "identifier2"], inplace=True)
         annotated_pairs = list(
             zip(self.judgments.identifier1, self.judgments.identifier2)
         )
@@ -196,11 +199,10 @@ class Dataset(BaseModel):
 
     @property
     def wsi_labels(self) -> dict[str, int]:
+        self.clusters.sort_values(by="identifier", inplace=True)
         return dict(zip(self.clusters.identifier, self.clusters.cluster))
 
-    def get_labels(
-        self, evaluation_task: EvaluationTask | None, keys: list[Any]
-    ) -> list[float] | list[int]:
+    def get_labels(self, evaluation_task: EvaluationTask | None) -> list[float] | list[int]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
         # this value should be a list returned by any of the models
@@ -222,7 +224,7 @@ class Dataset(BaseModel):
             case _:
                 raise ValueError
 
-        return [target_to_label[key] for key in keys]
+        return list(target_to_label.values())
 
     @property
     def stats_agreement(self) -> DataFrame:
@@ -269,6 +271,8 @@ class Dataset(BaseModel):
                     to_load = [folder.name for folder in (self.path / "data").iterdir()]
                     if utils.is_int(self.test_targets):
                         to_load = to_load[: self.test_targets]
+
+            to_load = sorted(to_load)
 
             self._targets = [
                 Target(

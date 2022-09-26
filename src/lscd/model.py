@@ -5,5 +5,5 @@ from src.target import Target
 
 class Model(BaseModel, ABC):
     @abstractmethod
-    def predict(self, targets: list[Target]) -> tuple[list[str], list[float | int]]:
+    def predict(self, targets: list[Target]) -> list[float | int]:
         ...

@@ -21,9 +21,16 @@ class Evaluation(BaseModel):
 
     def __call__(self, predictions: list[float | int], labels: list[float | int]) -> int | float:
         if self.metric is not None:
+            labels, predictions = self.filter_inputs(labels, predictions)
             score = self.metric(labels, predictions)
             if utils.is_list(score) and self.keep is not None:
                 return score[self.keep]
-            elif utils.is_number(score):
+            if utils.is_number(score):
                 return score
         return np.nan
+
+    @staticmethod
+    def filter_inputs(labels: list[float | int], predictions: list[float | int]):
+        combined = list(zip(labels, predictions))
+        # https://stackoverflow.com/questions/8081545/how-to-convert-list-of-tuples-to-multiple-lists
+        return map(list, zip(*combined))
