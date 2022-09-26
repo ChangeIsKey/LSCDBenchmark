@@ -3,7 +3,7 @@ from .cos import Cos
 from .cluster_jsd import ClusterJSD
 
 __all__ = [
-    "ApdCompareAll", 
-    "Cos", 
-    "ClusterJSD", 
+    "ApdCompareAll",
+    "Cos",
+    "ClusterJSD",
 ]

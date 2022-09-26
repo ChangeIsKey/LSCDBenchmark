@@ -18,7 +18,7 @@ class ClusterJSD(Model):
             predictions.append(jsd)
 
         if self.threshold_fn is not None:
-            predictions = self.threshold_fn(predictions)
+            return self.threshold_fn(predictions)
 
         return predictions
 
