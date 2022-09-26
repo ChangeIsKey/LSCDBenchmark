@@ -8,18 +8,17 @@ from src import wic
 
 class ApdCompareAll(Model):
     wic: wic.Model
-    threshold_fn: Callable[[list[float]], float] | None
+    threshold_fn: Callable[[list[float]], list[int]] | None
 
-    def predict(self, targets: list[Target]) -> list[float | int]:
-        predictions: dict[str, float | int] = {}
+    def predict(self, targets: list[Target]) -> list[int] | list[float]:
+        predictions = []
         for target in targets:
             use_pairs = target.use_pairs(pairing="COMPARE", sampling="all")
             similarities = self.wic.predict(use_pairs)
-            predictions[target.name] = np.mean(similarities).item()
+            apd = np.mean(similarities).item()
+            predictions.append(apd)
 
         if self.threshold_fn is not None:
-            values = list(predictions.values())
-            threshold = self.threshold_fn(values)
-            predictions = {target_name: int(p >= threshold) for target_name, p in predictions.items()}
+            predictions = self.threshold_fn(predictions)
 
-        return list(predictions.values())
+        return predictions
