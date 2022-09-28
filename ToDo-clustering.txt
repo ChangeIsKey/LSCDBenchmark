@@ -3,7 +3,10 @@
 - start with Spectral_clustering[sklearn]
 - one complete example with clustering (getting data, distance model, mapping use pairs to distances, 
     cluster the distances [specify a format], then compare cluster to gold, store the results)
-- include dwug sense annotation
+- include dwug sense annotation (format other than the other datasets) - we need code to load this dataset.
+- discuss with Andres, Dominik's code in order to load dwug dataset.
 - add more clustering algorithms
-- correlation clustering, stochastic block models, chinese whispers
+- correlation clustering, stochastic block models, chinese whispers, agglomerative clustering [DO it]
 - how do we generally install third party packages which are not available from pip?
+- pull external code as long as it's possible (correlation clustering possibly)
+- check with Andres if he added to the main README of the project, the explanation of using anaconda in order to run all the project dependecies mainly graph_tool
