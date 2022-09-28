@@ -101,7 +101,7 @@ class ContextualEmbedder(Model):
     @property
     def model(self) -> PreTrainedModel:
         if self._model is None:
-            self._model: PreTrainedModel = AutoModel.from_pretrained(
+            self._model = AutoModel.from_pretrained(
                 self.id, output_hidden_states=True
             ).to(self.device)
             self._model.eval()
@@ -161,7 +161,7 @@ class ContextualEmbedder(Model):
             )
 
             encoding = self.tokenize(use)
-            input_ids = encoding["input_ids"].to(self.device)
+            input_ids = encoding["input_ids"].to(self.device)  # type: ignore
             tokens = encoding.tokens()
             subword_spans = [encoding.token_to_chars(i) for i in range(len(tokens))]
 
@@ -191,7 +191,7 @@ class ContextualEmbedder(Model):
             log.info(f"Size of input_ids: {input_ids.size()}")
 
             with torch.no_grad():
-                outputs = self.model(input_ids, torch.ones_like(input_ids))
+                outputs = self.model(input_ids, torch.ones_like(input_ids))  # type: ignore
 
             embedding = (
                 # stack the layers
