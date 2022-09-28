@@ -7,7 +7,9 @@ from pydantic import BaseModel
 from src import utils
 
 
-EvaluationTask: TypeAlias = Literal["semantic_proximity", "change_graded", "change_binary", "COMPARE", "wsi"]
+EvaluationTask: TypeAlias = Literal[
+    "semantic_proximity", "change_graded", "change_binary", "COMPARE", "wsi"
+]
 K = TypeVar("K", str, tuple[str, str])
 V = TypeVar("V", int, float)
 
@@ -37,20 +39,21 @@ class Evaluation(BaseModel, ABC):
 
     @staticmethod
     def combine_inputs(labels: dict[K, V], predictions: dict[K, V]) -> DataFrame:
-        labels_df = DataFrame({
-            "target": list(labels.keys()),
-            "label": list(labels.values())
-        })
-        predictions_df = DataFrame({
-            "target": list(predictions.keys()),
-            "prediction": list(predictions.values())
-        })
+        labels_df = DataFrame(
+            {"target": list(labels.keys()), "label": list(labels.values())}
+        )
+        predictions_df = DataFrame(
+            {
+                "target": list(predictions.keys()),
+                "prediction": list(predictions.values()),
+            }
+        )
         merged = pd.merge(
-            left=labels_df, 
-            right=predictions_df, 
-            how="outer", 
-            on="target", 
-            validate="one_to_one"
+            left=labels_df,
+            right=predictions_df,
+            how="outer",
+            on="target",
+            validate="one_to_one",
         )
 
         return merged

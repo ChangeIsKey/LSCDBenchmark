@@ -9,10 +9,10 @@ envs/
 outputs/
 multirun/*
 *__pycache__*
-.conda/
 .env
 .vscode/
 conda/
+.conda/
 .cache/
 
 analysis/

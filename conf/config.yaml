@@ -1,6 +1,5 @@
 defaults:
   - _self_
-  - evaluation: ???
   - dataset: ???
   - task: ???
   - override hydra/job_logging: custom
