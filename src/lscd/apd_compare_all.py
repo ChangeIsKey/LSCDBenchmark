@@ -1,24 +1,19 @@
-from typing import Callable
 import numpy as np
 
-from src.lscd.model import Model
+from src.lscd.model import GradedModel
 from src.target import Target
 from src import wic
 
 
-class ApdCompareAll(Model):
+class ApdCompareAll(GradedModel):
     wic: wic.Model
-    threshold_fn: Callable[[list[float]], list[int]] | None
 
-    def predict(self, targets: list[Target]) -> list[int] | list[float]:
-        predictions = []
+    def predict(self, targets: list[Target]) -> dict[str, float]:
+        predictions = {}
         for target in targets:
             use_pairs = target.use_pairs(pairing="COMPARE", sampling="all")
-            similarities = self.wic.predict(use_pairs)
+            similarities = self.wic.similarities(use_pairs)
             apd = np.mean(similarities).item()
-            predictions.append(apd)
-
-        if self.threshold_fn is not None:
-            return self.threshold_fn(predictions)
+            predictions[target.name] = apd
 
         return predictions

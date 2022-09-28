@@ -6,12 +6,20 @@ from src.use import UseID
 
 
 class ClusterSpectral(Model):
-    def predict(self, target: Target) -> dict[UseID, int]:
-        n_clusters = len(target.clusters_df.cluster.unique())
+    n_clusters: int
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def predict_target(self, target: Target) -> dict[UseID, int]:
         clustering = SpectralClustering(
-            n_clusters=n_clusters, assign_labels="kmeans", affinity="precomputed"
+            n_clusters=self.n_clusters,
+            assign_labels="kmeans",
+            affinity="precomputed"
         )
+        similarity_matrix = self.wic.similarity_matrix(target).to_numpy()
+        labels = clustering.fit_predict(similarity_matrix)
         ids = target.uses_df.identifier.tolist()
-        distance_matrix = self.wic.distance_matrix(target).to_numpy()
-        labels = clustering.fit_predict(distance_matrix)
         return dict(zip(ids, labels))
+
+

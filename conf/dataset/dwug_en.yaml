@@ -1,14 +1,11 @@
 defaults:
-  - preprocessing/spelling_normalization: null
+  - preprocessing: toklem
+  - override preprocessing/spelling_normalization: null
 
 name: dwug_en
 cleaning: null
-preprocessing:
-  _target_: src.preprocessing.Toklem
-test_targets: null
-groupings: 
-  - "1"
-  - "2"
+test_on: null
+groupings: ["1", "2"]
 version: 'latest'
 
 _target_: src.dataset.Dataset

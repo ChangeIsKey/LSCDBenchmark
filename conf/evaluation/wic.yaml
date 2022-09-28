@@ -1,5 +1,6 @@
 _target_: src.evaluation.Evaluation
-task: change_binary
+task: semantic_proximity
 metric: 
   _target_: sklearn.metrics.f1_score
   _partial_: true
+  average: macro

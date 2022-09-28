@@ -1,0 +1,6 @@
+defaults:
+  - _self_
+  - threshold_fn: ???
+  - /task/wic@wic: ???
+
+_target_: src.lscd.ApdCompareAll

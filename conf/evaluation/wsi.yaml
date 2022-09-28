@@ -1,7 +1,5 @@
-_target_: src.evaluation.Evaluation
-task: clustering
-metric: 
+_target_: src.evaluation.WsiEvaluation
+task: wsi
+metric:
   _target_: sklearn.metrics.adjusted_rand_score
   _partial_: true
-
-keep: null

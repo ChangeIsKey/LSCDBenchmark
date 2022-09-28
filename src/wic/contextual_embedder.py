@@ -14,6 +14,7 @@ from transformers import (
     PreTrainedModel,
     logging as trans_logging,
 )
+from src.target import Target
 
 from src.wic.model import Model
 from src.use import Use
@@ -65,7 +66,7 @@ class ContextualEmbedder(Model):
     layer_aggregation: LayerAggregator
     subword_aggregation: SubwordAggregator
     truncation_tokens_before_target: float
-    distance_metric: Callable[..., float]
+    similarity_metric: Callable[..., float]
     id: str
     gpu: int | None
 
@@ -123,14 +124,15 @@ class ContextualEmbedder(Model):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
+    
+    def similarities(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         similarities = []
         for use_1, use_2 in tqdm(
             use_pairs, desc="Calculating use-pair distances", leave=False
         ):
             enc_1 = self.encode(use_1)
             enc_2 = self.encode(use_2)
-            similarities.append(self.distance_metric(enc_1, enc_2))
+            similarities.append(self.similarity_metric(enc_1, enc_2))
         return similarities
 
     def tokenize(self, use: Use) -> BatchEncoding:

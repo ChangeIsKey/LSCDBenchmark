@@ -3,6 +3,4 @@ task: change_graded
 metric: 
   _target_: scipy.stats.spearmanr
   _partial_: true
-
-# spearmanr returns both the correlation and the p-value, so we keep only the correlation
-keep: 0 
+  nan_policy: omit

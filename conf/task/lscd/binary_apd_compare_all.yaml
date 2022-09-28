@@ -1,9 +1,0 @@
-defaults:
-  - _self_
-  - /task/wic@wic: ???
-
-_target_: src.lscd.ApdCompareAll
-threshold_fn: 
-  _target_: src.threshold.mean_std
-  _partial_: true
-  t: 0.1

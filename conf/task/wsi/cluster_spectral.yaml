@@ -2,3 +2,4 @@ defaults:
   - /task/wic@wic: ???
 
 _target_: src.wsi.ClusterSpectral
+n_clusters: 2

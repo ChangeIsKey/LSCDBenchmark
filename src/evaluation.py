@@ -1,36 +1,62 @@
-from typing import Callable
-from enum import Enum
+from abc import ABC, abstractmethod
+from typing import Any, Callable, TypeAlias, Literal, TypeVar
 import numpy as np
-
+import pandas as pd
+from pandas import DataFrame
 from pydantic import BaseModel
 from src import utils
 
 
-class EvaluationTask(str, Enum):
-    CHANGE_GRADED = "change_graded"
-    CHANGE_BINARY = "change_binary"
-    COMPARE = "COMPARE"
-    SEMANTIC_PROXIMITY = "semantic_proximity"
-    WSI = "wsi"
+EvaluationTask: TypeAlias = Literal["semantic_proximity", "change_graded", "change_binary", "COMPARE", "wsi"]
+K = TypeVar("K", str, tuple[str, str])
+V = TypeVar("V", int, float)
 
 
-class Evaluation(BaseModel):
+class Evaluation(BaseModel, ABC):
     task: EvaluationTask | None
-    metric: Callable[..., int | float | list[float | int]] | None
-    keep: int | None
+    metric: Callable[[list[float | int], list[float | int]], Any] | None
 
-    def __call__(self, predictions: list[float | int], labels: list[float | int]) -> int | float:
+    def preprocess_inputs(self, results: DataFrame) -> DataFrame:
+        return results
+
+    def __call__(self, predictions: dict[K, V], labels: dict[K, V]) -> int | float:
+        combined_results = self.combine_inputs(labels=labels, predictions=predictions)
+        combined_results.to_csv("predictions.csv", sep="\t")
+        preprocessed_results = self.preprocess_inputs(combined_results)
+
+        score = np.nan
         if self.metric is not None:
-            labels, predictions = self.filter_inputs(labels, predictions)
-            score = self.metric(labels, predictions)
-            if utils.is_list(score) and self.keep is not None:
-                return score[self.keep]
-            if utils.is_number(score):
-                return score
-        return np.nan
+            y_true = preprocessed_results.label.tolist()
+            y_pred = preprocessed_results.prediction.tolist()
+            score = self.metric(y_true, y_pred)
+
+        with open(file="score.txt", mode="w", encoding="utf8") as f:
+            f.write(str(score))
+
+        return score
 
     @staticmethod
-    def filter_inputs(labels: list[float | int], predictions: list[float | int]):
-        combined = list(zip(labels, predictions))
-        # https://stackoverflow.com/questions/8081545/how-to-convert-list-of-tuples-to-multiple-lists
-        return map(list, zip(*combined))
+    def combine_inputs(labels: dict[K, V], predictions: dict[K, V]) -> DataFrame:
+        labels_df = DataFrame({
+            "target": list(labels.keys()),
+            "label": list(labels.values())
+        })
+        predictions_df = DataFrame({
+            "target": list(predictions.keys()),
+            "prediction": list(predictions.values())
+        })
+        merged = pd.merge(
+            left=labels_df, 
+            right=predictions_df, 
+            how="outer", 
+            on="target", 
+            validate="one_to_one"
+        )
+
+        return merged
+
+
+class WsiEvaluation(Evaluation):
+    def preprocess_inputs(self, results: DataFrame) -> DataFrame:
+        results["label"] = results["label"].replace(-1, np.nan)
+        return results.dropna(how="any")

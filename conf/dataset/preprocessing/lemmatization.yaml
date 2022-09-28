@@ -1,0 +1,5 @@
+defaults:
+  - spelling_normalization: null
+
+
+_target_: src.preprocessing.Lemmatize

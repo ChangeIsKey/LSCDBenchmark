@@ -2,5 +2,4 @@ defaults:
   - _self_
   - /task/wic@wic: ???
 
-_target_: src.lscd.Cos
-threshold_fn: null
+_target_: src.lscd.ApdCompareAll

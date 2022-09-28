@@ -31,7 +31,7 @@ class Dataset(BaseModel):
     cleaning: Cleaning | None
     preprocessing: ContextPreprocessor
     version: str
-    test_targets: list[str] | int | None
+    test_on: list[str] | int | None
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)
@@ -133,7 +133,7 @@ class Dataset(BaseModel):
         zipped.unlink()
 
     @property
-    def stats_groupings(self) -> DataFrame:
+    def stats_groupings_df(self) -> DataFrame:
         if self._stats_groupings is None:
             stats_groupings = "stats_groupings.csv"
             path = self.path / "stats" / "semeval" / stats_groupings
@@ -144,8 +144,8 @@ class Dataset(BaseModel):
             self._stats_groupings = pd.read_csv(path, **self._csv_params)
         return self._stats_groupings
 
-    @stats_groupings.setter
-    def stats_groupings(self, other: DataFrame) -> None:
+    @stats_groupings_df.setter
+    def stats_groupings_df(self, other: DataFrame) -> None:
         self._stats_groupings = other
 
     def get_stats_groupings_schema(
@@ -166,81 +166,77 @@ class Dataset(BaseModel):
         )
 
         match evaluation_task:
-            case EvaluationTask.CHANGE_GRADED:
+            case "change_graded":
                 return schema.add_columns({"change_graded": Column(float)})
-            case EvaluationTask.CHANGE_BINARY:
+            case "change_binary":
                 return schema.add_columns({"change_binary": Column(int)})
             case _:
                 return schema
 
     @property
     def graded_change_labels(self) -> dict[str, float]:
-        stats_groupings = self.get_stats_groupings_schema(
-            EvaluationTask.CHANGE_GRADED
-        ).validate(self.stats_groupings)
+        stats_groupings = self.get_stats_groupings_schema("change_graded").validate(
+            self.stats_groupings_df
+        )
         stats_groupings.sort_values(by="lemma", inplace=True)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_graded))
 
     @property
     def binary_change_labels(self) -> dict[str, int]:
-        stats_groupings = self.get_stats_groupings_schema(
-            EvaluationTask.CHANGE_BINARY
-        ).validate(self.stats_groupings)
+        stats_groupings = self.get_stats_groupings_schema("change_binary").validate(
+            self.stats_groupings_df
+        )
         stats_groupings.sort_values(by="lemma", inplace=True)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_binary))
 
     @property
     def semantic_proximity_labels(self) -> dict[tuple[str, str], float]:
-        self.judgments.sort_values(by=["identifier1", "identifier2"], inplace=True)
+        self.judgments_df.sort_values(by=["identifier1", "identifier2"], inplace=True)
         annotated_pairs = list(
-            zip(self.judgments.identifier1, self.judgments.identifier2)
+            zip(self.judgments_df.identifier1, self.judgments_df.identifier2)
         )
-        return dict(zip(annotated_pairs, self.judgments.judgment))
+        return dict(zip(annotated_pairs, self.judgments_df.judgment))
 
     @property
     def wsi_labels(self) -> dict[str, int]:
-        self.clusters.sort_values(by="identifier", inplace=True)
-        return dict(zip(self.clusters.identifier, self.clusters.cluster))
+        self.clusters_df.sort_values(by="identifier", inplace=True)
+        return dict(zip(self.clusters_df.identifier, self.clusters_df.cluster))
 
-    def get_labels(self, evaluation_task: EvaluationTask | None) -> list[float] | list[int]:
+    def get_labels(
+        self, evaluation_task: EvaluationTask | None
+    ) -> dict[Any, float] | dict[Any, int]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
         # this value should be a list returned by any of the models
-        target_to_label: dict[str, float] | dict[str, int] | dict[
-            tuple[str, str], float
-        ]
-
         match evaluation_task:
             case None:
-                return []
-            case EvaluationTask.CHANGE_GRADED:
-                target_to_label = self.graded_change_labels
-            case EvaluationTask.CHANGE_BINARY:
-                target_to_label = self.binary_change_labels
-            case EvaluationTask.SEMANTIC_PROXIMITY:
-                target_to_label = self.semantic_proximity_labels
-            case EvaluationTask.WSI:
-                target_to_label = self.wsi_labels
+                return {}
+            case "change_graded":
+                return self.graded_change_labels
+            case "change_binary":
+                return self.binary_change_labels
+            case "semantic_proximity":
+                return self.semantic_proximity_labels
+            case "wsi":
+                return self.wsi_labels
             case _:
                 raise ValueError
 
-        return list(target_to_label.values())
-
     @property
-    def stats_agreement(self) -> DataFrame:
+    def stats_agreement_df(self) -> DataFrame:
         if self._agreements is None:
             path = self.path / "stats" / "stats_agreement.csv"
             self._agreements = pd.read_csv(path, **self._csv_params)
         return self._agreements
 
     @property
-    def uses(self):
+    def uses_df(self):
         if self._uses is None:
             self._uses = pd.concat([target.uses_df for target in self.targets])
         return self._uses
 
     @property
-    def judgments(self):
+    def judgments_df(self):
         if self._judgments is None:
             self._judgments = pd.concat(
                 [target.judgments_df for target in self.targets]
@@ -248,7 +244,7 @@ class Dataset(BaseModel):
         return self._judgments
 
     @property
-    def clusters(self):
+    def clusters_df(self):
         if self._clusters is None:
             self._clusters = pd.concat([target.clusters_df for target in self.targets])
         return self._clusters
@@ -259,20 +255,17 @@ class Dataset(BaseModel):
             to_load = []
 
             if self.cleaning is not None and len(self.cleaning.stats) > 0:
-                agreements = self.stats_agreement.iloc[
-                    1:, :
-                ].copy()  # remove "data=full" row
+                # remove "data=full" row
+                agreements = self.stats_agreement_df.iloc[1:, :].copy()  
                 agreements = self.cleaning(agreements)
                 to_load = agreements.data.unique().tolist()
             else:
-                if utils.is_str_list(self.test_targets):
-                    to_load = self.test_targets
+                if utils.is_str_list(self.test_on):
+                    to_load = self.test_on
                 else:
-                    to_load = [folder.name for folder in (self.path / "data").iterdir()]
-                    if utils.is_int(self.test_targets):
-                        to_load = to_load[: self.test_targets]
-
-            to_load = sorted(to_load)
+                    to_load = sorted([folder.name for folder in (self.path / "data").iterdir()])
+                    if utils.is_int(self.test_on):
+                        to_load = to_load[: self.test_on]
 
             self._targets = [
                 Target(

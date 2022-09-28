@@ -1,3 +1,4 @@
+from collections import defaultdict
 import csv
 from itertools import product
 from pathlib import Path
@@ -123,21 +124,13 @@ class Target(BaseModel):
         )
 
     def useid_to_grouping(self) -> Dict[UseID, str]:
-        uses_to_grouping = dict(zip(self.uses_df.identifier, self.uses_df.grouping))
-        return {
-            identifier: value
-            for identifier, value in uses_to_grouping.items()
-            if value in self.groupings
-        }
+        return dict(zip(self.uses_df.identifier, self.uses_df.grouping))
 
     def grouping_to_useid(self) -> dict[str, list[UseID]]:
-        uses_to_groupings = self.useid_to_grouping()
-        return {
-            group: [
-                id_ for id_, grouping in uses_to_groupings.items() if grouping == group
-            ]
-            for group in self.groupings
-        }
+        grouping_to_useid = defaultdict(list)
+        for useid, grouping in self.useid_to_grouping().items():
+            grouping_to_useid[grouping].append(useid)
+        return dict(grouping_to_useid)
 
     def _split_compare_uses(self) -> tuple[list[UseID], list[UseID]]:
         ids1 = self.uses_df[self.uses_df.grouping == self.groupings[0]]

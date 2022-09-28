@@ -3,5 +3,7 @@ from src.use import Use
 
 
 class DeepMistake(Model):
-    def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
+    def similarities(
+        self, use_pairs: list[tuple[Use, Use]]
+    ) -> dict[tuple[str, str], float]:
         raise NotImplementedError

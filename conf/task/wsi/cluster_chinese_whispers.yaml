@@ -1,0 +1,5 @@
+defaults:
+  - /task/wic@wic: ???
+
+_target_: src.wsi.ClusterChineseWhispers
+n_iters: 20

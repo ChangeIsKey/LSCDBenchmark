@@ -1,0 +1,3 @@
+_target_: src.threshold.mean_std
+_partial_: true
+t: 0.1

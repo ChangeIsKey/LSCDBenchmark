@@ -1,3 +1,5 @@
+import numpy as np
+import numpy.typing as npt
 from abc import ABC, abstractmethod
 from collections import Counter
 
@@ -10,22 +12,46 @@ from src import wic
 
 class Model(BaseModel, ABC):
     wic: wic.Model
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def predict(self, targets: list[Target]) -> dict[UseID, int]:
+        preds = {}
+        for target in targets:
+            preds.update(self.predict_target(target))
+        return preds
+
     @abstractmethod
-    def predict(self, target: Target) -> dict[UseID, int]:
+    def predict_target(self, target: Target) -> dict[UseID, int]:
         ...
 
-    def split_clusters(
-        self, clusters: dict[UseID, int], grouping_to_use: dict[str, list[UseID]]
-    ) -> tuple[list[int], list[int]]:
+    def make_freq_dists(
+        self, 
+        clusters: dict[UseID, int], 
+        use_to_grouping: dict[UseID, str],
+        groupings: tuple[str, str]
+    ) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32]]:
+        cluster_to_freq1 = {}
+        cluster_to_freq2 = {}
+        for use, cluster in clusters.items():
+            if not cluster in cluster_to_freq1:
+                cluster_to_freq1[cluster] = 0
+            if not cluster in cluster_to_freq2:
+                cluster_to_freq2[cluster] = 0
 
-        groupings = list(grouping_to_use.keys())
-        groups = (
-            [clusters[use] for use in grouping_to_use[groupings[0]]],
-            [clusters[use] for use in grouping_to_use[groupings[1]]]
+            if use_to_grouping[use] == groupings[0]:
+                cluster_to_freq1[cluster] += 1
+            elif use_to_grouping[use] == groupings[1]:
+                cluster_to_freq2[cluster] += 1
+            else:
+                raise ValueError
+
+        return (
+            np.array(list(cluster_to_freq1.values())), 
+            np.array(list(cluster_to_freq2.values()))
         )
 
-        return groups
-        
     @staticmethod
     def normalize_cluster(cluster: list[int]) -> list[float]:
         normalized = []
