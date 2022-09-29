@@ -1,4 +1,4 @@
-name: /mount/projekte50/projekte/cik/users/andres/LSCDBenchmark/conda
+name: lscd-benchmark
 channels:
   - pytorch
   - conda-forge
@@ -216,4 +216,3 @@ dependencies:
   - pip:
     - chinese-whispers==0.8.0
     - mlrose==1.3.0
-prefix: /mount/projekte50/projekte/cik/users/andres/LSCDBenchmark/conda
