@@ -1,15 +1,13 @@
 from collections import Counter
-from typing import Any, Literal
+from typing import Literal
 
 import networkx as nx
-import chinese_whispers as cw
 from graph_tool.inference.blockmodel import BlockState
 
-from src.wsi.model import Model
-from src.target import Target
 from src import utils
-from src._correlation import cluster_correlation_search
+from src.target import Target
 from src.use import UseID
+from src.wsi.model import Model
 
 
 class ClusterWSBM(Model):
@@ -42,13 +40,13 @@ class ClusterWSBM(Model):
 
         block2clusterid_map = {}
         for i, (k, _) in enumerate(
-            dict(
-                sorted(
-                    Counter(state.get_blocks().get_array()).items(),
-                    key=lambda item: item[1],
-                    reverse=True,
-                )
-            ).items()
+                dict(
+                    sorted(
+                        Counter(state.get_blocks().get_array()).items(),
+                        key=lambda item: item[1],
+                        reverse=True,
+                    )
+                ).items()
         ):
             block2clusterid_map[k] = i
 

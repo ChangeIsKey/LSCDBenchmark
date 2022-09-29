@@ -1,7 +1,8 @@
+import scipy
+
+from src import wsi
 from src.lscd.model import GradedModel
 from src.target import Target
-from src import wsi
-import scipy
 
 
 class ClusterJSD(GradedModel):

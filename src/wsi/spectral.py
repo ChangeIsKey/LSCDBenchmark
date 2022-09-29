@@ -1,8 +1,8 @@
-from src.wsi.model import Model 
-from src.target import Target
 from sklearn.cluster import SpectralClustering
 
+from src.target import Target
 from src.use import UseID
+from src.wsi.model import Model
 
 
 class ClusterSpectral(Model):
@@ -21,5 +21,3 @@ class ClusterSpectral(Model):
         labels = clustering.fit_predict(similarity_matrix)
         ids = target.uses_df.identifier.tolist()
         return dict(zip(ids, labels))
-
-

@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Callable, TypeAlias, Literal, TypeVar
+
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from pydantic import BaseModel
-from src import utils
-
 
 EvaluationTask: TypeAlias = Literal[
     "semantic_proximity", "change_graded", "change_binary", "COMPARE", "wsi"

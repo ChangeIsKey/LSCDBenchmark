@@ -1,13 +1,13 @@
-import numpy as np
-import numpy.typing as npt
 from abc import ABC, abstractmethod
 from collections import Counter
 
+import numpy as np
+import numpy.typing as npt
 from pydantic import BaseModel
-from src.target import Target
 
-from src.use import UseID
 from src import wic
+from src.target import Target
+from src.use import UseID
 
 
 class Model(BaseModel, ABC):
@@ -27,10 +27,10 @@ class Model(BaseModel, ABC):
         ...
 
     def make_freq_dists(
-        self, 
-        clusters: dict[UseID, int], 
-        use_to_grouping: dict[UseID, str],
-        groupings: tuple[str, str]
+            self,
+            clusters: dict[UseID, int],
+            use_to_grouping: dict[UseID, str],
+            groupings: tuple[str, str]
     ) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32]]:
         cluster_to_freq1 = {}
         cluster_to_freq2 = {}
@@ -48,7 +48,7 @@ class Model(BaseModel, ABC):
                 raise ValueError
 
         return (
-            np.array(list(cluster_to_freq1.values())), 
+            np.array(list(cluster_to_freq1.values())),
             np.array(list(cluster_to_freq2.values()))
         )
 

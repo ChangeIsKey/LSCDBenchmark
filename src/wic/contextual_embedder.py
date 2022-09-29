@@ -1,10 +1,10 @@
 import logging
-from typing import Callable
 from enum import Enum
+from typing import Callable
 
 import numpy as np
-from pydantic import PositiveInt, PrivateAttr, conlist
 import torch
+from pydantic import PositiveInt, PrivateAttr, conlist
 from tqdm import tqdm
 from transformers import (
     AutoModel,
@@ -14,10 +14,9 @@ from transformers import (
     PreTrainedModel,
     logging as trans_logging,
 )
-from src.target import Target
 
-from src.wic.model import Model
 from src.use import Use
+from src.wic.model import Model
 
 trans_logging.set_verbosity_error()
 
@@ -124,11 +123,10 @@ class ContextualEmbedder(Model):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    
     def similarities(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         similarities = []
         for use_1, use_2 in tqdm(
-            use_pairs, desc="Calculating use-pair distances", leave=False
+                use_pairs, desc="Calculating use-pair distances", leave=False
         ):
             enc_1 = self.encode(use_1)
             enc_2 = self.encode(use_2)

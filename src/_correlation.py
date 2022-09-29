@@ -1,8 +1,7 @@
+import multiprocessing as mp
 import sys
 import time
 from collections import defaultdict
-
-import multiprocessing as mp
 
 import networkx as nx
 import numpy as np
@@ -13,7 +12,7 @@ import mlrose
 
 
 def cluster_correlation_search(
-    G: nx.Graph, max_senses=10, max_attempts=200, max_iters=5000, initial=[], split_flag=True
+        G: nx.Graph, max_senses=10, max_attempts=200, max_iters=5000, initial=[], split_flag=True
 ):
     """
     Apply correlation clustering. Assumes that negative edges have weights < 0, and positive edges have weights >= 0, that edges with nan have been removed and that weights are stored under edge attribute G[i][j]['weight'].
@@ -41,8 +40,8 @@ def cluster_correlation_search(
     edges_negative = {(n2i[i], n2i[j], G[i][j]["weight"]) for (i, j) in G.edges() if G[i][j]["weight"] < 0.0}
 
     Linear_loss = Loss(
-        "linear_loss", 
-        edges_positive=edges_positive, 
+        "linear_loss",
+        edges_positive=edges_positive,
         edges_negative=edges_negative
     )
     # conflict_loss = test_loss
@@ -57,10 +56,10 @@ def cluster_correlation_search(
         end_time = time.time()
         stats["runtime"] = (end_time - start_time) / 60
         stats |= {
-            "max_senses": max_senses, 
-            "max_attempts": max_attempts, 
-            "max_iters": max_iters, 
-            "split_flag": split_flag, 
+            "max_senses": max_senses,
+            "max_attempts": max_attempts,
+            "max_iters": max_iters,
+            "split_flag": split_flag,
             "runtime": (end_time - start_time) / 60,
         }
 
@@ -115,8 +114,8 @@ def cluster_correlation_search(
     classes.sort(key=lambda x: -len(x))  # sort by size
 
     end_time = time.time()
-    stats |= {"max_senses": max_senses, "max_attempts": max_attempts, "max_iters": max_iters, "split_flag": split_flag, "runtime": (end_time - start_time) / 60,}
-
+    stats |= {"max_senses": max_senses, "max_attempts": max_attempts, "max_iters": max_iters, "split_flag": split_flag,
+              "runtime": (end_time - start_time) / 60, }
 
     # print(stats['runtime'])
 
@@ -127,13 +126,13 @@ class Loss(object):
     """ """
 
     def __init__(
-        self,
-        fitness_fn,
-        edges_positive=None,
-        edges_negative=None,
-        edges_min=None,
-        edges_max=None,
-        signs=None,
+            self,
+            fitness_fn,
+            edges_positive=None,
+            edges_negative=None,
+            edges_min=None,
+            edges_max=None,
+            signs=None,
     ):
 
         self.edges_positive = edges_positive
@@ -188,7 +187,7 @@ class Loss(object):
             return float("nan")
 
     def optimize_simulated_annealing(
-        self, n, classes, nodes, init_state, max_attempts, max_iters
+            self, n, classes, nodes, init_state, max_attempts, max_iters
     ):
 
         # Important to reseed to have different seeds in different pool processes

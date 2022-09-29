@@ -1,8 +1,10 @@
 from typing import NewType
+
 from pandas import Series
 from pydantic import BaseModel
 
 UseID = NewType("UseID", str)
+
 
 class Use(BaseModel):
     # unique id for this specific use
@@ -26,9 +28,9 @@ class Use(BaseModel):
             target=use.lemma.split("_")[0],
             indices=(use.target_index_begin, use.target_index_end)
         )
-    
+
     def __hash__(self) -> int:
         return hash(self.identifier)
-    
+
     def __lt__(self, other: "Use") -> bool:
         return self.identifier < other.identifier

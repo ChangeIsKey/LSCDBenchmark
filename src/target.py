@@ -1,5 +1,5 @@
-from collections import defaultdict
 import csv
+from collections import defaultdict
 from itertools import product
 from pathlib import Path
 from typing import Dict, Literal, TypedDict
@@ -146,7 +146,7 @@ class Target(BaseModel):
         return ids.identifier.tolist(), ids.identifier.tolist()
 
     def split_uses(
-        self, pairing: Literal["COMPARE", "EARLIER", "LATER"]
+            self, pairing: Literal["COMPARE", "EARLIER", "LATER"]
     ) -> tuple[list[UseID], list[UseID]]:
         match pairing:
             case "COMPARE":
@@ -161,11 +161,11 @@ class Target(BaseModel):
 
     @validate_arguments
     def use_pairs(
-        self,
-        pairing: Literal["COMPARE", "EARLIER", "LATER"],
-        sampling: Literal["all", "sampled", "annotated"],
-        n: int | None = None,
-        replace: bool | None = None,
+            self,
+            pairing: Literal["COMPARE", "EARLIER", "LATER"],
+            sampling: Literal["all", "sampled", "annotated"],
+            n: int | None = None,
+            replace: bool | None = None,
     ) -> list[tuple[Use, Use]]:
 
         match (sampling, pairing):
@@ -198,8 +198,8 @@ class Target(BaseModel):
         return use_pairs_instances
 
     def _split_annotated_uses(
-        self,
-        pairing: Literal["COMPARE", "EARLIER", "LATER"],
+            self,
+            pairing: Literal["COMPARE", "EARLIER", "LATER"],
     ) -> tuple[list[UseID], list[UseID]]:
         match pairing:
             case "COMPARE":
@@ -212,7 +212,7 @@ class Target(BaseModel):
         judgments = self.augmented_judgments_df[
             (self.augmented_judgments_df.grouping_x == group_0)
             & (self.augmented_judgments_df.grouping_y == group_1)
-        ]
+            ]
 
         return (
             judgments.identifier1.tolist(),

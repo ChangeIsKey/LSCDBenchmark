@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import Any, TypeGuard
 
+import graph_tool
 import hydra
 import networkx as nx
 import numpy as np
-import graph_tool
 from graph_tool.inference import minimize_blockmodel_dl
 from graph_tool.inference.blockmodel import BlockState
 
@@ -117,17 +117,19 @@ def _minimize(graph: graph_tool.Graph, distribution: str) -> BlockState:
         ),
     )
 
+
 # Typeguards
 
 def is_list(obj: Any) -> TypeGuard[list[Any]]:
     return hasattr(obj, "__len__")
-    
+
 
 def is_str_list(obj: Any) -> TypeGuard[list[str]]:
     try:
         return obj is not None and all(isinstance(s, str) for s in obj)
     except TypeError:
         return False
+
 
 def is_number(obj: Any) -> TypeGuard[float | int]:
     try:

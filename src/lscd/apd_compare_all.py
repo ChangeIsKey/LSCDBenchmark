@@ -1,8 +1,8 @@
 import numpy as np
 
+from src import wic
 from src.lscd.model import GradedModel
 from src.target import Target
-from src import wic
 
 
 class ApdCompareAll(GradedModel):

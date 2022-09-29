@@ -1,9 +1,9 @@
-import networkx as nx
 import chinese_whispers as cw
-from src.wsi.model import Model 
-from src.target import Target
+import networkx as nx
 
+from src.target import Target
 from src.use import UseID
+from src.wsi.model import Model
 
 
 class ClusterChineseWhispers(Model):

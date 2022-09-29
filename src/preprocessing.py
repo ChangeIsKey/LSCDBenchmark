@@ -1,7 +1,6 @@
-from typing import Any
-from pandas import Series
 from abc import ABC, abstractmethod
 
+from pandas import Series
 from pydantic import BaseModel
 
 
@@ -19,7 +18,7 @@ class ContextPreprocessor(BaseModel, ABC):
             self.spelling_normalization = {}
 
     def character_indices(
-        self, token_index: int, tokens: list[str], target: str
+            self, token_index: int, tokens: list[str], target: str
     ) -> tuple[int, int]:
         char_idx = -1
         for i, token in enumerate(tokens):

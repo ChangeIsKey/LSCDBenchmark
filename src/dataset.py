@@ -1,23 +1,23 @@
 import csv
-from pydantic import BaseModel, PrivateAttr
+import json
+import os
 import shutil
 import zipfile
 from pathlib import Path
 from typing import Any
 
-import json
-import os
 import pandas as pd
 import pandera as pa
 import requests
 from pandas import DataFrame, Series
 from pandera import Column, DataFrameSchema
+from pydantic import BaseModel, PrivateAttr
 from tqdm import tqdm
-from src.preprocessing import ContextPreprocessor
-from src.cleaning import Cleaning
 
 import src.utils as utils
+from src.cleaning import Cleaning
 from src.evaluation import EvaluationTask
+from src.preprocessing import ContextPreprocessor
 from src.target import Target, CsvParams
 
 
@@ -111,8 +111,8 @@ class Dataset(BaseModel):
             root.mkdir(parents=True, exist_ok=True)
 
             for filename in tqdm(
-                namelist,
-                desc=f"Unzipping dataset '{self.name}' (version {self.version})",
+                    namelist,
+                    desc=f"Unzipping dataset '{self.name}' (version {self.version})",
             ):
 
                 filename_fixed = filename
@@ -149,7 +149,7 @@ class Dataset(BaseModel):
         self._stats_groupings = other
 
     def get_stats_groupings_schema(
-        self, evaluation_task: EvaluationTask
+            self, evaluation_task: EvaluationTask
     ) -> DataFrameSchema:
         def validate_grouping(s: Series) -> bool:
             for _, item in s.items():
@@ -203,7 +203,7 @@ class Dataset(BaseModel):
         return dict(zip(self.clusters_df.identifier, self.clusters_df.cluster))
 
     def get_labels(
-        self, evaluation_task: EvaluationTask | None
+            self, evaluation_task: EvaluationTask | None
     ) -> dict[Any, float] | dict[Any, int]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
@@ -256,7 +256,7 @@ class Dataset(BaseModel):
 
             if self.cleaning is not None and len(self.cleaning.stats) > 0:
                 # remove "data=full" row
-                agreements = self.stats_agreement_df.iloc[1:, :].copy()  
+                agreements = self.stats_agreement_df.iloc[1:, :].copy()
                 agreements = self.cleaning(agreements)
                 to_load = agreements.data.unique().tolist()
             else:

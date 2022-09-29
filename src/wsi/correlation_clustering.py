@@ -1,12 +1,13 @@
 from typing import Any
+
 import networkx as nx
-import chinese_whispers as cw
-from src.wsi.model import Model 
-from src.target import Target
+
 from src import utils
 from src._correlation import cluster_correlation_search
-
+from src.target import Target
 from src.use import UseID
+from src.wsi.model import Model
+
 
 class ClusterCorrelation(Model):
     max_senses: int
@@ -14,9 +15,9 @@ class ClusterCorrelation(Model):
     max_iters: int
     initial: list[Any]
     split_flag: bool
-    
+
     def predict_target(self, target: Target) -> dict[UseID, int]:
-        
+
         similarity_matrix = self.wic.similarity_matrix(target)
         ids = similarity_matrix.index
         graph = nx.Graph()
@@ -30,9 +31,9 @@ class ClusterCorrelation(Model):
             )
 
         clusters, _ = cluster_correlation_search(
-            G=graph, 
-            max_senses=self.max_senses, 
-            max_attempts=self.max_attempts, 
+            G=graph,
+            max_senses=self.max_senses,
+            max_attempts=self.max_attempts,
             max_iters=self.max_iters,
             initial=self.initial,
             split_flag=self.split_flag

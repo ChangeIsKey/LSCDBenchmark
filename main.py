@@ -19,7 +19,7 @@ def main(config: DictConfig):
     predictions = model.predict(dataset.targets)
     labels = dataset.get_labels(evaluation.task)
     score = evaluation(labels=labels, predictions=predictions)
-  
+
     print(score)
 
 

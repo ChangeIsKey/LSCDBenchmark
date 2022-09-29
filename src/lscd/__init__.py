@@ -1,6 +1,6 @@
 from .apd_compare_all import ApdCompareAll
-from .cos import Cos
 from .cluster_jsd import ClusterJSD
+from .cos import Cos
 
 __all__ = [
     "ApdCompareAll",

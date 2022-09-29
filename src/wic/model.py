@@ -1,9 +1,10 @@
+from abc import ABC, abstractmethod
+
 import numpy as np
 from pandas import DataFrame
 from pydantic import BaseModel
-from abc import ABC, abstractmethod
-from src.target import Target
 
+from src.target import Target
 from src.use import Use, UseID
 
 
@@ -16,14 +17,13 @@ class Model(BaseModel, ABC):
         predictions = {}
         for target in targets:
             use_pairs = (
-                target.use_pairs(pairing="COMPARE", sampling="annotated")
-                + target.use_pairs(pairing="EARLIER", sampling="annotated")
-                + target.use_pairs(pairing="LATER", sampling="annotated")
+                    target.use_pairs(pairing="COMPARE", sampling="annotated")
+                    + target.use_pairs(pairing="EARLIER", sampling="annotated")
+                    + target.use_pairs(pairing="LATER", sampling="annotated")
             )
             use_pairs_ids = [(use_1.identifier, use_2.identifier) for use_1, use_2 in use_pairs]
             predictions.update(dict(zip(use_pairs_ids, self.similarities(use_pairs))))
         return predictions
-    
 
     def similarity_matrix(self, target: Target):
         compare_pairs = target.use_pairs(sampling="all", pairing="COMPARE")

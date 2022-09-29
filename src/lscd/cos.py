@@ -1,4 +1,3 @@
-from typing import Callable
 import numpy as np
 from scipy.spatial import distance
 from tqdm import tqdm

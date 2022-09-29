@@ -1,7 +1,9 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field
+
 from typing import Literal
+
 from pandas import DataFrame
+from pydantic import BaseModel, Field
 
 
 class CleaningParam(BaseModel):
@@ -10,7 +12,7 @@ class CleaningParam(BaseModel):
 
 
 class Cleaning(BaseModel):
-    stats: dict[str, CleaningParam] 
+    stats: dict[str, CleaningParam]
     match: Literal["all", "any"]
 
     def __call__(self, agreements: DataFrame) -> DataFrame:
@@ -26,7 +28,3 @@ class Cleaning(BaseModel):
                 return agreements.query("&".join(conditions))
             case "any":
                 return agreements.query("|".join(conditions))
-
-
-
-
