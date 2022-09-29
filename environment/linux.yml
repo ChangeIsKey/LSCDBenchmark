@@ -1,4 +1,4 @@
-name: lscd-benchmark
+name: LSCDBenchmark
 channels:
   - pytorch
   - conda-forge
