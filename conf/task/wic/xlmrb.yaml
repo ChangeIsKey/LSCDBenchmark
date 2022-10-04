@@ -1,0 +1,11 @@
+_target_: src.wic.ContextualEmbedder
+layers: [1, 12]
+layer_aggregation: average
+subword_aggregation: average
+truncation_tokens_before_target: 0.5
+similarity_metric:
+  _target_: scipy.spatial.distance.cosine
+  _partial_: true
+
+gpu: null
+id: xlm-roberta-base
