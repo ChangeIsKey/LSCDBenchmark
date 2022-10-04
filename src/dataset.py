@@ -63,11 +63,6 @@ class Dataset(BaseModel):
 		**data
 	):
 		super().__init__(**data)
-
-		if self.version == "latest":
-			versions = sorted(self.wug_to_url[self.name].keys(), reverse=True)
-			self.version = versions[0]
-
 		if not self.path.exists():
 			if self.name not in self.wug_to_url:
 				raise UnknownDataset
