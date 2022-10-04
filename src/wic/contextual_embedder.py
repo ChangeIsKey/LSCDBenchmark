@@ -1,6 +1,9 @@
 import logging
 from enum import Enum
-from typing import Callable
+from typing import (
+    Callable,
+    TypedDict,
+)
 
 from collections import defaultdict
 import numpy as np
@@ -74,6 +77,16 @@ class SubwordAggregator(str, Enum):
                 raise ValueError
 
 
+class DatasetMetadata(TypedDict):
+    name: str
+    version: str
+    preprocessing: str
+
+
+class Metadata(TypedDict):
+    dataset: DatasetMetadata
+
+
 class ContextualEmbedder(Model):
     layers: conlist(item_type=PositiveInt, unique_items=True)  # type: ignore
     layer_aggregation: LayerAggregator
@@ -82,6 +95,8 @@ class ContextualEmbedder(Model):
     similarity_metric: Callable[..., float]
     id: str
     gpu: int | None
+
+    metadata: Metadata
 
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)

@@ -7,5 +7,12 @@ similarity_metric:
   _target_: scipy.spatial.distance.cosine
   _partial_: true
 
+
+metadata:
+  dataset:
+    name: ${dataset.name}
+    version: ${dataset.version}
+    preprocessing: ${dataset.preprocessing.name}
+
 gpu: null
 id: ${dataset.bert}
