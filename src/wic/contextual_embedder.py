@@ -33,7 +33,6 @@ from transformers import (
 from src import utils
 from src.use import (
     Use,
-    UseID,
 )
 from src.wic.model import Model
 
@@ -49,15 +48,15 @@ class LayerAggregator(str, Enum):
 
     def __call__(
         self,
-        layers: torch.Tensor
-    ) -> torch.Tensor:
+        layers: np.ndarray
+    ) -> np.ndarray:
         match self:
             case self.AVERAGE:
-                return torch.mean(layers, dim=0)
+                return np.mean(layers, axis=0)
             case self.SUM:
-                return torch.sum(layers, dim=0)
+                return np.sum(layers, axis=0)
             case self.CONCAT:
-                return torch.ravel(layers)
+                return np.ravel(layers)
             case _:
                 raise ValueError
 
@@ -159,13 +158,14 @@ class ContextualEmbedder(Model):
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
-    _layer_mask: torch.Tensor = PrivateAttr(default=None)
+    _layer_mask: np.ndarray = PrivateAttr(default=None)
 
     def __init__(
         self,
         **data
     ) -> None:
         super().__init__(**data)
+        self._layer_mask = np.array(self.layers, dtype=int)
         print(self.cache)
 
     @property
@@ -242,8 +242,12 @@ class ContextualEmbedder(Model):
 
     def aggregate(
         self,
-    ) -> torch.Tensor:
+        embedding: np.ndarray
+    ) -> np.ndarray:
         return self.layer_aggregation(
+            self.subword_aggregation(embedding)
+            .squeeze()
+            .take(index=self._layer_mask, dim=0)
         )
 
     def encode(
@@ -287,6 +291,10 @@ class ContextualEmbedder(Model):
             with torch.no_grad():
                 outputs = self.model(input_ids, torch.ones_like(input_ids))  # type: ignore
 
+            embedding = (
+                # stack the layers
+                torch.stack(outputs[2], dim=0)
+                # we don't vectorize in batches, so we can get rid of the batches dimension
                 .squeeze(dim=1)  # swap the subwords and layers dimension
                 .permute(1, 0, 2)  # select the target's subwords' embeddings
                 [torch.tensor(target_indices), :, :]  # convert to numpy array
@@ -297,6 +305,4 @@ class ContextualEmbedder(Model):
             self.cache.has_new_uses(target=use.target)
             self.cache.add_use(use=use, embedding=embedding)
 
-            embedding = self.aggregate(embedding)
-
-        return embedding.cpu().numpy()
+        return self.aggregate(embedding)
