@@ -1,14 +1,21 @@
 import logging
+import os
+from collections import defaultdict
 from enum import Enum
+from pathlib import Path
 from typing import (
     Callable,
     TypedDict,
 )
 
-from collections import defaultdict
 import numpy as np
+import pandas as pd
+import json
 import torch
+from pandas import DataFrame
 from pydantic import (
+    BaseModel,
+    Field,
     PositiveInt,
     PrivateAttr,
     conlist,
@@ -23,6 +30,7 @@ from transformers import (
     logging as trans_logging,
 )
 
+from src import utils
 from src.use import (
     Use,
     UseID,
@@ -62,13 +70,13 @@ class SubwordAggregator(str, Enum):
 
     def __call__(
         self,
-        vectors: torch.Tensor
-    ) -> torch.Tensor:
+        vectors: np.ndarray
+    ) -> np.ndarray:
         match self:
             case self.AVERAGE:
-                return torch.mean(vectors, dim=0, keepdim=True)
+                return np.mean(vectors, axis=0, keepdim=True)
             case self.SUM:
-                return torch.sum(vectors, dim=0, keepdim=True)
+                return np.sum(vectors, axis=0, keepdim=True)
             case self.FIRST:
                 return vectors[0]
             case self.LAST:
@@ -83,9 +91,59 @@ class DatasetMetadata(TypedDict):
     preprocessing: str
 
 
-class Metadata(TypedDict):
-    dataset: DatasetMetadata
+class ContextualEmbedderMetadata(TypedDict):
+    pre_target_tokens: float
 
+
+class CacheParams(TypedDict):
+    dataset: DatasetMetadata
+    contextual_embedder: ContextualEmbedderMetadata
+
+
+class Cache(BaseModel):
+    metadata: CacheParams
+    _cache: dict[str, dict[str, np.ndarray]] = Field(default_factory=lambda: defaultdict(dict))
+    _has_new_uses: dict[str, bool] = Field(default_factory=lambda: defaultdict(lambda: False))
+    _index: DataFrame = PrivateAttr(default=None)
+    _index_dir: Path = PrivateAttr(default=None)
+    _index_path: Path = PrivateAttr(default=None)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._index_dir = utils.path(os.getenv("CACHE_DIR") or ".cache")
+        self._index_path = self._index_dir / "index.csv"
+
+        try:
+            self._index = pd.read_csv(filepath_or_buffer=self._index_path, sep="\t", engine="pyarrow")
+        except FileNotFoundError:
+            # create cache directory if it does not exist
+            self._index_dir.mkdir(exist_ok=True, parents=True)
+            # build lookup table with dynamically with
+            # columns from the fields of VectorCacheParams
+            self._index = pd.json_normalize(self.metadata).assign(**{"id": None, "target": None})
+            # empty dataframe
+            self._index = self._index.iloc[0:0]
+            self._index.to_csv(path_or_buf=self._index_path, sep="\t", index=False)
+
+
+
+    def add_use(self, use: Use, embedding: np.ndarray) -> None:
+        self._cache[use.target][use.identifier] = embedding
+
+    def retrieve(self, use: Use) -> np.ndarray | None:
+        return self._cache.get(use.target).get(use.identifier)
+
+    def load(self):
+        ...
+
+    def persist(self):
+        ...
+
+    def has_new_uses(self, target: str):
+        self._has_new_uses[target] = True
+
+    def __del__(self):
+        ...
 
 class ContextualEmbedder(Model):
     layers: conlist(item_type=PositiveInt, unique_items=True)  # type: ignore
@@ -95,13 +153,12 @@ class ContextualEmbedder(Model):
     similarity_metric: Callable[..., float]
     id: str
     gpu: int | None
+    cache: Cache
 
-    metadata: Metadata
 
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
-    _vectors: dict[str, torch.Tensor] = PrivateAttr(default=None)
     _layer_mask: torch.Tensor = PrivateAttr(default=None)
 
     def __init__(
@@ -109,7 +166,7 @@ class ContextualEmbedder(Model):
         **data
     ) -> None:
         super().__init__(**data)
-        self._layer_mask = torch.tensor(self.layers, dtype=torch.int32).to(self.device)
+        print(self.cache)
 
     @property
     def device(
@@ -185,20 +242,16 @@ class ContextualEmbedder(Model):
 
     def aggregate(
         self,
-        embedding: torch.Tensor
     ) -> torch.Tensor:
         return self.layer_aggregation(
-            self.subword_aggregation(embedding).squeeze().index_select(index=self._layer_mask, dim=0)
         )
 
     def encode(
         self,
         use: Use
     ) -> np.ndarray:
-        if self._vectors is None:
-            self._vectors = defaultdict(dict)
 
-        embedding = self._vectors.get(use.identifier)
+        embedding = self.cache.retrieve(use)
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
             log.info(f"Target character indices: {use.indices}")
@@ -234,18 +287,16 @@ class ContextualEmbedder(Model):
             with torch.no_grad():
                 outputs = self.model(input_ids, torch.ones_like(input_ids))  # type: ignore
 
-            embedding = (  # stack the layers
-                torch.stack(
-                    outputs[2], dim=0
-                )  # we don't vectorize in batches, so we can get rid of the batches dimension
                 .squeeze(dim=1)  # swap the subwords and layers dimension
                 .permute(1, 0, 2)  # select the target's subwords' embeddings
                 [torch.tensor(target_indices), :, :]  # convert to numpy array
+                .cpu().numpy()
             )
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
+            self.cache.has_new_uses(target=use.target)
+            self.cache.add_use(use=use, embedding=embedding)
 
-            self._vectors[use.identifier] = embedding
             embedding = self.aggregate(embedding)
 
         return embedding.cpu().numpy()
