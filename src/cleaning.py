@@ -3,7 +3,10 @@ from __future__ import annotations
 from typing import Literal
 
 from pandas import DataFrame
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    Field,
+)
 
 
 class CleaningParam(BaseModel):

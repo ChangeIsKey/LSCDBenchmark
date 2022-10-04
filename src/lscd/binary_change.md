@@ -5,7 +5,6 @@ class BinaryThresholdModel(lscd.Model):
         return threshold_fn(predictions)
 ```
 
-
 ```yaml
 _target_: src.lscd.BinaryThresholdModel
 graded_model:
@@ -16,7 +15,6 @@ threshold_fn:
     t: 0.1
 
 ```
-
 
 ```yaml
 pairings: [COMPARE, EARLIER, LATER]
