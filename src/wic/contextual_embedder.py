@@ -157,6 +157,7 @@ class ContextualEmbedder(Model):
         ):
             enc_1 = self.encode(use_1)
             enc_2 = self.encode(use_2)
+            print(enc_1.shape)
             similarities.append(self.similarity_metric(enc_1, enc_2))
         return similarities
 
@@ -181,7 +182,7 @@ class ContextualEmbedder(Model):
         use: Use
     ) -> np.ndarray:
         if self._vectors is None:
-            self._vectors = defaultdict(dict)
+            self._vectors = {}
 
         embedding = self._vectors.get(use.identifier)
         if embedding is None:
