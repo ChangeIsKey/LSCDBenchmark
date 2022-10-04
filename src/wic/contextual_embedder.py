@@ -138,10 +138,10 @@ class Cache(BaseModel):
     def persist(self):
         ...
 
-    def has_new_uses(self, target: str):
+    def has_new_uses(self, target: str) -> None:
         self._has_new_uses[target] = True
 
-    def __del__(self):
+    def __del__(self) -> None:
         ...
 
 class ContextualEmbedder(Model):
