@@ -8,4 +8,4 @@ similarity_metric:
   _partial_: true
 
 gpu: null
-id: ???
+id: ${dataset.bert}

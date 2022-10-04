@@ -3,6 +3,7 @@ defaults:
   - override preprocessing/spelling_normalization: null
 
 name: dwug_en
+bert: bert-base-uncased
 cleaning: null
 test_on: null
 groupings: ["1", "2"]

@@ -3,6 +3,7 @@ defaults:
   - override preprocessing/spelling_normalization: german
 
 name: dwug_de
+bert: bert-base-german-cased
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
