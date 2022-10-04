@@ -232,6 +232,6 @@ class ContextualEmbedder(Model):
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
 
             self._vectors[use.identifier] = embedding
-            embedding = self.aggregate(embedding)
 
+        embedding = self.aggregate(embedding)
         return embedding.cpu().numpy()
