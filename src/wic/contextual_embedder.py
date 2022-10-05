@@ -73,9 +73,9 @@ class SubwordAggregator(str, Enum):
     ) -> np.ndarray:
         match self:
             case self.AVERAGE:
-                return np.mean(vectors, axis=0, keepdim=True)
+                return np.mean(vectors, axis=0, keepdims=True)
             case self.SUM:
-                return np.sum(vectors, axis=0, keepdim=True)
+                return np.sum(vectors, axis=0, keepdims=True)
             case self.FIRST:
                 return vectors[0]
             case self.LAST:
@@ -247,7 +247,7 @@ class ContextualEmbedder(Model):
         return self.layer_aggregation(
             self.subword_aggregation(embedding)
             .squeeze()
-            .take(index=self._layer_mask, dim=0)
+            .take(indices=self._layer_mask, axis=0)
         )
 
     def encode(
