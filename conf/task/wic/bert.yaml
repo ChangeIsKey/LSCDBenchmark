@@ -9,3 +9,14 @@ similarity_metric:
 
 gpu: null
 id: ${dataset.bert}
+
+cache:
+  _target_: src.wic.contextual_embedder.Cache
+  metadata:
+    dataset:
+      name: ${dataset.name}
+      version: ${dataset.version}
+      preprocessing: ${dataset.preprocessing.name}
+    contextual_embedder:
+      pre_target_tokens: ${....truncation_tokens_before_target}
+
