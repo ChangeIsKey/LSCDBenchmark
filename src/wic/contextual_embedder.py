@@ -118,6 +118,7 @@ class Cache(BaseModel):
         super().__init__(**data)
         self._index_dir = utils.path(os.getenv("CACHE_DIR") or ".cache")
         self._index_path = self._index_dir / "index.csv"
+        print(self._index_path)
         try:
             self._index = pd.read_csv(filepath_or_buffer=self._index_path, engine="pyarrow")
             self.clean()
@@ -231,20 +232,14 @@ class ContextualEmbedder(Model):
         self._layer_mask = np.array(self.layers, dtype=int)
 
     def __enter__(self):
-        self._signal_received = False
-        self._old_exit_handler = signal.signal(signal.SIGINT, self.on_exit)
+        pass
 
-    def on_exit(self, sig, frame):
-        self._signal_received = (sig, frame)
+    def __exit__(self, exc_type, exc_val, exc_tb):
         targets = self.cache.targets()
         for target in targets:
             if self.cache.has_new_uses(target):
                 self.cache.persist(target)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        signal.signal(signal.SIGINT, self._old_exit_handler)
-        if self._signal_received:
-            self._old_exit_handler(*self._signal_received)
 
     @property
     def device(
