@@ -11,7 +11,7 @@ gpu: null
 id: ${dataset.bert}
 
 cache:
-  _target_: src.wic.contextual_embedder.VectorCache
+  _target_: src.wic.contextual_embedder.Cache
   metadata:
     dataset:
       name: ${dataset.name}

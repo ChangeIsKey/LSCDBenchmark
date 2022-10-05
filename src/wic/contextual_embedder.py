@@ -1,10 +1,15 @@
 import logging
+import signal
 import os
+import uuid
 from collections import defaultdict
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from typing import (
+    Any,
     Callable,
+    TypeAlias,
     TypedDict,
 )
 
@@ -12,7 +17,7 @@ import numpy as np
 import pandas as pd
 import json
 import torch
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from pydantic import (
     BaseModel,
     Field,
@@ -33,6 +38,7 @@ from transformers import (
 from src import utils
 from src.use import (
     Use,
+    UseID
 )
 from src.wic.model import Model
 
@@ -84,25 +90,26 @@ class SubwordAggregator(str, Enum):
                 raise ValueError
 
 
-class DatasetMetadata(TypedDict):
+class DatasetMetadata(BaseModel):
     name: str
     version: str
     preprocessing: str
 
 
-class ContextualEmbedderMetadata(TypedDict):
+class ContextualEmbedderMetadata(BaseModel):
     pre_target_tokens: float
 
 
-class CacheParams(TypedDict):
+class CacheParams(BaseModel):
     dataset: DatasetMetadata
     contextual_embedder: ContextualEmbedderMetadata
 
+TargetName: TypeAlias = str
 
 class Cache(BaseModel):
     metadata: CacheParams
-    _cache: dict[str, dict[str, np.ndarray]] = Field(default_factory=lambda: defaultdict(dict))
-    _has_new_uses: dict[str, bool] = Field(default_factory=lambda: defaultdict(lambda: False))
+    _cache: dict[TargetName, dict[UseID, np.ndarray]] = PrivateAttr(default_factory=dict)
+    _targets_with_new_uses: set[TargetName] = PrivateAttr(default_factory=set)
     _index: DataFrame = PrivateAttr(default=None)
     _index_dir: Path = PrivateAttr(default=None)
     _index_path: Path = PrivateAttr(default=None)
@@ -111,38 +118,90 @@ class Cache(BaseModel):
         super().__init__(**data)
         self._index_dir = utils.path(os.getenv("CACHE_DIR") or ".cache")
         self._index_path = self._index_dir / "index.csv"
-
         try:
-            self._index = pd.read_csv(filepath_or_buffer=self._index_path, sep="\t", engine="pyarrow")
+            self._index = pd.read_csv(filepath_or_buffer=self._index_path, engine="pyarrow")
+            self.clean()
         except FileNotFoundError:
-            # create cache directory if it does not exist
-            self._index_dir.mkdir(exist_ok=True, parents=True)
-            # build lookup table with dynamically with
-            # columns from the fields of VectorCacheParams
-            self._index = pd.json_normalize(self.metadata).assign(**{"id": None, "target": None})
-            # empty dataframe
-            self._index = self._index.iloc[0:0]
-            self._index.to_csv(path_or_buf=self._index_path, sep="\t", index=False)
+            self._index = DataFrame()
 
-
-
-    def add_use(self, use: Use, embedding: np.ndarray) -> None:
+    def add_use(self, use: Use, embedding: np.ndarray, new: bool) -> None:
+        if not use.target in self._cache:
+            self._cache[use.target] = {}
         self._cache[use.target][use.identifier] = embedding
+        if new:
+            self._targets_with_new_uses.add(use.target)
 
     def retrieve(self, use: Use) -> np.ndarray | None:
-        return self._cache.get(use.target).get(use.identifier)
+        if not use.target in self._cache:
+            loaded = self.load(use.target)
+            if loaded is None:
+                return None
+            self._cache[use.target] = loaded
+        return self._cache[use.target].get(use.identifier)  # this can still be None
 
-    def load(self):
-        ...
+    def mask(self, target: str):
+        try:
+            mask = self._index.target == target
+            metadata = self.metadata.dict()
+            for col in self._index.columns.tolist():
+                if "." in col:
+                    key, child = col.split(".")
+                    mask &= self._index[col] == metadata[key][child]
+            return mask
+        except AttributeError:
+            return []
 
-    def persist(self):
-        ...
+    def load(self, target: str) -> dict[UseID, np.ndarray] | None:
+        mask = self.mask(target)
+        df = self._index[mask]
+        assert len(df) < 2
 
-    def has_new_uses(self, target: str) -> None:
-        self._has_new_uses[target] = True
+        if df.empty:
+            return None
 
-    def __del__(self) -> None:
-        ...
+        identifier = df.id.iloc[0]
+        path = str(self._index_dir / f"{identifier}.npz")
+        return dict(np.load(path, mmap_mode="r"))
+
+    def _ids(self) -> set[UseID]:
+        try:
+            return set(self._index.id.tolist())
+        except AttributeError:
+            return set()
+
+    def targets(self) -> set[TargetName]:
+        return set(self._cache.keys())
+
+    def clean(self):
+        self._index.drop_duplicates(subset=[col for col in self._index.columns.tolist() if col != "id"], inplace=True, keep="last")
+        valid_ids = self._ids()
+        for file in self._index_dir.iterdir():
+            if file.name != "index.csv" and file.stem not in valid_ids:
+                file.unlink()
+
+
+    def persist(self, target: str) -> None:
+        while True:
+            identifier = str(uuid.uuid4())
+            if identifier not in self._ids():
+                self._index_dir.mkdir(exist_ok=True, parents=True)
+                with open(file=self._index_dir / f"{identifier}.npz", mode="wb") as f:
+                    np.savez(f, **self._cache[target])
+                    log.info(f"Saved embeddings to disk as {identifier}.npz")
+
+                self._index = pd.concat([
+                    self._index,
+                    pd.json_normalize(self.metadata.dict()).assign(id=identifier, target=target)
+                ], ignore_index=True)
+                self._index.to_csv(path_or_buf=self._index_path, index=False)
+                self._targets_with_new_uses.remove(target)
+                log.info("Logged record of new embedding file")
+
+                break
+
+    def has_new_uses(self, target: str) -> bool:
+        return target in self._targets_with_new_uses
+
 
 class ContextualEmbedder(Model):
     layers: conlist(item_type=PositiveInt, unique_items=True)  # type: ignore
@@ -152,7 +211,6 @@ class ContextualEmbedder(Model):
     similarity_metric: Callable[..., float]
     id: str
     gpu: int | None
-    cache: Cache
 
 
     _device: torch.device = PrivateAttr(default=None)
@@ -160,13 +218,33 @@ class ContextualEmbedder(Model):
     _model: PreTrainedModel = PrivateAttr(default=None)
     _layer_mask: np.ndarray = PrivateAttr(default=None)
 
+    # attributes for cleanup and vector caching
+    cache: Cache
+    _signal_received: Any = PrivateAttr(default=None)
+    _old_exit_handler: Any = PrivateAttr(default=None)
+
     def __init__(
         self,
         **data
     ) -> None:
         super().__init__(**data)
         self._layer_mask = np.array(self.layers, dtype=int)
-        print(self.cache)
+
+    def __enter__(self):
+        self._signal_received = False
+        self._old_exit_handler = signal.signal(signal.SIGINT, self.on_exit)
+
+    def on_exit(self, sig, frame):
+        self._signal_received = (sig, frame)
+        targets = self.cache.targets()
+        for target in targets:
+            if self.cache.has_new_uses(target):
+                self.cache.persist(target)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        signal.signal(signal.SIGINT, self._old_exit_handler)
+        if self._signal_received:
+            self._old_exit_handler(*self._signal_received)
 
     @property
     def device(
@@ -224,9 +302,7 @@ class ContextualEmbedder(Model):
         use_pairs: list[tuple[Use, Use]]
     ) -> list[float]:
         similarities = []
-        for use_1, use_2 in tqdm(
-                use_pairs, desc="Calculating use-pair distances", leave=False
-        ):
+        for use_1, use_2 in use_pairs:
             enc_1 = self.encode(use_1)
             enc_2 = self.encode(use_2)
             similarities.append(self.similarity_metric(enc_1, enc_2))
@@ -255,6 +331,7 @@ class ContextualEmbedder(Model):
         use: Use
     ) -> np.ndarray:
 
+        is_new = False
         embedding = self.cache.retrieve(use)
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
@@ -302,7 +379,7 @@ class ContextualEmbedder(Model):
             )
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
-            self.cache.has_new_uses(target=use.target)
-            self.cache.add_use(use=use, embedding=embedding)
+            is_new = True
 
+        self.cache.add_use(use=use, embedding=embedding, new=is_new)
         return self.aggregate(embedding)
