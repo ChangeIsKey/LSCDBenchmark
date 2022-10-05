@@ -1,4 +1,4 @@
-FROM nvidia/cuda:latest AS cuda
+FROM nvidia/cuda:10.2-base
 
 FROM tiagopeixoto/graph-tool:latest
 RUN pacman -S python-pip --noconfirm
