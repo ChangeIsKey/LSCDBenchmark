@@ -305,7 +305,6 @@ class ContextualEmbedder(Model):
         for use_1, use_2 in use_pairs:
             enc_1 = self.encode(use_1)
             enc_2 = self.encode(use_2)
-            print(enc_1.shape)
             similarities.append(self.similarity_metric(enc_1, enc_2))
         return similarities
 
@@ -331,11 +330,6 @@ class ContextualEmbedder(Model):
         self,
         use: Use
     ) -> np.ndarray:
-<<<<<<< HEAD
-        if self._vectors is None:
-            self._vectors = {}
-=======
->>>>>>> vector-cache
 
         is_new = False
         embedding = self.cache.retrieve(use)
@@ -387,12 +381,5 @@ class ContextualEmbedder(Model):
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
             is_new = True
 
-<<<<<<< HEAD
-            self._vectors[use.identifier] = embedding
-
-        embedding = self.aggregate(embedding)
-        return embedding.cpu().numpy()
-=======
         self.cache.add_use(use=use, embedding=embedding, new=is_new)
         return self.aggregate(embedding)
->>>>>>> vector-cache
