@@ -25,7 +25,7 @@ class Evaluation(BaseModel, ABC):
 		self,
 		results: DataFrame
 	) -> DataFrame:
-		return results
+		return results.dropna(how="any")
 
 	def __call__(
 		self,
