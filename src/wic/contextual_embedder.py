@@ -90,24 +90,10 @@ class SubwordAggregator(str, Enum):
                 raise ValueError
 
 
-class DatasetMetadata(BaseModel):
-    name: str
-    version: str
-    preprocessing: str
-
-
-class ContextualEmbedderMetadata(BaseModel):
-    pre_target_tokens: float
-
-
-class CacheParams(BaseModel):
-    dataset: DatasetMetadata
-    contextual_embedder: ContextualEmbedderMetadata
-
 TargetName: TypeAlias = str
 
 class Cache(BaseModel):
-    metadata: CacheParams
+    metadata: dict[Any, Any]
     _cache: dict[TargetName, dict[UseID, np.ndarray]] = PrivateAttr(default_factory=dict)
     _targets_with_new_uses: set[TargetName] = PrivateAttr(default_factory=set)
     _index: DataFrame = PrivateAttr(default=None)
@@ -118,7 +104,7 @@ class Cache(BaseModel):
         super().__init__(**data)
         self._index_dir = utils.path(os.getenv("CACHE_DIR") or ".cache")
         self._index_path = self._index_dir / "index.csv"
-        print(self._index_path)
+
         try:
             self._index = pd.read_csv(filepath_or_buffer=self._index_path, engine="pyarrow")
             self.clean()
@@ -140,21 +126,12 @@ class Cache(BaseModel):
             self._cache[use.target] = loaded
         return self._cache[use.target].get(use.identifier)  # this can still be None
 
-    def mask(self, target: str):
-        try:
-            mask = self._index.target == target
-            metadata = self.metadata.dict()
-            for col in self._index.columns.tolist():
-                if "." in col:
-                    key, child = col.split(".")
-                    mask &= self._index[col] == metadata[key][child]
-            return mask
-        except AttributeError:
-            return []
-
     def load(self, target: str) -> dict[UseID, np.ndarray] | None:
-        mask = self.mask(target)
-        df = self._index[mask]
+        df = (
+             pd.json_normalize(self.metadata)
+             .assign(target=target)
+             .merge(self._index)
+        )
         assert len(df) < 2
 
         if df.empty:
@@ -321,11 +298,7 @@ class ContextualEmbedder(Model):
             .take(indices=self._layer_mask, axis=0)
         )
 
-    def encode(
-        self,
-        use: Use
-    ) -> np.ndarray:
-
+    def encode(self, use: Use) -> np.ndarray:
         is_new = False
         embedding = self.cache.retrieve(use)
         if embedding is None:
