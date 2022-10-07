@@ -18,3 +18,4 @@ conda/
 analysis/
 results/results.csv
 results/results.xlsx
+.devcontainer/
