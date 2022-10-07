@@ -1,4 +1,5 @@
 _target_: src.wic.ContextualEmbedder
+thresholds: [-0.2, -0.1, 0.1, 0.2]
 layers: [1, 12]
 layer_aggregation: average
 subword_aggregation: average

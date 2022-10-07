@@ -4,6 +4,7 @@ from abc import (
 )
 
 import numpy as np
+import more_itertools as mit
 from pandas import DataFrame
 from pydantic import BaseModel
 from tqdm import tqdm
@@ -16,6 +17,7 @@ from src.use import (
 
 
 class Model(BaseModel, ABC):
+    thresholds: list[float]
     @abstractmethod
     def similarities(
         self,
@@ -35,6 +37,14 @@ class Model(BaseModel, ABC):
              use_pairs_ids = [(use_1.identifier, use_2.identifier) for use_1, use_2 in use_pairs]
              with self:
                    predictions.update(dict(zip(use_pairs_ids, self.similarities(use_pairs))))
+
+        threshold_spans = list(mit.windowed([float("-inf"), *self.thresholds, float("inf")], n=2, step=1))
+        for use_pair_id, pred in predictions.items():
+            for i, (floor, ceil) in enumerate(threshold_spans):
+                if floor <= pred < ceil:
+                    predictions[use_pair_id] = float(i)
+                    break
+
         return predictions
 
     def similarity_matrix(
