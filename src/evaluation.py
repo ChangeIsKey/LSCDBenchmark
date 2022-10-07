@@ -73,3 +73,14 @@ class WsiEvaluation(Evaluation):
 	) -> DataFrame:
 		results["label"] = results["label"].replace(-1, np.nan)
 		return results.dropna(how="any")
+
+
+class WicEvaluation(Evaluation):
+	def preprocess_inputs(
+		self,
+		results: DataFrame
+	) -> DataFrame:
+		results["label"] = results["label"].replace(
+			to_replace=0, value=np.nan
+		)
+		return results.dropna(how="any")
