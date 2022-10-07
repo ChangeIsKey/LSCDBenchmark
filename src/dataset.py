@@ -294,8 +294,6 @@ class Dataset(BaseModel):
 		self
 	) -> list[Target]:
 		if self._targets is None:
-			to_load = []
-
 			if self.cleaning is not None and len(self.cleaning.stats) > 0:
 				# remove "data=full" row
 				agreements = self.stats_agreement_df.iloc[1:, :].copy()
@@ -309,8 +307,14 @@ class Dataset(BaseModel):
 					if utils.is_int(self.test_on):
 						to_load = to_load[: self.test_on]
 
-			self._targets = [Target(
-				name=target, groupings=self.groupings, path=self.path, preprocessing=self.preprocessing, ) for target in
-				tqdm(to_load, desc="Building targets", leave=False)]
+			self._targets = [
+				Target(
+					name=target,
+					groupings=self.groupings,
+					path=self.path,
+					preprocessing=self.preprocessing
+				)
+				for target in to_load
+			]
 
 		return self._targets
