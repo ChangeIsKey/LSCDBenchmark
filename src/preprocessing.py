@@ -20,17 +20,19 @@ class ContextPreprocessor(BaseModel, ABC):
         else:
             self.spelling_normalization = {}
 
-	@staticmethod
-	def character_indices(token_index: int, tokens: list[str], target: str) -> tuple[int, int]:
-		char_idx = -1
-		for i, token in enumerate(tokens):
-			if i == token_index:
-				# char_idx will be one index to the left of the target, so we need to add 1
-				start = char_idx + 1
-				end = start + len(target)
-				return start, end
-			char_idx += len(token) + 1  # plus one space
-		raise ValueError
+    @staticmethod
+    def character_indices(
+        token_index: int, tokens: list[str], target: str
+    ) -> tuple[int, int]:
+        char_idx = -1
+        for i, token in enumerate(tokens):
+            if i == token_index:
+                # char_idx will be one index to the left of the target, so we need to add 1
+                start = char_idx + 1
+                end = start + len(target)
+                return start, end
+            char_idx += len(token) + 1  # plus one space
+        raise ValueError
 
     def normalize_spelling(self, context: str) -> str:
         if self.spelling_normalization is not None:
