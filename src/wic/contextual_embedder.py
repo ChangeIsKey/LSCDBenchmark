@@ -14,6 +14,7 @@ from typing import (
 )
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import json
 import torch
@@ -36,10 +37,7 @@ from transformers import (
 )
 
 from src import utils
-from src.use import (
-    Use,
-    UseID
-)
+from src.use import Use, UseID
 from src.wic.model import Model
 
 trans_logging.set_verbosity_error()
@@ -52,10 +50,7 @@ class LayerAggregator(str, Enum):
     CONCAT = "concat"
     SUM = "sum"
 
-    def __call__(
-        self,
-        layers: np.ndarray
-    ) -> np.ndarray:
+    def __call__(self, layers: np.ndarray) -> np.ndarray:
         match self:
             case self.AVERAGE:
                 return np.mean(layers, axis=0)
@@ -73,10 +68,7 @@ class SubwordAggregator(str, Enum):
     LAST = "last"
     SUM = "sum"
 
-    def __call__(
-        self,
-        vectors: np.ndarray
-    ) -> np.ndarray:
+    def __call__(self, vectors: np.ndarray) -> np.ndarray:
         match self:
             case self.AVERAGE:
                 return np.mean(vectors, axis=0, keepdims=True)
@@ -92,9 +84,12 @@ class SubwordAggregator(str, Enum):
 
 TargetName: TypeAlias = str
 
+
 class Cache(BaseModel):
     metadata: dict[Any, Any]
-    _cache: dict[TargetName, dict[UseID, np.ndarray]] = PrivateAttr(default_factory=dict)
+    _cache: dict[TargetName, dict[UseID, np.ndarray]] = PrivateAttr(
+        default_factory=dict
+    )
     _targets_with_new_uses: set[TargetName] = PrivateAttr(default_factory=set)
     _index: DataFrame = PrivateAttr(default=None)
     _index_dir: Path = PrivateAttr(default=None)
@@ -106,18 +101,18 @@ class Cache(BaseModel):
         self._index_path = self._index_dir / "index.csv"
 
         try:
-            self._index = pd.read_csv(filepath_or_buffer=self._index_path, engine="pyarrow")
+            self._index = pd.read_csv(
+                filepath_or_buffer=self._index_path, engine="pyarrow"
+            )
             self.clean()
         except FileNotFoundError:
             self._index = pd.json_normalize(self.metadata).assign(id=None, target=None)
             self._index = self._index.iloc[0:0]
 
-    def add_use(self, use: Use, embedding: np.ndarray, new: bool) -> None:
+    def add_use(self, use: Use, embedding: np.ndarray) -> None:
         if not use.target in self._cache:
             self._cache[use.target] = {}
         self._cache[use.target][use.identifier] = embedding
-        if new:
-            self._targets_with_new_uses.add(use.target)
 
     def retrieve(self, use: Use) -> np.ndarray | None:
         if not use.target in self._cache:
@@ -128,11 +123,7 @@ class Cache(BaseModel):
         return self._cache[use.target].get(use.identifier)  # this can still be None
 
     def load(self, target: str) -> dict[UseID, np.ndarray] | None:
-        df = (
-             pd.json_normalize(self.metadata)
-             .assign(target=target)
-             .merge(self._index)
-        )
+        df = pd.json_normalize(self.metadata).assign(target=target).merge(self._index)
         assert len(df) < 2
 
         if df.empty:
@@ -152,30 +143,38 @@ class Cache(BaseModel):
         return set(self._cache.keys())
 
     def clean(self):
-        self._index.drop_duplicates(subset=[col for col in self._index.columns.tolist() if col != "id"], inplace=True, keep="last")
+        self._index.drop_duplicates(
+            subset=[col for col in self._index.columns.tolist() if col != "id"],
+            inplace=True,
+            keep="last",
+        )
         valid_ids = self._ids()
         for file in self._index_dir.iterdir():
             if file.name != "index.csv" and file.stem not in valid_ids:
                 file.unlink()
-
 
     def persist(self, target: str) -> None:
         while True:
             identifier = str(uuid.uuid4())
             if identifier not in self._ids():
                 self._index_dir.mkdir(exist_ok=True, parents=True)
-                self._index = pd.concat([
-                    self._index,
-                    pd.json_normalize(self.metadata).assign(id=identifier, target=target)
-                ], ignore_index=True)
+                self._index = pd.concat(
+                    [
+                        self._index,
+                        pd.json_normalize(self.metadata).assign(
+                            id=identifier, target=target
+                        ),
+                    ],
+                    ignore_index=True,
+                )
                 self._index.to_csv(path_or_buf=self._index_path, index=False)
-                self._targets_with_new_uses.remove(target)
                 log.info("Logged record of new embedding file")
 
                 with open(file=self._index_dir / f"{identifier}.npz", mode="wb") as f:
                     np.savez(f, **self._cache[target])
                     log.info(f"Saved embeddings to disk as {identifier}.npz")
 
+                self._targets_with_new_uses.remove(target)
 
                 break
 
@@ -192,21 +191,17 @@ class ContextualEmbedder(Model):
     id: str
     gpu: int | None
 
-
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
-    _layer_mask: np.ndarray = PrivateAttr(default=None)
+    _layer_mask: npt.NDArray[np.int8] = PrivateAttr(default=None)
 
     # attributes for cleanup and vector caching
     cache: Cache
     _signal_received: Any = PrivateAttr(default=None)
     _old_exit_handler: Any = PrivateAttr(default=None)
 
-    def __init__(
-        self,
-        **data
-    ) -> None:
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         self._layer_mask = np.array(self.layers, dtype=int)
 
@@ -219,21 +214,18 @@ class ContextualEmbedder(Model):
             if self.cache.has_new_uses(target):
                 self.cache.persist(target)
 
-
     @property
-    def device(
-        self
-    ) -> torch.device:
+    def device(self) -> torch.device:
         if self._device is None:
             self._device = torch.device(
-                f"cuda:{self.gpu}" if self.gpu is not None and torch.cuda.is_available() else "cpu"
+                f"cuda:{self.gpu}"
+                if self.gpu is not None and torch.cuda.is_available()
+                else "cpu"
             )
         return self._device
 
     @property
-    def tokenizer(
-        self
-    ) -> PreTrainedTokenizerBase:
+    def tokenizer(self) -> PreTrainedTokenizerBase:
         if self._tokenizer is None:
             self._tokenizer: PreTrainedTokenizerBase = AutoTokenizer.from_pretrained(
                 self.id, use_fast=True, model_max_length=int(1e30)
@@ -241,9 +233,7 @@ class ContextualEmbedder(Model):
         return self._tokenizer
 
     @property
-    def model(
-        self
-    ) -> PreTrainedModel:
+    def model(self) -> PreTrainedModel:
         if self._model is None:
             self._model = AutoModel.from_pretrained(
                 self.id, output_hidden_states=True
@@ -251,10 +241,7 @@ class ContextualEmbedder(Model):
             self._model.eval()
         return self._model
 
-    def truncation_indices(
-        self,
-        target_subword_indices: list[bool]
-    ) -> tuple[int, int]:
+    def truncation_indices(self, target_subword_indices: list[bool]) -> tuple[int, int]:
 
         max_tokens = 512
         n_target_subtokens = target_subword_indices.count(True)
@@ -271,10 +258,7 @@ class ContextualEmbedder(Model):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    def similarities(
-        self,
-        use_pairs: list[tuple[Use, Use]]
-    ) -> list[float]:
+    def similarities(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         similarities = []
         for use_1, use_2 in use_pairs:
             enc_1 = self.encode(use_1)
@@ -282,18 +266,12 @@ class ContextualEmbedder(Model):
             similarities.append(self.similarity_metric(enc_1, enc_2))
         return similarities
 
-    def tokenize(
-        self,
-        use: Use
-    ) -> BatchEncoding:
+    def tokenize(self, use: Use) -> BatchEncoding:
         return self.tokenizer.encode_plus(
             text=use.context, return_tensors="pt", add_special_tokens=True
         ).to(self.device)
 
-    def aggregate(
-        self,
-        embedding: np.ndarray
-    ) -> np.ndarray:
+    def aggregate(self, embedding: np.ndarray) -> np.ndarray:
         return self.layer_aggregation(
             self.subword_aggregation(embedding)
             .squeeze()
@@ -318,8 +296,12 @@ class ContextualEmbedder(Model):
 
             log.info(f"Extracted {len(tokens)} tokens: {tokens}")
 
-            target_indices = [span.start >= use.indices[0] and span.end <= use.indices[1] if span is not None else False
-                              for span in subword_spans]
+            target_indices = [
+                span.start >= use.indices[0] and span.end <= use.indices[1]
+                if span is not None
+                else False
+                for span in subword_spans
+            ]
 
             # truncate input if the model cannot handle it
             if len(tokens) > 512:
@@ -331,7 +313,9 @@ class ContextualEmbedder(Model):
                 log.info(f"Truncated input")
                 log.info(f"New tokens: {tokens}")
 
-            extracted_subwords = [tokens[i] for i, value in enumerate(target_indices) if value]
+            extracted_subwords = [
+                tokens[i] for i, value in enumerate(target_indices) if value
+            ]
             log.info(f"Selected subwords: {extracted_subwords}")
             log.info(f"Size of input_ids: {input_ids.size()}")
 
@@ -342,14 +326,17 @@ class ContextualEmbedder(Model):
                 # stack the layers
                 torch.stack(outputs[2], dim=0)
                 # we don't vectorize in batches, so we can get rid of the batches dimension
-                .squeeze(dim=1)  # swap the subwords and layers dimension
-                .permute(1, 0, 2)  # select the target's subwords' embeddings
-                [torch.tensor(target_indices), :, :]  # convert to numpy array
+                .squeeze(dim=1)
+                # swap the subwords and layers dimension
+                .permute(1, 0, 2)
+                # select the target's subwords' embeddings
+                [torch.tensor(target_indices), :, :]
+                # convert to numpy array
                 .cpu().numpy()
             )
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
-            is_new = True
+            self.cache._targets_with_new_uses.add(use.target)
+            self.cache.add_use(use=use, embedding=embedding)
 
-        self.cache.add_use(use=use, embedding=embedding, new=is_new)
         return self.aggregate(embedding)
