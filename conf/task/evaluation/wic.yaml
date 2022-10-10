@@ -1,3 +1,6 @@
+defaults:
+  - plotter: histogram
+
 _target_: src.evaluation.WicEvaluation
 task: semantic_proximity
 metric: 
