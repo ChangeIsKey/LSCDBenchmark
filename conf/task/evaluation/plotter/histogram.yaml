@@ -1,0 +1,5 @@
+_target_: src.plots.Plotter
+max_alpha: 0.40  # Make it .25 or .20?  Min boots formula dubious even at .40 or .25?
+default_alpha: 0.05
+min_boots_in_one_tail: 11  # North et al.:10; Davidson&MacK ".05-->399"==>11, ".01-->1499"==>9
+metric: ${..metric}
