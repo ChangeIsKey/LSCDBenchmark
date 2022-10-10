@@ -1,7 +1,20 @@
 WARNING: Outdated documentation
 
-
 # LSCDBenchmark
+
+## Creating an environment
+This tool relies on [graph-tool](https://graph-tool.skewed.de/) for some of its functionality. This library is notoriously difficult to install via regular methods.
+However, Docker provides a simple way to create a development environment. See the Wiki for more details.
+
+
+
+
+
+
+
+
+
+
 
 ## Details on dataset:
 
