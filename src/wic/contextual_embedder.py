@@ -109,7 +109,8 @@ class Cache(BaseModel):
             self._index = pd.read_csv(filepath_or_buffer=self._index_path, engine="pyarrow")
             self.clean()
         except FileNotFoundError:
-            self._index = DataFrame()
+            self._index = pd.json_normalize(self.metadata).assign(id=None, target=None)
+            self._index = self._index.iloc[0:0]
 
     def add_use(self, use: Use, embedding: np.ndarray, new: bool) -> None:
         if not use.target in self._cache:
@@ -163,17 +164,18 @@ class Cache(BaseModel):
             identifier = str(uuid.uuid4())
             if identifier not in self._ids():
                 self._index_dir.mkdir(exist_ok=True, parents=True)
-                with open(file=self._index_dir / f"{identifier}.npz", mode="wb") as f:
-                    np.savez(f, **self._cache[target])
-                    log.info(f"Saved embeddings to disk as {identifier}.npz")
-
                 self._index = pd.concat([
                     self._index,
-                    pd.json_normalize(self.metadata.dict()).assign(id=identifier, target=target)
+                    pd.json_normalize(self.metadata).assign(id=identifier, target=target)
                 ], ignore_index=True)
                 self._index.to_csv(path_or_buf=self._index_path, index=False)
                 self._targets_with_new_uses.remove(target)
                 log.info("Logged record of new embedding file")
+
+                with open(file=self._index_dir / f"{identifier}.npz", mode="wb") as f:
+                    np.savez(f, **self._cache[target])
+                    log.info(f"Saved embeddings to disk as {identifier}.npz")
+
 
                 break
 
