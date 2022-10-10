@@ -20,9 +20,8 @@ class ContextPreprocessor(BaseModel, ABC):
 		else:
 			self.spelling_normalization = {}
 
-	def character_indices(
-		self, token_index: int, tokens: list[str], target: str
-	) -> tuple[int, int]:
+	@staticmethod
+	def character_indices(token_index: int, tokens: list[str], target: str) -> tuple[int, int]:
 		char_idx = -1
 		for i, token in enumerate(tokens):
 			if i == token_index:
