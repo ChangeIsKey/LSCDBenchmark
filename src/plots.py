@@ -122,7 +122,7 @@ class Plotter(BaseModel, ABC):
         )
         n_boots = len(results)  # in case some failed
         (lo, hi) = results.quantile([0.5 * self._alpha, 1 - 0.5 * self._alpha])
-        matplotlib.rcParams["figure.dpi"] = 250
+        matplotlib.rcParams["figure.dpi"] = 500
         ax = results.hist(bins=50, figsize=(7, 2.5), alpha=0.4, edgecolor="white")
         showing = f", showing {100*(1-self._alpha):.4g}% Confidence Interval"
         ax.set_title(f"Histogram of {n_boots} boot results" + showing)
@@ -130,4 +130,6 @@ class Plotter(BaseModel, ABC):
         ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
         for x in lo, self.metric(y_true, y_pred), hi:
             ax.plot([x, x], [0, n_boots * 0.07], lw=2.5)
-        ax.figure.savefig("histogram.png")  # the name of histogram could be a parameter
+        
+        for ext in {"svg", "png"}:
+            ax.figure.savefig(f"histogram.{ext}")
