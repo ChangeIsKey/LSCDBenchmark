@@ -14,3 +14,6 @@ torch==1.12.1
 tqdm==4.64.1
 transformers==4.22.2
 more_itertools==8.14.0
+mypy==0.982
+black==22.10.0
+pylint==2.15.4
