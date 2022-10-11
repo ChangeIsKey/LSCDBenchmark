@@ -1,7 +1,7 @@
 FROM nvidia/cuda:10.2-base
 
 FROM tiagopeixoto/graph-tool:latest
-RUN pacman -S python-pip git sudo --noconfirm
+RUN pacman -S python-pip git --noconfirm
 
 ARG USERNAME=vscode
 ARG USER_UID=1200
