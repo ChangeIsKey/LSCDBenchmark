@@ -8,14 +8,6 @@ However, Docker provides a simple way to create a development environment. See t
 
 
 
-
-
-
-
-
-
-
-
 ## Details on dataset:
 
 - COMPARE score for datasets only exists for datasets where word-usage pairs for annotation were randomly sampled (e.g., durel, dwug_es)
