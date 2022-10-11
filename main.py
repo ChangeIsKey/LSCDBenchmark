@@ -6,11 +6,7 @@ from omegaconf import DictConfig
 dotenv.load_dotenv()
 
 
-@hydra.main(
-    version_base=None,
-    config_path="conf",
-    config_name="config"
-)
+@hydra.main(version_base=None, config_path="conf", config_name="config")
 def main(config: DictConfig):
     dataset = utils.instantiate(config.dataset, _convert_="all")
     model = utils.instantiate(config.task.model, _convert_="all")
