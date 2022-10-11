@@ -10,7 +10,7 @@
 		"TRANSFORMERS_CACHE": "/app/.transformers"
 	},
 	"mounts": [
-		"source=vscode_extensions,target=/home/vscode/.vscode-server/extensions,type=volume",
+		"source=vscode,target=/root/.vscode-server,type=volume",
 		"source=transformers,target=/app/.transformers,type=volume"
 	]
 }
