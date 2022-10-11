@@ -1,0 +1,16 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.245.2/containers/docker-existing-dockerfile
+{
+	"name": "Dockerfile",
+	// Sets the run context to one level up instead of the .devcontainer folder.
+	"context": "..",
+	// Update the 'dockerFile' property if you aren't using the standard 'Dockerfile' filename.
+	"dockerFile": "../Dockerfile",
+	"containerEnv": {
+		"TRANSFORMERS_CACHE": "/app/.transformers"
+	},
+	"mounts": [
+		"source=vscode_extensions,target=/home/vscode/.vscode-server/extensions,type=volume",
+		"source=transformers,target=/app/.transformers,type=volume"
+	]
+}
