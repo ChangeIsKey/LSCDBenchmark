@@ -3,12 +3,11 @@ WARNING: Outdated documentation
 # LSCDBenchmark
 
 ## Creating an environment
+
 This tool relies on [graph-tool](https://graph-tool.skewed.de/) for some of its functionality. This library is notoriously difficult to install via regular methods.
 However, Docker provides a simple way to create a development environment. See the Wiki for more details.
 
-
-
-## Details on dataset:
+## Details on dataset
 
 - COMPARE score for datasets only exists for datasets where word-usage pairs for annotation were randomly sampled (e.g., durel, dwug_es)
 - stats_groupings.tsv always contains statistics for group comparison. Groups represent in most cases time periods (e.g., dwug_de, dwug_en), but in some cases other distinctions, such as dialect, can be made (e.g., diawug).
@@ -67,7 +66,6 @@ hydra:
   job:
     chdir: true
 ```
-
 
 ### Preprocessing
 
@@ -134,7 +132,6 @@ You can also specify how to aggregate the embeddings for the subwords correspond
 ### Measures
 
 You can specify on which measure to evaluate the targets. As with the preprocessing, you can create your own module, specify its path and the name of the new method (plus any other extra parameters), or use one of the methods provided in the [measures module](src/measures.py).
-
 
 ## Things to keep in mind
 
