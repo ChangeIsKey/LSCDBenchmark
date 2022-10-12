@@ -1,3 +1,6 @@
+defaults:
+  - plotter: histogram
+
 _target_: src.evaluation.Evaluation
 task: compare
 metric:
