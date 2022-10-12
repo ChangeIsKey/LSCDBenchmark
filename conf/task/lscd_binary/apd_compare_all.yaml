@@ -1,6 +1,6 @@
 defaults:
   - _self_
   - threshold_fn: ???
-  - /task/wic@wic: ???
+  - /task/lscd_graded@graded_model: apd_compare_all
 
-_target_: src.lscd.ApdCompareAll
+_target_: src.lscd.BinaryThresholdModel
