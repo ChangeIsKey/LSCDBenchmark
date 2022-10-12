@@ -4,6 +4,5 @@ defaults:
 _target_: src.evaluation.Evaluation
 task: change_graded
 metric: 
-  _target_: scipy.stats.spearmanr
+  _target_: src.wrappers.spearmanr
   _partial_: true
-  nan_policy: omit
