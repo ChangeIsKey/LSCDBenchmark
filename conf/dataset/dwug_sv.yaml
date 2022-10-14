@@ -1,6 +1,6 @@
 defaults:
   - preprocessing: toklem
-  - override preprocessing/spelling_normalization: null
+  - spelling_normalization: null
 
 name: dwug_sv
 bert: KB/bert-base-swedish-uncased

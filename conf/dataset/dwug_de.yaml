@@ -1,6 +1,6 @@
 defaults:
   - preprocessing: toklem
-  - override preprocessing/spelling_normalization: german
+  - spelling_normalization: german
 
 name: dwug_de
 bert: bert-base-german-cased
