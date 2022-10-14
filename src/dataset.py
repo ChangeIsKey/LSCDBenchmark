@@ -23,7 +23,7 @@ from pydantic import (
 )
 from tqdm import tqdm
 
-import src.utils as utils
+import src.utils.utils as utils
 from src.cleaning import Cleaning
 from src.evaluation import EvaluationTask
 from src.preprocessing import ContextPreprocessor

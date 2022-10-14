@@ -4,7 +4,7 @@ from typing import Literal
 import networkx as nx
 from graph_tool.inference.blockmodel import BlockState
 
-from src import utils
+from src.utils import utils
 from src.target import Target
 from src.use import UseID
 from src.wsi.model import Model

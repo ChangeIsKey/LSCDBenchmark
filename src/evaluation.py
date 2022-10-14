@@ -26,23 +26,27 @@ class Evaluation(BaseModel, ABC):
     metric: Callable[[list[float | int], list[float | int]], Any] | None
     plotter: Plotter
 
-    def preprocess_inputs(self, results: DataFrame) -> DataFrame:
-        return results.dropna(how="any")
+    def preprocess_results(self, results: DataFrame) -> DataFrame:
+        return results
 
-    def __call__(self, predictions: dict[K, V], labels: dict[K, V]) -> int | float:
-        combined_results = self.combine_inputs(labels=labels, predictions=predictions)
-        combined_results.to_csv("predictions.csv", sep="\t")
-        preprocessed_results = self.preprocess_inputs(combined_results)
+    def __call__(self, predictions: dict[K, V], labels: dict[K, V], write: bool) -> int | float:
+        results = self.combine_inputs(labels=labels, predictions=predictions)
+        if write:
+            results.to_csv("predictions.csv", sep="\t")
+        results = self.preprocess_results(results)
+        results = results.dropna(how="any")
 
         score = np.nan
         if self.metric is not None:
-            y_true = preprocessed_results.label.tolist()
-            y_pred = preprocessed_results.prediction.tolist()
+            y_true = results.label.tolist()
+            y_pred = results.prediction.tolist()
             score = self.metric(y_true, y_pred)
-            self.plotter(predictions=predictions, labels=labels)
+            if write:
+                self.plotter(predictions=predictions, labels=labels)
 
-        with open(file="score.txt", mode="w", encoding="utf8") as f:
-            f.write(str(score))
+        if write:
+            with open(file="score.txt", mode="w", encoding="utf8") as f:
+                f.write(str(score))
 
         return score
 
@@ -69,12 +73,12 @@ class Evaluation(BaseModel, ABC):
 
 
 class WsiEvaluation(Evaluation):
-    def preprocess_inputs(self, results: DataFrame) -> DataFrame:
+    def preprocess_results(self, results: DataFrame) -> DataFrame:
         results["label"] = results["label"].replace(-1, np.nan)
-        return results.dropna(how="any")
+        return results
 
 
 class WicEvaluation(Evaluation):
-    def preprocess_inputs(self, results: DataFrame) -> DataFrame:
+    def preprocess_results(self, results: DataFrame) -> DataFrame:
         results["label"] = results["label"].replace(to_replace=0, value=np.nan)
-        return results.dropna(how="any")
+        return results

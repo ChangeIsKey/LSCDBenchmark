@@ -36,7 +36,7 @@ from transformers import (
     logging as trans_logging,
 )
 
-from src import utils
+from src.utils import utils
 from src.use import Use, UseID
 from src.wic.model import Model
 

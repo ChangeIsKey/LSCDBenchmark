@@ -2,7 +2,7 @@ from typing import Any
 
 import networkx as nx
 
-from src import utils
+from src.utils import utils
 from src._correlation import cluster_correlation_search
 from src.target import Target
 from src.use import UseID
