@@ -12,7 +12,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from pandas import DataFrame
-from pydantic import BaseModel, PrivateAttr, root_validator, validator
+from pydantic import BaseModel, PrivateAttr, root_validator
 
 K = TypeVar("K", str, tuple[str, str])
 V = TypeVar("V", int, float)
