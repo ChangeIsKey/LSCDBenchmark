@@ -2,12 +2,78 @@ from collections import Counter
 from typing import Literal
 
 import networkx as nx
+import graph_tool
 from graph_tool.inference.blockmodel import BlockState
 
 from src.utils import utils
 from src.target import Target
 from src.use import UseID
 from src.wsi.model import Model
+
+
+def _nxgraph_to_graphtoolgraph(
+	graph: nx.Graph
+):
+	"""Convert a networkx graph to a graphtool graph.
+	Parameters
+	----------
+	graph: networkx.Graph
+		The graph to convert
+	Returns
+	-------
+	gt_graph: graphtool.Graph
+		The converted graph
+	"""
+	graph_tool_graph = graph_tool.Graph(directed=False)
+
+	nx2gt_vertex_id = dict()
+	gt2nx_vertex_id = dict()
+	for i, node in enumerate(graph.nodes()):
+		nx2gt_vertex_id[node] = i
+		gt2nx_vertex_id[i] = node
+
+	new_weights = []
+	for i, j in graph.edges():
+		current_weight = graph[i][j]["weight"]
+		if current_weight != 0 and not np.isnan(current_weight):
+			graph_tool_graph.add_edge(nx2gt_vertex_id[i], nx2gt_vertex_id[j])
+			new_weights.append(current_weight)
+
+	original_edge_weights = graph_tool_graph.new_edge_property("double")
+	original_edge_weights.a = new_weights
+	graph_tool_graph.ep["weight"] = original_edge_weights
+
+	new_vertex_id = graph_tool_graph.new_vertex_property("string")
+	for k, v in nx2gt_vertex_id.items():
+		new_vertex_id[v] = str(k)
+	graph_tool_graph.vp.id = new_vertex_id
+
+	return graph_tool_graph, nx2gt_vertex_id, gt2nx_vertex_id
+
+
+def _minimize(
+	graph: graph_tool.Graph,
+	distribution: str
+) -> BlockState:
+	"""Minimize the graph using the given distribution as described by graph-tool.
+	Parameters
+	----------
+	graph: graphtool.Graph
+		The graph to minimize
+	distribution: str
+		The distribution to use for the WSBM algorithm.
+	Returns
+	-------
+	state: BlockState
+		The minimized graph as BlockState object.
+	"""
+
+	return minimize_blockmodel_dl(
+		graph, state_args=dict(
+			deg_corr=False, recs=[graph.ep.weight], rec_types=[distribution]
+		), multilevel_mcmc_args=dict(
+			B_min=1, B_max=30, niter=100, entropy_args=dict(adjacency=False, degree_dl=False), ), )
+
 
 
 class ClusterWSBM(Model):
@@ -33,8 +99,8 @@ class ClusterWSBM(Model):
 		if utils._check_nan_weights_exits(graph):
 			raise ValueError("NaN weights are not supported by the WSBM algorithm.")
 
-		gt_graph, _, gt2nx = utils._nxgraph_to_graphtoolgraph(graph.copy())
-		state: BlockState = utils._minimize(gt_graph, self.distribution)
+		gt_graph, _, gt2nx = _nxgraph_to_graphtoolgraph(graph.copy())
+		state: BlockState = _minimize(gt_graph, self.distribution)
 
 		block2clusterid_map = {}
 		for i, (k, _) in enumerate(
