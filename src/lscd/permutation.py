@@ -11,6 +11,38 @@ from src.wic import ContextualEmbedder
 class Permutation(GradedModel):
     wic: ContextualEmbedder
     n_perms: int
+    whiten: bool
+    k: int | None
+
+    @staticmethod
+    def compute_kernel_bias(vecs: npt.NDArray[np.float32], k: int | None = None):
+        """
+        vecs = matrix (n x 768) with the sentence representations of your whole dataset
+        (in the paper they use train, val and test sets)
+        """
+        mu = vecs.mean(axis=0, keepdims=True)
+        cov = np.cov(vecs.T)
+        u, s, vh = np.linalg.svd(cov)
+        W = np.dot(u, np.diag(1 / np.sqrt(s)))
+        if k:
+            return W[:, :k], -mu
+        else:
+            return W, -mu
+
+    @staticmethod
+    def transform_and_normalize(
+        vecs: npt.NDArray[np.float32],
+        kernel: npt.NDArray[np.float32] | None = None,
+        bias: float | None = None,
+    ):
+        """
+        Kernel and bias are W and -mu from previous function. They're passed to this function
+        when inputing vecs
+        vecs = vectors we need to whiten.
+        """
+        if not (kernel is None or bias is None):
+            vecs = (vecs + bias).dot(kernel)
+        return vecs / (vecs**2).sum(axis=1, keepdims=True) ** 0.5
 
     @staticmethod
     def euclidean_dist(
@@ -76,14 +108,28 @@ class Permutation(GradedModel):
             later_stacked = np.vstack(later)
 
             observations = []
-            first_observed = np.mean(self.euclidean_dist(earlier_stacked, later_stacked).flatten())
+            first_observed = np.mean(
+                self.euclidean_dist(earlier_stacked, later_stacked).flatten()
+            )
 
+            if self.whiten:
+                kernel, bias = self.compute_kernel_bias(
+                    vecs=np.vstack([earlier_stacked, later_stacked]),
+                    k=self.k
+                )
+                earlier_stacked = self.transform_and_normalize(earlier_stacked, kernel, bias)
+                later_stacked = self.transform_and_normalize(later_stacked, kernel, bias)
+
+            
+            
             for _ in range(self.n_perms):
                 perm_m0, perm_m1 = self.shuffle_matrices(earlier_stacked, later_stacked)
                 distance = self.euclidean_dist(perm_m0, perm_m1)
                 observations.append(np.mean(distance.flatten()))
 
-            p_value = len([i for i in observations if i > first_observed]) / self.n_perms
+            p_value = (
+                len([i for i in observations if i > first_observed]) / self.n_perms
+            )
             predictions[target.name] = p_value
 
         return predictions

@@ -4,3 +4,5 @@ defaults:
 
 _target_: src.lscd.Permutation
 n_perms: 10000
+whiten: true
+k: null
