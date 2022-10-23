@@ -14,7 +14,7 @@ multirun/*
 conda/
 .conda/
 .cache/
-
+venv/
 analysis/
 results/results.csv
 results/results.xlsx
