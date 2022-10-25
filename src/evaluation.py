@@ -24,7 +24,7 @@ V = TypeVar("V", int, float)
 class Evaluation(BaseModel, ABC):
     task: EvaluationTask | None
     metric: Callable[[list[float | int], list[float | int]], Any] | None
-    plotter: Plotter
+    plotter: Plotter | None
 
     def preprocess_results(self, results: DataFrame) -> DataFrame:
         return results
@@ -41,7 +41,7 @@ class Evaluation(BaseModel, ABC):
             y_true = results.label.tolist()
             y_pred = results.prediction.tolist()
             score = self.metric(y_true, y_pred)
-            if write:
+            if write and self.plotter is not None:
                 self.plotter(predictions=predictions, labels=labels)
 
         if write:

@@ -85,7 +85,7 @@ class Dataset(BaseModel):
 	def wug_to_url(
 		self
 	) -> dict[str, dict[str, str]]:
-		path = utils.path("src/datasets.json")
+		path = utils.path("datasets.json")
 		with path.open(mode="r") as f:
 			return json.load(f)
 
