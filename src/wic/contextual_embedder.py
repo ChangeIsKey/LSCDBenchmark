@@ -38,7 +38,7 @@ from transformers import (
 
 from src.utils import utils
 from src.use import Use, UseID
-from src.wic.model import Model
+from src.wic.model import WICModel
 
 trans_logging.set_verbosity_error()
 
@@ -182,7 +182,7 @@ class Cache(BaseModel):
         return target in self._targets_with_new_uses
 
 
-class ContextualEmbedder(Model):
+class ContextualEmbedder(WICModel):
     layers: conlist(item_type=PositiveInt, unique_items=True)  # type: ignore
     layer_aggregation: LayerAggregator
     subword_aggregation: SubwordAggregator
@@ -258,13 +258,16 @@ class ContextualEmbedder(Model):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    def similarities(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
-        similarities = []
-        for use_1, use_2 in use_pairs:
-            enc_1 = self.encode(use_1)
-            enc_2 = self.encode(use_2)
-            similarities.append(self.similarity_metric(enc_1, enc_2))
-        return similarities
+    def predict(self, use_pairs: list[tuple[Use, Use]]) -> dict[tuple[Use, Use], float]:
+        use_pairs_ids = [(use_1.identifier, use_2.identifier) for use_1, use_2 in use_pairs]
+        with self:
+            similarities = []
+            for use_1, use_2 in use_pairs:
+                enc_1 = self.encode(use_1)
+                enc_2 = self.encode(use_2)
+                similarities.append(self.similarity_metric(enc_1, enc_2))
+
+        return dict(zip(use_pairs_ids, similarities))
 
     def tokenize(self, use: Use) -> BatchEncoding:
         return self.tokenizer.encode_plus(

@@ -18,3 +18,5 @@ venv/
 analysis/
 results/results.csv
 results/results.xlsx
+src/wic/deepmistake_models
+src/wic/mcl-wic

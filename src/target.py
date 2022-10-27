@@ -35,7 +35,7 @@ class CsvParams(TypedDict):
     quoting: Literal[0, 1, 2, 3]
 
 
-class Target(BaseModel):
+class Lemma(BaseModel):
     name: str
     groupings: tuple[str, str]
     path: Path

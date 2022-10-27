@@ -2,16 +2,16 @@ import numpy as np
 from scipy.spatial import distance
 from tqdm import tqdm
 
-from src.lscd.model import GradedModel
-from src.target import Target
+from src.lscd.model import GradedLSCDModel
+from src.target import Lemma
 from src.use import Use
 from src.wic import ContextualEmbedder
 
 
-class Cos(GradedModel):
+class Cos(GradedLSCDModel):
     wic: ContextualEmbedder
 
-    def predict(self, targets: list[Target]) -> dict[str, float]:
+    def predict(self, targets: list[Lemma]) -> dict[str, float]:
         predictions = {}
         for target in tqdm(targets, desc="Generating target predictions"):
             earlier_df = target.uses_df[target.uses_df.grouping == target.groupings[0]]

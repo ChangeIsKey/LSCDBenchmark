@@ -2,13 +2,13 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-from src.lscd.model import GradedModel
-from src.target import Target
+from src.lscd.model import GradedLSCDModel
+from src.target import Lemma
 from src.use import Use
 from src.wic import ContextualEmbedder
 
 
-class Permutation(GradedModel):
+class Permutation(GradedLSCDModel):
     wic: ContextualEmbedder
     n_perms: int
     whiten: bool
@@ -89,7 +89,7 @@ class Permutation(GradedModel):
 
         return perm_m0, perm_m1
 
-    def predict(self, targets: list[Target]) -> dict[str, float]:
+    def predict(self, targets: list[Lemma]) -> dict[str, float]:
         predictions = {}
         earlier = []
         later = []
@@ -114,21 +114,23 @@ class Permutation(GradedModel):
 
             if self.whiten:
                 kernel, bias = self.compute_kernel_bias(
-                    vecs=np.vstack([earlier_stacked, later_stacked]),
-                    k=self.k
+                    vecs=np.vstack([earlier_stacked, later_stacked]), k=self.k
                 )
-                earlier_stacked = self.transform_and_normalize(earlier_stacked, kernel, bias)
-                later_stacked = self.transform_and_normalize(later_stacked, kernel, bias)
+                earlier_stacked = self.transform_and_normalize(
+                    earlier_stacked, kernel, bias
+                )
+                later_stacked = self.transform_and_normalize(
+                    later_stacked, kernel, bias
+                )
 
-            
-            
             for _ in range(self.n_perms):
                 perm_m0, perm_m1 = self.shuffle_matrices(earlier_stacked, later_stacked)
                 distance = self.euclidean_dist(perm_m0, perm_m1)
                 observations.append(np.mean(distance.flatten()))
 
             p_value = (
-                len([i for i in observations if i > first_observed]) / self.n_perms
+                len([obs for obs in observations if obs > first_observed])
+                / self.n_perms
             )
             predictions[target.name] = p_value
 

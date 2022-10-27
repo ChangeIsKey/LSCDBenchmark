@@ -7,39 +7,53 @@ from collections import Counter
 import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel
+from pandas import DataFrame
 
 from src import wic
-from src.target import Target
-from src.use import UseID
+from src.target import Lemma
+from src.use import UseID, Use
 
 
 class Model(BaseModel, ABC):
-    wic: wic.Model
+    wic: wic.WICModel
+
+    def similarity_matrix(self, use_pairs: set[tuple[Use, Use]]):
+        
+        use_pairs = list(use_pairs)
+        with self.wic:
+            predictions = self.wic.predict(use_pairs)
+        pairs_to_similarities = dict(zip(use_pairs, predictions))
+
+        # get a sorted list of unique uses
+        uses = sorted(
+            {use for use_pair in list(pairs_to_similarities.keys()) for use in use_pair}
+        )
+        ids = [use.identifier for use in uses]
+        n_ids = len(ids)
+
+        similarity_matrix = np.zeros((n_ids, n_ids))
+        for i, use_1 in enumerate(uses):
+            for j, use_2 in enumerate(uses):
+                try:
+                    similarity_matrix[i, j] = pairs_to_similarities[(use_1, use_2)]
+                except KeyError:
+                    similarity_matrix[i, j] = pairs_to_similarities[(use_2, use_1)]
+
+        return similarity_matrix
 
     class Config:
         arbitrary_types_allowed = True
 
-    def predict(
-        self,
-        targets: list[Target]
-    ) -> dict[UseID, int]:
-        preds = {}
-        for target in targets:
-             preds.update(self.predict_target(target))
-        return preds
-
     @abstractmethod
-    def predict_target(
-        self,
-        target: Target
-    ) -> dict[UseID, int]:
+    def predict(self, uses: list[Use]) -> dict[UseID, int]:
         ...
+
 
     def make_freq_dists(
         self,
         clusters: dict[UseID, int],
         use_to_grouping: dict[UseID, str],
-        groupings: tuple[str, str]
+        groupings: tuple[str, str],
     ) -> tuple[npt.NDArray[np.int32], npt.NDArray[np.int32]]:
         cluster_to_freq1 = {}
         cluster_to_freq2 = {}
@@ -56,12 +70,12 @@ class Model(BaseModel, ABC):
             else:
                 raise ValueError
 
-        return np.array(list(cluster_to_freq1.values())), np.array(list(cluster_to_freq2.values()))
+        return np.array(list(cluster_to_freq1.values())), np.array(
+            list(cluster_to_freq2.values())
+        )
 
     @staticmethod
-    def normalize_cluster(
-        cluster: list[int]
-    ) -> list[float]:
+    def normalize_cluster(cluster: list[int]) -> list[float]:
         normalized = []
         counts = Counter(cluster)
         n = len(cluster)
