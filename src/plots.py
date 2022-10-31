@@ -1,6 +1,3 @@
-import matplotlib, matplotlib.ticker as mtick
-
-
 from abc import ABC
 from typing import (
     Any,
@@ -8,11 +5,14 @@ from typing import (
     TypeVar,
 )
 
+import matplotlib
+import matplotlib.ticker as mtick
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from pandas import DataFrame
 from pydantic import BaseModel, PrivateAttr, root_validator
+
 
 K = TypeVar("K", str, tuple[str, str])
 V = TypeVar("V", int, float)
@@ -34,11 +34,11 @@ class Plotter(BaseModel, ABC):
     def validate_alphas(cls, v: dict[str, float]) -> dict[str, float]:
         default_alpha = v["default_alpha"]
         max_alpha = v["max_alpha"]
-        if default_alpha > max_alpha and (0 < (1 - default_alpha) <= max_alpha):
+        if default_alpha > max_alpha and 0 < (1 - default_alpha) <= max_alpha:
             raise ValueError(
                 f"alpha={default_alpha} > 0.5. Did you mean alpha={1-default_alpha:.9g}?"
             )
-        elif not (0 < default_alpha <= max_alpha):
+        if not 0 < default_alpha <= max_alpha:
             raise ValueError(
                 f"alpha={default_alpha} is outside allowed range: 0 < alpha <= {max_alpha}"
             )
@@ -65,7 +65,7 @@ class Plotter(BaseModel, ABC):
         if self.metric is not None:
             y_true = preprocessed_results.label.to_numpy()
             y_pred = preprocessed_results.prediction.to_numpy()
-            self.metric_boot_histogram(y_pred, y_true)
+            self.metric_boot_histogram(y_true, y_pred)
 
     @staticmethod
     def combine_inputs(labels: dict[K, V], predictions: dict[K, V]) -> DataFrame:
@@ -96,7 +96,7 @@ class Plotter(BaseModel, ABC):
         index = np.random.randint(0, length, size=length)
         return y_true[index], y_pred[index]
 
-    def _boot_generator(self, y_true: np.ndarray, y_pred: np.ndarray):
+    def _boot_generator(self, y_true: npt.NDArray[Any], y_pred: npt.NDArray[Any]):
         # return Gener of boot sampl datasets, not huge list!
         return (
             self._one_boot(y_pred=y_pred, y_true=y_true) for _ in range(self._n_boots)
@@ -121,15 +121,15 @@ class Plotter(BaseModel, ABC):
             ]
         )
         n_boots = len(results)  # in case some failed
-        (lo, hi) = results.quantile([0.5 * self._alpha, 1 - 0.5 * self._alpha])
+        lo, hi = results.quantile([0.5 * self._alpha, 1 - 0.5 * self._alpha])
         matplotlib.rcParams["figure.dpi"] = 500
-        ax = results.hist(bins=50, figsize=(7, 2.5), alpha=0.4, edgecolor="white")
+        axis = results.hist(bins=50, figsize=(7, 2.5), alpha=0.4, edgecolor="white")
         showing = f", showing {100*(1-self._alpha):.4g}% Confidence Interval"
-        ax.set_title(f"Histogram of {n_boots} boot results" + showing)
-        ax.set_xlabel(results.name)
-        ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
+        axis.set_title(f"Histogram of {n_boots} boot results" + showing)
+        axis.set_xlabel(results.name)
+        axis.xaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
         for x in lo, self.metric(y_true, y_pred), hi:
-            ax.plot([x, x], [0, n_boots * 0.07], lw=2.5)
-        
+            axis.plot([x, x], [0, n_boots * 0.07], lw=2.5)
+
         for ext in {"svg", "png"}:
-            ax.figure.savefig(f"histogram.{ext}")
+            axis.figure.savefig(f"histogram.{ext}")

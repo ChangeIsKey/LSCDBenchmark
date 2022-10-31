@@ -4,7 +4,7 @@ import os
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import pandas as pd
 import pandera as pa
@@ -27,7 +27,7 @@ import src.utils.utils as utils
 from src.cleaning import Cleaning
 from src.evaluation import EvaluationTask
 from src.preprocessing import ContextPreprocessor
-from src.target import (
+from src.lemma import (
     CsvParams,
     Lemma,
 )
@@ -44,8 +44,8 @@ class Dataset(BaseModel):
     preprocessing: ContextPreprocessor
     version: str
     test_on: list[str] | int | None
-    sampling: list[str]
-    pairing: list[str]
+    pairing: list[Literal["COMPARE", "EARLIER", "LATER"]] | None
+    sampling: list[Literal["all", "sampled", "annotated"]] | None
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)

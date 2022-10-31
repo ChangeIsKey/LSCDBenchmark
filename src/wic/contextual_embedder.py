@@ -1,32 +1,16 @@
 import logging
-import signal
 import os
 import uuid
-from collections import defaultdict
 from enum import Enum
-from functools import cached_property
 from pathlib import Path
-from typing import (
-    Any,
-    Callable,
-    TypeAlias,
-    TypedDict,
-)
+from typing import Any, Callable, TypeAlias
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-import json
 import torch
-from pandas import DataFrame, Series
-from pydantic import (
-    BaseModel,
-    Field,
-    PositiveInt,
-    PrivateAttr,
-    conlist,
-)
-from tqdm import tqdm
+from pandas import DataFrame
+from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist
 from transformers import (
     AutoModel,
     AutoTokenizer,
@@ -36,9 +20,10 @@ from transformers import (
     logging as trans_logging,
 )
 
-from src.utils import utils
 from src.use import Use, UseID
+from src.utils import utils
 from src.wic.model import WICModel
+
 
 trans_logging.set_verbosity_error()
 
@@ -110,6 +95,7 @@ class Cache(BaseModel):
             self._index = self._index.iloc[0:0]
 
     def add_use(self, use: Use, embedding: np.ndarray) -> None:
+        self._targets_with_new_uses.add(use.target)
         if not use.target in self._cache:
             self._cache[use.target] = {}
         self._cache[use.target][use.identifier] = embedding
@@ -258,8 +244,7 @@ class ContextualEmbedder(WICModel):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    def predict(self, use_pairs: list[tuple[Use, Use]]) -> dict[tuple[Use, Use], float]:
-        use_pairs_ids = [(use_1.identifier, use_2.identifier) for use_1, use_2 in use_pairs]
+    def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         with self:
             similarities = []
             for use_1, use_2 in use_pairs:
@@ -267,7 +252,7 @@ class ContextualEmbedder(WICModel):
                 enc_2 = self.encode(use_2)
                 similarities.append(self.similarity_metric(enc_1, enc_2))
 
-        return dict(zip(use_pairs_ids, similarities))
+        return similarities
 
     def tokenize(self, use: Use) -> BatchEncoding:
         return self.tokenizer.encode_plus(
@@ -275,14 +260,14 @@ class ContextualEmbedder(WICModel):
         ).to(self.device)
 
     def aggregate(self, embedding: np.ndarray) -> np.ndarray:
-        return self.layer_aggregation(
+        embedding = (
             self.subword_aggregation(embedding)
             .squeeze()
             .take(indices=self._layer_mask, axis=0)
         )
+        return self.layer_aggregation(embedding)
 
     def encode(self, use: Use) -> np.ndarray:
-        is_new = False
         embedding = self.cache.retrieve(use)
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
@@ -339,7 +324,6 @@ class ContextualEmbedder(WICModel):
             )
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
-            self.cache._targets_with_new_uses.add(use.target)
             self.cache.add_use(use=use, embedding=embedding)
 
         return self.aggregate(embedding)

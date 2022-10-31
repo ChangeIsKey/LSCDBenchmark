@@ -3,14 +3,15 @@ from tqdm import tqdm
 
 from src import wsi
 from src.lscd.model import GradedModel
-from src.target import Lemma
+from src.lemma import Lemma
 
 
 class ClusterJSD(GradedModel):
-    wsi: wsi.Model
+    wsi: wsi.WSIModel
 
     def predict(self, lemma: Lemma) -> float:
-        clusters = self.wsi.predict(lemma.get_uses())
+        uses = lemma.get_uses()
+        clusters = dict(zip([use.identifier for use in uses], self.wsi.predict(uses)))
         c1, c2 = self.wsi.make_freq_dists(
             clusters, lemma.useid_to_grouping(), lemma.groupings
         )

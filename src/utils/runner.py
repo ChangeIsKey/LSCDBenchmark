@@ -1,41 +1,50 @@
 from itertools import product
-from typing import Any
+from typing import Any, TypeAlias
 from hydra import utils
 from numpy import isin
 from omegaconf import DictConfig
 from src.dataset import Dataset
 from src.evaluation import Evaluation
-from src.wic.model import WICModel
+from src.wic.model import ThresholdedWicModel, WICModel
+from src.lscd import GradedModel, BinaryThresholdModel
+from src.wsi.model import WSIModel
 
 
-def instantiate(config: DictConfig) -> tuple[Dataset, Any, Evaluation]:
-    dataset = utils.instantiate(config.dataset, _convert_="all")
-    model = utils.instantiate(config.task.model, _convert_="all")
-    evaluation = utils.instantiate(config.task.evaluation, _convert_="all")
+Model: TypeAlias = WICModel | ThresholdedWicModel | GradedModel | BinaryThresholdModel | WSIModel
+
+def instantiate(config: DictConfig) -> tuple[Dataset, Model, Evaluation]:
+    dataset: Dataset = utils.instantiate(config.dataset, _convert_="all")
+    model: Model = utils.instantiate(config.task.model, _convert_="all")
+    evaluation: Evaluation = utils.instantiate(config.task.evaluation, _convert_="all")
     return dataset, model, evaluation
 
 
 
 def run(
-    dataset: Dataset, model: Any, evaluation: Evaluation, write: bool = True
+    dataset: Dataset, model: Model, evaluation: Evaluation, write: bool = True
 ) -> float:
     predictions = {}
-    if isinstance(model, WICModel):
+    if isinstance(model, ThresholdedWicModel):
+        assert dataset.sampling is not None
+        assert dataset.pairing is not None
         for lemma in dataset.lemmas:
             use_pairs = []
             for s, p in list(zip(dataset.sampling, dataset.pairing)):
                 use_pairs += lemma.use_pairs(pairing=p, sampling=s)
-            predictions.update(model.predict(use_pairs))
+            predictions.update({lemma: model.predict(use_pairs)})
             # TODO: call thresholding for WIC models
-    elif isinstance(model, LSCDModel):
+    elif isinstance(model, GradedModel):
         for lemma in dataset.lemmas:
             predictions.update({lemma: model.predict(lemma)})
+    elif isinstance(model, BinaryThresholdModel):
+        graded_predictions = []
+        for lemma in dataset.lemmas:
+            graded_predictions.append(model.graded_model.predict(lemma))
+        predictions = dict(zip(dataset.lemmas, model.predict(graded_predictions)))
     elif isinstance(model, WSIModel):
         for lemma in dataset.lemmas:
             uses = lemma.get_uses()
-            use_pairs = list(product(uses))
-            similarity_matrix = model.similarity_matrix(use_pairs)
-            predictions.update(model.predict(uses))
+            predictions.update(dict(zip(uses, model.predict(uses))))
         
     
     # predictions = model.predict(dataset.lemmas)

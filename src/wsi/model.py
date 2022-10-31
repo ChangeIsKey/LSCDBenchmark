@@ -7,21 +7,18 @@ from collections import Counter
 import numpy as np
 import numpy.typing as npt
 from pydantic import BaseModel
-from pandas import DataFrame
 
-from src import wic
-from src.target import Lemma
 from src.use import UseID, Use
+from src import wic
 
 
-class Model(BaseModel, ABC):
+class WSIModel(BaseModel, ABC):
     wic: wic.WICModel
 
-    def similarity_matrix(self, use_pairs: set[tuple[Use, Use]]):
-        
-        use_pairs = list(use_pairs)
-        with self.wic:
-            predictions = self.wic.predict(use_pairs)
+    def similarity_matrix(
+        self, use_pairs: list[tuple[Use, Use]]
+    ) -> npt.NDArray[np.float64]:
+        predictions = self.wic.predict(use_pairs)
         pairs_to_similarities = dict(zip(use_pairs, predictions))
 
         # get a sorted list of unique uses
@@ -45,9 +42,8 @@ class Model(BaseModel, ABC):
         arbitrary_types_allowed = True
 
     @abstractmethod
-    def predict(self, uses: list[Use]) -> dict[UseID, int]:
+    def predict(self, uses: list[Use]) -> list[int]:
         ...
-
 
     def make_freq_dists(
         self,
@@ -58,9 +54,9 @@ class Model(BaseModel, ABC):
         cluster_to_freq1 = {}
         cluster_to_freq2 = {}
         for use, cluster in clusters.items():
-            if not cluster in cluster_to_freq1:
+            if cluster not in cluster_to_freq1:
                 cluster_to_freq1[cluster] = 0
-            if not cluster in cluster_to_freq2:
+            if cluster not in cluster_to_freq2:
                 cluster_to_freq2[cluster] = 0
 
             if use_to_grouping[use] == groupings[0]:

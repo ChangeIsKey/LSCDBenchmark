@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 from src import wic
 from src.lscd.model import GradedModel
-from src.target import Lemma
+from src.lemma import Lemma
 
 
 class ApdCompareAll(GradedModel):
@@ -11,7 +11,5 @@ class ApdCompareAll(GradedModel):
 
     def predict(self, lemma: Lemma) -> float:
         use_pairs = lemma.use_pairs(pairing="COMPARE", sampling="all")
-        with self.wic:
-            similarities = list(self.wic.predict(use_pairs).values())
+        similarities = self.wic.predict(use_pairs)
         return np.mean(similarities).item()
-        

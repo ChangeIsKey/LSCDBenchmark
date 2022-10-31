@@ -1,0 +1,5 @@
+[[language]]
+name = "python"
+auto-format = true
+formatter = { command = "black", args = ["-"] }
+config = { pylsp.plugins.pylint.enabled = true, pylsp.plugins.pylint.executable = "C:\\Users\\andre\\anaconda3\\Scripts\\pylint.exe" }

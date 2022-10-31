@@ -1,16 +1,18 @@
 import chinese_whispers as cw
 import networkx as nx
+from itertools import combinations
 
-from src.target import Lemma
-from src.use import UseID
-from src.wsi.model import Model
+from src.lemma import Lemma
+from src.use import Use
+from src.wsi.model import WSIModel
 
 
-class ClusterChineseWhispers(Model):
+class ClusterChineseWhispers(WSIModel):
     n_iters: int
 
-    def predict_target(self, target: Lemma) -> dict[UseID, int]:
-        similarity_matrix = self.wic.similarity_matrix(target)
+    def predict(self, uses: list[Use]) -> list[int]:
+        use_pairs = list(combinations(uses, r=2))
+        similarity_matrix = self.similarity_matrix(use_pairs)
         ids = similarity_matrix.index
         G = nx.Graph()
         for id1 in ids:
@@ -22,4 +24,4 @@ class ClusterChineseWhispers(Model):
         for label, values in cw.aggregate_clusters(G).items():
             new_ids.extend(list(values))
             new_labels.extend([label for _ in range(len(list(values)))])
-        return dict(zip(new_ids, new_labels))
+        return new_labels

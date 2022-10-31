@@ -5,20 +5,20 @@ import networkx as nx
 
 from src.utils import utils
 from src._correlation import cluster_correlation_search
-from src.target import Lemma
+from src.lemma import Lemma
 from src.use import UseID, Use
-from src.wsi.model import Model
+from src.wsi.model import WSIModel
 
 
-class ClusterCorrelation(Model):
+class ClusterCorrelation(WSIModel):
     max_senses: int
     max_attempts: int
     max_iters: int
     initial: list[Any]
     split_flag: bool
 
-    def predict(self, uses: list[Use]) -> dict[UseID, int]:
-        use_pairs = combinations(uses, r=2)
+    def predict(self, uses: list[Use]) -> list[int]:
+        use_pairs = list(combinations(uses, r=2))
         similarity_matrix = self.similarity_matrix(use_pairs)
         ids = similarity_matrix.index
         graph = nx.Graph()
@@ -32,7 +32,7 @@ class ClusterCorrelation(Model):
             )
 
         clusters, _ = cluster_correlation_search(
-            G=graph,
+            graph=graph,
             max_senses=self.max_senses,
             max_attempts=self.max_attempts,
             max_iters=self.max_iters,
@@ -40,4 +40,4 @@ class ClusterCorrelation(Model):
             split_flag=self.split_flag,
         )
 
-        return {id_: i for i, cluster in enumerate(clusters) for id_ in cluster}
+        return [i for i, cluster in enumerate(clusters)]

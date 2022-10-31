@@ -6,20 +6,21 @@ from typing import Callable
 
 from pydantic import BaseModel
 
-from src.target import Lemma
+from src.lemma import Lemma
 
 
 class GradedModel(BaseModel, ABC):
     @abstractmethod
-    def predict(self, targets: list[Lemma]) -> dict[str, float]:
+    def predict(self, lemma: Lemma) -> float:
         ...
 
 
-class BinaryThresholdModel(BaseModel):
+class BinaryModel(BaseModel, ABC):
+    ...    
+
+class BinaryThresholdModel(BinaryModel):
     threshold_fn: Callable[[list[float]], list[int]]
     graded_model: GradedModel
 
-    def predict(self, targets: list[Lemma]) -> dict[str, int]:
-        predictions = self.graded_model.predict(targets)
-        values = list(predictions.values())
-        return dict(zip(predictions.keys(), self.threshold_fn(values)))
+    def predict(self, graded_predictions: list[float]) -> list[int]:
+        return self.threshold_fn(graded_predictions)

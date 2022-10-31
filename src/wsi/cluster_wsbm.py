@@ -1,14 +1,15 @@
 from collections import Counter
+from itertools import combinations
 from typing import Literal
 
-import networkx as nx
 import graph_tool
+import networkx as nx
+import numpy as np
 from graph_tool.inference.blockmodel import BlockState
+from src.use import Use
 
 from src.utils import utils
-from src.target import Lemma
-from src.use import UseID
-from src.wsi.model import Model
+from src.wsi.model import WSIModel
 
 
 def _nxgraph_to_graphtoolgraph(graph: nx.Graph):
@@ -77,7 +78,7 @@ def _minimize(graph: graph_tool.Graph, distribution: str) -> BlockState:
     )
 
 
-class ClusterWSBM(Model):
+class ClusterWSBM(WSIModel):
     distribution: Literal[
         "real-exponential",
         "discrete-poisson",
@@ -86,8 +87,9 @@ class ClusterWSBM(Model):
         "real-normal",
     ]
 
-    def predict_target(self, target: Lemma) -> dict[UseID, int]:
-        similarity_matrix = self.wic.similarity_matrix(target)
+    def predict(self, uses: list[Use]) -> list[int]:
+        use_pairs = list(combinations(uses, r=2))
+        similarity_matrix = self.similarity_matrix(use_pairs)
         ids = similarity_matrix.index
         graph = nx.Graph()
         for id1 in ids:
@@ -127,4 +129,4 @@ class ClusterWSBM(Model):
 
         classes = [set(v) for _, v in communities.items()]
 
-        return {use: i for i, set_ in enumerate(classes) for use in set_}
+        return [i for i, _ in enumerate(classes)]

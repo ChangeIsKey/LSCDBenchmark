@@ -9,7 +9,7 @@ from pandas import DataFrame
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from src.target import Lemma
+from src.lemma import Lemma
 from src.use import (
     Use,
     UseID,
@@ -18,28 +18,23 @@ from src.use import (
 
 class WICModel(BaseModel, ABC):
     @abstractmethod
-    def predict(
-        self, use_pairs: list[tuple[Use, Use]]
-    ) -> dict[tuple[UseID, UseID], float]:
+    def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         ...
-
 
 
 class ThresholdedWicModel(BaseModel):
     thresholds: list[float]
     wic: WICModel
 
-    def predict(
-        self, use_pairs: list[tuple[Use, Use]]
-    ) -> dict[tuple[UseID, UseID], float]:
+    def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         predictions = self.wic.predict(use_pairs)
-        new_predictions = {}
         threshold_spans = list(
             mit.windowed([float("-inf"), *self.thresholds, float("inf")], n=2, step=1)
         )
-        for use_pair_id, pred in predictions.items():
-            for i, (floor, ceil) in enumerate(threshold_spans):
-                if floor <= pred < ceil:
-                    new_predictions[use_pair_id] = float(i)
+        for i, x in enumerate(predictions):
+            for j, (floor, ceil) in enumerate(threshold_spans):
+                assert floor is not None and ceil is not None
+                if floor <= x < ceil:
+                    predictions[i] = float(j)
                     break
-        return new_predictions
+        return predictions

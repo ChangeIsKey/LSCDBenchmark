@@ -1,10 +1,10 @@
 from .chinese_whispers import ClusterChineseWhispers
 from .correlation_clustering import ClusterCorrelation
-from .model import Model
+from .model import WSIModel
 from .spectral import ClusterSpectral
 
 __all__ = [
-    "Model",
+    "WSIModel",
     "ClusterSpectral",
     "ClusterChineseWhispers",
     "ClusterCorrelation",
