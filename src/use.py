@@ -1,6 +1,7 @@
 import uuid
 from typing import NewType
 
+import numpy as np
 from pandas import Series
 from pydantic import BaseModel
 
@@ -52,7 +53,7 @@ def use_pair_group(use_pair: tuple[Use, Use]) -> str:
 
 def to_data_format(use_pair: tuple[Use, Use]) -> dict[str, str | int]:
     return {
-        "id": f"{use_pair[0].target}.{str(uuid.uuid4())[:8]}",
+        "id": f"{use_pair[0].target}.{np.random.randint(low=100000, high=1000000)}",
         "start1": use_pair[0].indices[0],
         "end1": use_pair[0].indices[1],
         "sentence1": use_pair[0].context,
