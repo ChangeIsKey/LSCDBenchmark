@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import numpy.typing as npt
 
@@ -27,8 +28,7 @@ class Permutation(GradedModel):
         W = np.dot(u, np.diag(1 / np.sqrt(s)))
         if k:
             return W[:, :k], -mu
-        else:
-            return W, -mu
+        return W, -mu
 
     @staticmethod
     def transform_and_normalize(
@@ -54,41 +54,24 @@ class Permutation(GradedModel):
             + np.sum(m0**2, axis=1)[:, np.newaxis]
         )
 
-    def get_n_rows(
-        self, m0: npt.NDArray[np.float32], m1: npt.NDArray[np.float32]
-    ) -> int:
-        if m0.shape[0] <= m1.shape[0]:
-            return np.random.randint(1, m0.shape[0])
-        else:
-            return np.random.randint(1, m1.shape[0])
+    def get_n_rows(self, len_m0: int, len_m1: int) -> int:
+        if len_m0 <= len_m1:
+            return np.random.randint(1, len_m0)
+        return np.random.randint(1, len_m1)
 
-    def shuffle_matrices(
-        self,
-        m0: npt.NDArray[np.float32],
-        m1: npt.NDArray[np.float32],
-    ) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
+    def permute_indices(self, len_m0: int, len_m1: int) -> tuple[list[int], list[int]]:
 
-        n_rows = self.get_n_rows(m0, m1)
-        random_indices = (
-            sorted(np.random.choice(m0.shape[0], size=n_rows, replace=False)),
-            sorted(np.random.choice(m1.shape[0], size=n_rows, replace=False)),
+        n_rows = self.get_n_rows(len_m0, len_m1)
+        # shuffle order of list
+        indices = (
+            random.sample(range(0, len_m0), len_m0),
+            random.sample(range(len_m0, len_m0 + len_m1), len_m1),
         )
 
-        indices_to_keep = (
-            [i for i in range(m0.shape[0]) if i not in random_indices[0]],
-            [i for i in range(m1.shape[0]) if i not in random_indices[1]],
+        return (
+            indices[0][n_rows:] + indices[1][:n_rows],
+            indices[1][n_rows:] + indices[0][:n_rows],
         )
-
-        perm_m0 = np.zeros_like(m0)
-        perm_m1 = np.zeros_like(m1)
-
-        perm_m0[random_indices[0]] = m1[random_indices[1]]
-        perm_m1[random_indices[1]] = m0[random_indices[0]]
-
-        perm_m0[indices_to_keep[0]] = m0[indices_to_keep[0]]
-        perm_m1[indices_to_keep[1]] = m1[indices_to_keep[1]]
-
-        return perm_m0, perm_m1
 
     def predict(self, lemma: Lemma) -> float:
         earlier_df = lemma.uses_df[lemma.uses_df.grouping == lemma.groupings[0]]
@@ -102,7 +85,6 @@ class Permutation(GradedModel):
             later = np.vstack([self.wic.encode(use) for use in later_uses])
 
         observations = []
-        first_observed = np.mean(self.euclidean_dist(earlier, later).flatten())
 
         if self.whiten:
             kernel, bias = self.compute_kernel_bias(
@@ -111,10 +93,18 @@ class Permutation(GradedModel):
             earlier = self.transform_and_normalize(earlier, kernel, bias)
             later = self.transform_and_normalize(later, kernel, bias)
 
+        len_m0 = earlier.shape[0]
+        len_m1 = later.shape[0]
+        stacked = np.vstack([earlier, later])
+        distance_matrix = self.euclidean_dist(stacked, stacked)
+        first_observed = np.mean(
+            distance_matrix[:len_m0, len_m0 : len_m0 + len_m1].flatten()
+        )
+
         for _ in range(self.n_perms):
-            perm_m0, perm_m1 = self.shuffle_matrices(m0=earlier, m1=later)
-            distance = self.euclidean_dist(perm_m0, perm_m1)
-            observations.append(np.mean(distance.flatten()))
+            perm_m0, perm_m1 = self.permute_indices(len_m0, len_m1)
+            distances = distance_matrix[np.ix_(perm_m0, perm_m1)]
+            observations.append(np.mean(distances))
 
         p_value = (
             len([obs for obs in observations if obs > first_observed]) / self.n_perms
