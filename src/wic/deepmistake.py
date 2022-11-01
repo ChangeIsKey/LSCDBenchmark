@@ -13,7 +13,7 @@ class DeepMistake(WICModel):
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self.checkpoint = utils.path(self.checkpoint)
+        self.checkpoint = utils.path(str(self.checkpoint))
 
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         data_dir = self.checkpoint.parent / "data"
@@ -44,13 +44,13 @@ class DeepMistake(WICModel):
 
         with open(
             file=output_dir / f"{use_pairs[0][0].target}.scores", encoding="utf8"
-        ) as data:
-            data = json.load(data)
+        ) as f:
+            dumped_scores: list[dict[str, str | list[str]]] = json.load(f)
             scores = []
-            for x in data:
+            for x in dumped_scores:
                 score_0 = float(x["score"][0])
                 score_1 = float(x["score"][1])
-                scores.append(np.mean([score_0, score_1]))
+                scores.append(np.mean([score_0, score_1]).item())
 
         os.chdir(hydra_dir)
 
