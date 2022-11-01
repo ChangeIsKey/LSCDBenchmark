@@ -102,17 +102,14 @@ class Permutation(GradedModel):
             later = np.vstack([self.wic.encode(use) for use in later_uses])
 
         observations = []
-        first_observed = np.mean(
-            self.euclidean_dist(earlier, later).flatten()
-        )
+        first_observed = np.mean(self.euclidean_dist(earlier, later).flatten())
 
         if self.whiten:
             kernel, bias = self.compute_kernel_bias(
-                vecs=np.vstack([earlier, later]), 
-                k=self.k
+                vecs=np.vstack([earlier, later]), k=self.k
             )
             earlier = self.transform_and_normalize(earlier, kernel, bias)
-            later= self.transform_and_normalize(later, kernel, bias)
+            later = self.transform_and_normalize(later, kernel, bias)
 
         for _ in range(self.n_perms):
             perm_m0, perm_m1 = self.shuffle_matrices(m0=earlier, m1=later)
