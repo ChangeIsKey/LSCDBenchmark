@@ -49,11 +49,8 @@ class ContextPreprocessor(BaseModel, ABC):
             original_n_blanks = key.count(" ") + key.count("\t")
             later_n_blanks = replacement.count(" ") + replacement.count("\t")
             for span in spans:
-                span_start, span_end = span.start(), span.end()
-                new_context = re.sub(
-                    pattern=key, repl=replacement, string=new_context, count=1
-                )
-                if span_end < start:
+                new_context = new_context.replace(key, replacement, 1)
+                if span.end() < start:
                     new_target_start -= original_n_blanks - later_n_blanks
                     new_target_end -= original_n_blanks - later_n_blanks
 
