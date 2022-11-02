@@ -1,7 +1,9 @@
+import re
 from abc import (
     ABC,
     abstractmethod,
 )
+from typing import Any
 
 from pandas import Series
 from pydantic import BaseModel
@@ -34,62 +36,129 @@ class ContextPreprocessor(BaseModel, ABC):
             char_idx += len(token) + 1  # plus one space
         raise ValueError
 
-    def normalize_spelling(self, context: str) -> str:
-        if self.spelling_normalization is not None:
-            for key, replacement in self.spelling_normalization.items():
-                context = context.replace(key, replacement)
-        return context
+    def normalize_spelling(
+        self, context: str, start: int, end: int
+    ) -> tuple[str, int, int]:
+        assert self.spelling_normalization is not None
+
+        new_target_start, new_target_end = start, end
+        new_context = context
+
+        for key, replacement in self.spelling_normalization.items():
+            spans = re.finditer(pattern=key, string=context)
+            original_n_blanks = key.count(" ") + key.count("\t")
+            later_n_blanks = replacement.count(" ") + replacement.count("\t")
+            for span in spans:
+                span_start, span_end = span.start(), span.end()
+                new_context = re.sub(
+                    pattern=key, repl=replacement, string=new_context, count=1
+                )
+                if span_end < start:
+                    new_target_start -= original_n_blanks - later_n_blanks
+                    new_target_end -= original_n_blanks - later_n_blanks
+
+        return new_context, new_target_start, new_target_end
+
+    @staticmethod
+    @abstractmethod
+    def fields_from_series(s: Series) -> dict[str, Any]:
+        pass
 
     @abstractmethod
-    def preprocess_context(self, s: Series) -> tuple[str, int, int]:
-        raise NotImplementedError
+    def preprocess(self, *args, **kwargs) -> tuple[str, int, int]:
+        pass
 
     def __call__(self, s: Series) -> Series:
-        context, start, end = self.preprocess_context(s)
+        fields = self.fields_from_series(s)
+        context, start, end = self.preprocess(**fields.__dict__)
         return Series(
             {
                 "context_preprocessed": context,
-                "target_index_begin": start,
+                "target_index_Begin": start,
                 "target_index_end": end,
             }
         )
 
 
 class Toklem(ContextPreprocessor):
-    def preprocess_context(self, s: Series) -> tuple[str, int, int]:
-        tokens = self.normalize_spelling(s.context_tokenized).split()
-        target = s.lemma.split("_")[0]
+    @staticmethod
+    def fields_from_series(s: Series) -> dict[str, str | int]:
+        return {
+            "context": s.context_tokenized,
+            "lemma": s.lemma.split("_")[0],
+            "index": int(s.indexes_target_token_tokenized),
+        }
+
+    def preprocess(self, context: str, index: int, lemma: str) -> tuple[str, int, int]:
+        # extract tokens (in the DWUG datasets, each token is separated by space)
+        # so no extra methods are needed
+        tokens = context.split()
+        # get the initial character indices, before spelling normalization is applied
         start, end = self.character_indices(
-            token_index=s.indexes_target_token_tokenized, tokens=tokens, target=target
+            token_index=index, tokens=tokens, target=lemma
         )
-        tokens[int(s.indexes_target_token_tokenized)] = target
+
+        # if some spelling normalization table has been specified, apply it to the context
+        # and recalculate the character indices (number of tokens may change)
+        if self.spelling_normalization is not None:
+            new_context, start, end = self.normalize_spelling(context, start, end)
+            tokens = new_context.split()
+
+        # adjust the end character index for possible changes in target length
+        end -= abs(len(lemma) - len(tokens[index]))
+        # replace target with lemma
+        tokens[index] = lemma
+
         return " ".join(tokens), start, end
 
 
 class KeepIntact(ContextPreprocessor):
-    def preprocess_context(self, s: Series) -> tuple[str, int, int]:
+    @staticmethod
+    def fields_from_series(s: Series) -> dict[str, str | int]:
         start, end = tuple(map(int, s.indexes_target_token.split(":")))
-        return s.context, start, end
+        return {"context": s.context, "start": start, "end": end}
+
+    def preprocess(self, context: str, start: int, end: int) -> tuple[str, int, int]:
+        return context, start, end
 
 
 class Lemmatize(ContextPreprocessor):
-    def preprocess_context(self, s: Series) -> tuple[str, int, int]:
-        context_preprocessed = self.normalize_spelling(s.context_lemmatized)
-        tokens = context_preprocessed.split()
+    @staticmethod
+    def fields_from_series(s: Series) -> dict[str, str | int]:
+        return {
+            "context": s.context_lemmatized,
+            # the spanish dataset has an index column for the lemmatized contexts, but all the others don't
+            "index": s.get(
+                key="indexes_target_token_lemmatized",
+                default=s.indexes_target_token_tokenized,
+            ),  # type: ignore
+        }
 
-        # the spanish dataset has an index column for the lemmatized contexts, but all the others don't
-        idx: int = s.get(key="indexes_target_token_lemmatized", default=s.indexes_target_token_tokenized)  # type: ignore
+    def preprocess(self, context: str, index: int) -> tuple[str, int, int]:
+        tokens = context.split()
         start, end = self.character_indices(
-            token_index=idx, tokens=tokens, target=tokens[idx]
+            token_index=index, tokens=tokens, target=tokens[index]
         )
-        return context_preprocessed, start, end
+        if self.spelling_normalization is not None:
+            context, start, end = self.normalize_spelling(context, start, end)
+
+        return context, start, end
 
 
 class Tokenize(ContextPreprocessor):
-    def preprocess_context(self, s: Series) -> tuple[str, int, int]:
-        tokens = self.normalize_spelling(s.context_tokenized).split()
-        idx = s.indexes_target_token_tokenized
+    @staticmethod
+    def fields_from_series(s: Series) -> dict[str, str | int]:
+        return {
+            "context": s.context_tokenized,
+            "index": int(s.indexes_target_token_tokenized),
+        }
+
+    def preprocess(self, context: str, index: int) -> tuple[str, int, int]:
+        tokens = context.split()
         start, end = self.character_indices(
-            token_index=idx, tokens=tokens, target=tokens[idx]
+            token_index=index, tokens=tokens, target=tokens[index]
         )
-        return " ".join(tokens), start, end
+        if self.spelling_normalization is not None:
+            context, start, end = self.normalize_spelling(context, start, end)
+
+        return context, start, end
