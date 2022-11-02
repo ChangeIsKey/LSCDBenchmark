@@ -27,7 +27,10 @@ def instantiate(config: DictConfig) -> tuple[Dataset, Model, Evaluation]:
 def run(
     dataset: Dataset, model: Model, evaluation: Evaluation, write: bool = True
 ) -> float:
-    predictions = {}
+
+    labels = dataset.get_labels(evaluation.task)
+    predictions: Any = {}
+
     lemma_pbar = tqdm(dataset.lemmas, desc="Processing lemmas")
     if isinstance(model, (ThresholdedWicModel, WICModel)):
         assert dataset.sampling is not None
@@ -49,14 +52,12 @@ def run(
         lemma_names = [lemma.name for lemma in dataset.lemmas]
         for lemma in lemma_pbar:
             graded_predictions.append(model.graded_model.predict(lemma))
-        predictions = dict(zip(lemma_names, model.predict(graded_predictions)))
+        predictions.update(dict(zip(lemma_names, model.predict(graded_predictions))))
     elif isinstance(model, WSIModel):
         for lemma in lemma_pbar:
             uses = lemma.get_uses()
             ids = [use.identifier for use in uses]
             predictions.update(dict(zip(ids, model.predict(uses))))
 
-    labels = dataset.get_labels(evaluation.task)
     score = evaluation(labels=labels, predictions=predictions, write=write)
-    print(predictions)
     return score
