@@ -1,5 +1,5 @@
 defaults:
   - _self_
-  - /task/wsi@wsi: ???
+  - wsi: ???
 
 _target_: src.lscd.ClusterJSD
