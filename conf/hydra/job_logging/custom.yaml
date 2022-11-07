@@ -5,6 +5,7 @@ formatters:
 handlers:
   file:
     class: logging.FileHandler
+    encoding: utf8
     formatter: simple
     filename: ${hydra.runtime.output_dir}/${hydra.job.name}.log
 root:
