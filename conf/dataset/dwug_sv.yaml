@@ -1,6 +1,6 @@
 defaults:
   - preprocessing: toklem
-  - spelling_normalization: null
+  - spelling_normalization: swedish
 
 name: dwug_sv
 bert: KB/bert-base-swedish-cased
@@ -8,5 +8,7 @@ cleaning: null
 test_on: null
 groupings: ["1", "2"]
 version: 2.0.0
+pairing: [COMPARE]
+sampling: [annotated]
 
 _target_: src.dataset.Dataset

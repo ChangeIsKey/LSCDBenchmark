@@ -1,6 +1,5 @@
 defaults:
   - preprocessing: toklem
-  - spelling_normalization: null
 
 name: dwug_es
 bert: dccuchile/bert-base-spanish-wwm-uncased
@@ -8,5 +7,6 @@ cleaning: null
 test_on: null
 groupings: ["1", "2"]
 version: 4.0.0
+spelling_normalization: null
 
 _target_: src.dataset.Dataset
