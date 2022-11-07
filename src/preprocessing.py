@@ -23,38 +23,30 @@ class ContextPreprocessor(BaseModel, ABC):
             self.spelling_normalization = {}
 
     @staticmethod
-    def character_indices(
-        token_index: int, tokens: list[str], target: str
-    ) -> tuple[int, int]:
+    def start_char_index(token_index: int, tokens: list[str]) -> int:
         char_idx = -1
         for i, token in enumerate(tokens):
             if i == token_index:
                 # char_idx will be one index to the left of the target, so we need to add 1
                 start = char_idx + 1
-                end = start + len(target)
-                return start, end
+                return start
             char_idx += len(token) + 1  # plus one space
         raise ValueError
 
-    def normalize_spelling(
-        self, context: str, start: int, end: int
-    ) -> tuple[str, int, int]:
+    def normalize_spelling(self, context: str, start: int) -> tuple[str, int]:
         assert self.spelling_normalization is not None
 
-        new_target_start, new_target_end = start, end
+        new_target_start = start
         new_context = context
 
         for key, replacement in self.spelling_normalization.items():
-            spans = re.finditer(pattern=key, string=context)
-            original_n_blanks = key.count(" ") + key.count("\t")
-            later_n_blanks = replacement.count(" ") + replacement.count("\t")
+            spans = list(re.finditer(pattern=key, string=context))
             for span in spans:
                 new_context = new_context.replace(key, replacement, 1)
                 if span.end() < start:
-                    new_target_start -= original_n_blanks - later_n_blanks
-                    new_target_end -= original_n_blanks - later_n_blanks
+                    new_target_start -= len(key) - len(replacement)
 
-        return new_context, new_target_start, new_target_end
+        return new_context, new_target_start
 
     @staticmethod
     @abstractmethod
@@ -67,11 +59,11 @@ class ContextPreprocessor(BaseModel, ABC):
 
     def __call__(self, s: Series) -> Series:
         fields = self.fields_from_series(s)
-        context, start, end = self.preprocess(**fields.__dict__)
+        context, start, end = self.preprocess(**fields)
         return Series(
             {
                 "context_preprocessed": context,
-                "target_index_Begin": start,
+                "target_index_begin": start,
                 "target_index_end": end,
             }
         )
@@ -91,20 +83,24 @@ class Toklem(ContextPreprocessor):
         # so no extra methods are needed
         tokens = context.split()
         # get the initial character indices, before spelling normalization is applied
-        start, end = self.character_indices(
-            token_index=index, tokens=tokens, target=lemma
+        start = self.start_char_index(
+            token_index=index, tokens=tokens
         )
 
         # if some spelling normalization table has been specified, apply it to the context
         # and recalculate the character indices (number of tokens may change)
         if self.spelling_normalization is not None:
-            new_context, start, end = self.normalize_spelling(context, start, end)
+            new_context, start = self.normalize_spelling(context, start)
             tokens = new_context.split()
 
         # adjust the end character index for possible changes in target length
-        end -= abs(len(lemma) - len(tokens[index]))
-        # replace target with lemma
         tokens[index] = lemma
+        context_preprocessed = " ".join(tokens)
+        
+        try:
+            end = context_preprocessed.index(" ", start) - 1
+        except ValueError:
+            end = len(context_preprocessed) - 1
 
         return " ".join(tokens), start, end
 
@@ -133,7 +129,7 @@ class Lemmatize(ContextPreprocessor):
 
     def preprocess(self, context: str, index: int) -> tuple[str, int, int]:
         tokens = context.split()
-        start, end = self.character_indices(
+        start, end = self.start_char_index(
             token_index=index, tokens=tokens, target=tokens[index]
         )
         if self.spelling_normalization is not None:
@@ -152,7 +148,7 @@ class Tokenize(ContextPreprocessor):
 
     def preprocess(self, context: str, index: int) -> tuple[str, int, int]:
         tokens = context.split()
-        start, end = self.character_indices(
+        start, end = self.start_char_index(
             token_index=index, tokens=tokens, target=tokens[index]
         )
         if self.spelling_normalization is not None:
