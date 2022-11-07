@@ -8,8 +8,12 @@ bert: bert-base-uncased
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
-version: 2.0.0
+version: "2.0.0"
 pairing: [COMPARE]
 sampling: [annotated]
+
+urls:
+  "2.0.0": "https://zenodo.org/record/5796878/files/dwug_en.zip"
+  "1.0.0": "https://zenodo.org/record/5544444/files/dwug_en.zip"
 
 _target_: src.dataset.Dataset

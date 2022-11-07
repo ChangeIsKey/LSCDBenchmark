@@ -7,9 +7,14 @@ bert: bert-base-german-cased
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
-version: 2.0.0
+version: "2.1.0"
 pairing: [COMPARE]
 sampling: [annotated]
 
+urls:
+  "2.1.0": "https://zenodo.org/record/7295410/files/dwug_de.zip"
+  "2.0.0": "https://zenodo.org/record/5796871/files/dwug_de.zip"
+  "1.1.0": "https://zenodo.org/record/5544198/files/dwug_de.zip"
+  "1.0.0": "https://zenodo.org/record/5543724/files/dwug_de.zip"
 
 _target_: src.dataset.Dataset

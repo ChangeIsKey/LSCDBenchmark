@@ -1,0 +1,17 @@
+defaults:
+  - preprocessing: toklem
+
+name: dwug_de
+bert: ClassCat/roberta-base-latin-v2
+cleaning: null
+test_on: null
+groupings: ["1", "2"]
+version: "1"
+pairing: [COMPARE]
+sampling: [annotated]
+spelling_normalization: null
+
+urls:
+  "1": "https://zenodo.org/record/5255228/files/dwug_la.zip"
+
+_target_: src.dataset.Dataset

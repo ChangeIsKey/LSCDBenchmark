@@ -17,10 +17,7 @@ from pandera import (
     Column,
     DataFrameSchema,
 )
-from pydantic import (
-    BaseModel,
-    PrivateAttr,
-)
+from pydantic import BaseModel, PrivateAttr, HttpUrl
 from tqdm import tqdm
 
 import src.utils.utils as utils
@@ -46,6 +43,7 @@ class Dataset(BaseModel):
     test_on: list[str] | int | None
     pairing: list[Literal["COMPARE", "EARLIER", "LATER"]] | None
     sampling: list[Literal["all", "sampled", "annotated"]] | None
+    urls: dict[str, HttpUrl]
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)
@@ -63,8 +61,6 @@ class Dataset(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
         if not self.path.exists():
-            if self.name not in self.wug_to_url:
-                raise UnknownDataset
             self.path.parent.parent.mkdir(parents=True, exist_ok=True)
             self.__download()
             self.__unzip(self.path.parent.parent)
@@ -79,21 +75,11 @@ class Dataset(BaseModel):
         return self._path
 
     @property
-    def wug_to_url(self) -> dict[str, dict[str, str]]:
-        path = utils.path("src/datasets.json")
-        with path.open(mode="r") as f:
-            return json.load(f)
-
-    @property
-    def url(self) -> str:
-        return self.wug_to_url[self.name][self.version]
-
-    @property
     def __zipped_filename(self) -> Path:
         return utils.path(f"{self.name}-{self.version}.zip")
 
     def __download(self) -> None:
-        r = requests.get(self.url, stream=True)
+        r = requests.get(self.urls[self.version], stream=True)
         with open(file=self.__zipped_filename, mode="wb") as f:
             pbar = tqdm(
                 desc=f"Downloading dataset '{self.name}' (version {self.version})",

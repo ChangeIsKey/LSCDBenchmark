@@ -6,7 +6,16 @@ bert: dccuchile/bert-base-spanish-wwm-uncased
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
-version: 4.0.0
+version: "4.0.0"
 spelling_normalization: null
+pairing: [COMPARE]
+sampling: [annotated]
+
+urls:
+  "4.0.0": "https://zenodo.org/record/6433667/files/dwug_es.zip"
+  "3.0.0": "https://zenodo.org/record/6433398/files/dwug_es.zip"
+  "2.0.0": "https://zenodo.org/record/6433350/files/dwug_es.zip"
+  "1.0.1": "https://zenodo.org/record/6433203/files/dwug_es.zip"
+  "1.0.0": "https://zenodo.org/record/6300105/files/dwug_es.zip"
 
 _target_: src.dataset.Dataset
