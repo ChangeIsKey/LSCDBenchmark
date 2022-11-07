@@ -174,18 +174,15 @@ class ContextualEmbedder(WICModel):
     subword_aggregation: SubwordAggregator
     truncation_tokens_before_target: float
     similarity_metric: Callable[..., float]
-    id: str
+    cache: Cache | None
     gpu: int | None
+    id: str
 
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
     _layer_mask: npt.NDArray[np.int8] = PrivateAttr(default=None)
 
-    # attributes for cleanup and vector caching
-    cache: Cache
-    _signal_received: Any = PrivateAttr(default=None)
-    _old_exit_handler: Any = PrivateAttr(default=None)
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -195,10 +192,11 @@ class ContextualEmbedder(WICModel):
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        targets = self.cache.targets()
-        for target in targets:
-            if self.cache.has_new_uses(target):
-                self.cache.persist(target)
+        if self.cache is not None:
+            targets = self.cache.targets()
+            for target in targets:
+                if self.cache.has_new_uses(target):
+                    self.cache.persist(target)
 
     @property
     def device(self) -> torch.device:
@@ -268,13 +266,12 @@ class ContextualEmbedder(WICModel):
         return self.layer_aggregation(embedding)
 
     def encode(self, use: Use) -> np.ndarray:
-        embedding = self.cache.retrieve(use)
+        embedding = None if self.cache is None else self.cache.retrieve(use)
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
             log.info(f"Target character indices: {use.indices}")
             log.info(
-                f"Context slice corresponding to target indices: \
-                {use.context[use.indices[0]:use.indices[1]]}"
+                f"Context slice corresponding to target indices: {use.context[use.indices[0]:use.indices[1]+1]}"
             )
 
             encoding = self.tokenize(use)
@@ -285,7 +282,7 @@ class ContextualEmbedder(WICModel):
             log.info(f"Extracted {len(tokens)} tokens: {tokens}")
 
             target_indices = [
-                span.start >= use.indices[0] and span.end <= use.indices[1]
+                span.start >= use.indices[0] and span.end <= (use.indices[1] + 1)
                 if span is not None
                 else False
                 for span in subword_spans
@@ -324,6 +321,8 @@ class ContextualEmbedder(WICModel):
             )
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
-            self.cache.add_use(use=use, embedding=embedding)
+
+            if self.cache is not None:
+                self.cache.add_use(use=use, embedding=embedding)
 
         return self.aggregate(embedding)
