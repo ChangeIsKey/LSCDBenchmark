@@ -1,2 +1,1 @@
-# @package task.lscd_graded.wic.deepmistake
-ckpt: src/wic/deepmistake_models/mean_dist_l1ndotn_CE/pytorch_model.bin
+path: src/wic/deepmistake_models/mean_dist_l1ndotn_CE

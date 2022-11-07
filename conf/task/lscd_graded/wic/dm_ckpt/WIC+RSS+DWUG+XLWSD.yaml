@@ -1,2 +1,1 @@
-# @package task.lscd_graded.wic.deepmistake
-ckpt: src/wic/deepmistake_models/WIC+RSS+DWUG+XLWSD/pytorch_model.bin
+path: src/wic/deepmistake_models/WIC+RSS+DWUG+XLWSD

@@ -165,6 +165,8 @@ class Dataset(BaseModel):
                 return schema.add_columns({"change_graded": Column(float)})
             case "change_binary":
                 return schema.add_columns({"change_binary": Column(int)})
+            case "COMPARE":
+                return schema.add_columns({"COMPARE": Column(float)})
             case _:
                 return schema
 
@@ -175,6 +177,14 @@ class Dataset(BaseModel):
         )
         stats_groupings.sort_values(by="lemma", inplace=True)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_graded))
+
+    @property
+    def compare_labels(self) -> dict[str, float]:
+        stats_groupings = self.get_stats_groupings_schema("COMPARE").validate(
+            self.stats_groupings_df
+        )
+        stats_groupings.sort_values(by="lemma", inplace=True)
+        return dict(zip(stats_groupings.lemma, stats_groupings.COMPARE))
 
     @property
     def binary_change_labels(self) -> dict[str, int]:
@@ -210,6 +220,8 @@ class Dataset(BaseModel):
                 return self.graded_change_labels
             case "change_binary":
                 return self.binary_change_labels
+            case "COMPARE":
+                return self.compare_labels
             case "semantic_proximity":
                 return self.semantic_proximity_labels
             case "wsi":

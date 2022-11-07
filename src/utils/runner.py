@@ -3,6 +3,7 @@ from typing import Any, TypeAlias
 from hydra import utils
 from numpy import isin
 import numpy as np
+import os
 from omegaconf import DictConfig
 from tqdm import tqdm
 from src.dataset import Dataset
@@ -13,7 +14,11 @@ from src.wsi.model import WSIModel
 
 
 Model: TypeAlias = (
-    WICModel | ThresholdedWicModel | GradedModel | BinaryThresholdModel | WSIModel
+    WICModel
+    | ThresholdedWicModel 
+    | GradedModel 
+    | BinaryThresholdModel
+    | WSIModel
 )
 
 
@@ -28,11 +33,12 @@ def run(
     dataset: Dataset, model: Model, evaluation: Evaluation, write: bool = True
 ) -> float:
 
+    cwd = os.getcwd()
     labels = dataset.get_labels(evaluation.task)
     predictions: Any = {}
 
     lemma_pbar = tqdm(dataset.lemmas, desc="Processing lemmas")
-    if isinstance(model, (ThresholdedWicModel, WICModel)):
+    if isinstance(model, ThresholdedWicModel):
         assert dataset.sampling is not None
         assert dataset.pairing is not None
         for lemma in lemma_pbar:
@@ -59,5 +65,6 @@ def run(
             ids = [use.identifier for use in uses]
             predictions.update(dict(zip(ids, model.predict(uses))))
 
+    os.chdir(cwd)
     score = evaluation(labels=labels, predictions=predictions, write=write)
     return score

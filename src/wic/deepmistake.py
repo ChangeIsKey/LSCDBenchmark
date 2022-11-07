@@ -1,5 +1,6 @@
 import json
 import os
+from typing import TypedDict
 import numpy as np
 from pathlib import Path
 
@@ -8,16 +9,21 @@ from src.wic.model import WICModel
 from src.utils import utils
 
 
+class Model(TypedDict):
+    path: Path
+    
+
+
 class DeepMistake(WICModel):
-    ckpt: Path
+    model: Model
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self.ckpt = utils.path(str(self.ckpt))
+        self.model["path"] = utils.path(str(self.model["path"]))
 
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
-        data_dir = self.ckpt.parent / "data"
-        output_dir = self.ckpt.parent / "scores"
+        data_dir = self.model["path"] / "data"
+        output_dir = self.model["path"] / "scores"
         output_dir.mkdir(parents=True, exist_ok=True)
         data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -30,12 +36,12 @@ class DeepMistake(WICModel):
 
         hydra_dir = os.getcwd()
 
-        os.chdir(self.ckpt.parent)
+        os.chdir(self.model["path"])
         os.system(
             f"python -u {script} \
             --max_seq_len=500 \
             --do_eval \
-            --ckpt_path {self.ckpt.parent} \
+            --ckpt_path {self.model['path']} \
             --eval_input_dir {data_dir} \
             --eval_output_dir {output_dir} \
             --output_dir {output_dir}"
