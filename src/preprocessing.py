@@ -83,9 +83,7 @@ class Toklem(ContextPreprocessor):
         # so no extra methods are needed
         tokens = context.split()
         # get the initial character indices, before spelling normalization is applied
-        start = self.start_char_index(
-            token_index=index, tokens=tokens
-        )
+        start = self.start_char_index(token_index=index, tokens=tokens)
 
         # if some spelling normalization table has been specified, apply it to the context
         # and recalculate the character indices (number of tokens may change)
@@ -96,7 +94,7 @@ class Toklem(ContextPreprocessor):
         # adjust the end character index for possible changes in target length
         tokens[index] = lemma
         context_preprocessed = " ".join(tokens)
-        
+
         try:
             end = context_preprocessed.index(" ", start) - 1
         except ValueError:
@@ -129,11 +127,14 @@ class Lemmatize(ContextPreprocessor):
 
     def preprocess(self, context: str, index: int) -> tuple[str, int, int]:
         tokens = context.split()
-        start, end = self.start_char_index(
-            token_index=index, tokens=tokens, target=tokens[index]
-        )
+        start = self.start_char_index(token_index=index, tokens=tokens)
         if self.spelling_normalization is not None:
-            context, start, end = self.normalize_spelling(context, start, end)
+            context, start = self.normalize_spelling(context, start)
+
+        try:
+            end = context.index(" ", start) - 1
+        except ValueError:
+            end = len(context) - 1
 
         return context, start, end
 
@@ -148,10 +149,35 @@ class Tokenize(ContextPreprocessor):
 
     def preprocess(self, context: str, index: int) -> tuple[str, int, int]:
         tokens = context.split()
-        start, end = self.start_char_index(
-            token_index=index, tokens=tokens, target=tokens[index]
-        )
+        start = self.start_char_index(token_index=index, tokens=tokens)
         if self.spelling_normalization is not None:
-            context, start, end = self.normalize_spelling(context, start, end)
+            context, start = self.normalize_spelling(context, start)
+
+        try:
+            end = context.index(" ", start) - 1
+        except ValueError:
+            end = len(context) - 1
+
+        return context, start, end
+
+
+class Normalize(ContextPreprocessor):
+    @staticmethod
+    def fields_from_series(s: Series) -> dict[str, str | int]:
+        return {
+            "context": s.get("context_normalized", default="context_tokenized"), # type: ignore
+            "index": int(s.indexes_target_token_tokenized),
+        }  
+
+    def preprocess(self, context: str, index: int) -> tuple[str, int, int]:
+        tokens = context.split()
+        start = self.start_char_index(token_index=index, tokens=tokens)
+        if self.spelling_normalization is not None:
+            context, start = self.normalize_spelling(context, start)
+
+        try:
+            end = context.index(" ", start) - 1
+        except ValueError:
+            end = len(context) - 1
 
         return context, start, end

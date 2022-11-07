@@ -1,0 +1,4 @@
+name: normalize
+_target_: src.preprocessing.Normalize
+spelling_normalization: ${dataset.spelling_normalization}
+
