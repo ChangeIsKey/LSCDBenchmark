@@ -9,15 +9,15 @@ from src.utils import utils
 
 
 class DeepMistake(WICModel):
-    checkpoint: Path
+    ckpt: Path
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        self.checkpoint = utils.path(str(self.checkpoint))
+        self.ckpt = utils.path(str(self.ckpt))
 
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
-        data_dir = self.checkpoint.parent / "data"
-        output_dir = self.checkpoint.parent / "scores"
+        data_dir = self.ckpt.parent / "data"
+        output_dir = self.ckpt.parent / "scores"
         output_dir.mkdir(parents=True, exist_ok=True)
         data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -30,12 +30,12 @@ class DeepMistake(WICModel):
 
         hydra_dir = os.getcwd()
 
-        os.chdir(self.checkpoint.parent)
+        os.chdir(self.ckpt.parent)
         os.system(
             f"python -u {script} \
             --max_seq_len=500 \
             --do_eval \
-            --ckpt_path {self.checkpoint.parent} \
+            --ckpt_path {self.ckpt.parent} \
             --eval_input_dir {data_dir} \
             --eval_output_dir {output_dir} \
             --output_dir {output_dir}"

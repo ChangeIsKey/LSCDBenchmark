@@ -1,4 +1,4 @@
 defaults:
-  - ckpt: ???
+  - dm_ckpt@ckpt: ???
 
 _target_: src.wic.DeepMistake
