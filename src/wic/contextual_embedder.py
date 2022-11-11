@@ -3,7 +3,7 @@ import os
 import uuid
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, TypeAlias
+from typing import Any, Callable, Literal, Type, TypeAlias, TypeVar
 
 import numpy as np
 import numpy.typing as npt
@@ -11,38 +11,34 @@ import pandas as pd
 import torch
 from pandas import DataFrame
 from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist
-from transformers import (
-    AutoModel,
-    AutoTokenizer,
-    BatchEncoding,
-    PreTrainedModel,
-    PreTrainedTokenizerBase,
-    logging as trans_logging,
-)
+from transformers import (AutoModel, AutoTokenizer, BatchEncoding,
+                          PreTrainedModel, PreTrainedTokenizerBase)
+from transformers import logging as trans_logging
 
 from src.use import Use, UseID
 from src.utils import utils
 from src.wic.model import WICModel
 
-
 trans_logging.set_verbosity_error()
 
 log = logging.getLogger(__name__)
 
+T = TypeVar("T", torch.Tensor, np.ndarray)
 
 class LayerAggregator(str, Enum):
     AVERAGE = "average"
     CONCAT = "concat"
     SUM = "sum"
 
-    def __call__(self, layers: np.ndarray) -> np.ndarray:
+    def __call__(self, tensor: torch.Tensor, layers: list[int]) -> torch.Tensor:
+        tensor = tensor[:, torch.tensor(layers), :]
         match self:
             case self.AVERAGE:
-                return np.mean(layers, axis=0)
+                return tensor.mean(dim=1, keepdim=True)
             case self.SUM:
-                return np.sum(layers, axis=0)
+                return tensor.sum(dim=1, keepdim=True)
             case self.CONCAT:
-                return np.ravel(layers)
+                return tensor.ravel()
             case _:
                 raise ValueError
 
@@ -52,17 +48,25 @@ class SubwordAggregator(str, Enum):
     FIRST = "first"
     LAST = "last"
     SUM = "sum"
+    MAX = "max"
+    MIN = "min"
 
-    def __call__(self, vectors: np.ndarray) -> np.ndarray:
+    def __call__(self, tensor: torch.Tensor) -> torch.Tensor:
         match self:
             case self.AVERAGE:
-                return np.mean(vectors, axis=0, keepdims=True)
+                return tensor.mean(dim=0, keepdim=True)
             case self.SUM:
-                return np.sum(vectors, axis=0, keepdims=True)
+                return tensor.sum(dim=0, keepdim=True)
+            case self.MAX:
+                max_, _ = tensor.max(dim=0, keepdim=True)
+                return max_
+            case self.MIN:
+                min_, _ = tensor.min(dim=0, keepdim=True)
+                return min_
             case self.FIRST:
-                return vectors[0]
+                return tensor[0]
             case self.LAST:
-                return vectors[-1]
+                return tensor[-1]
             case _:
                 raise ValueError
 
@@ -72,7 +76,7 @@ TargetName: TypeAlias = str
 
 class Cache(BaseModel):
     metadata: dict[Any, Any]
-    _cache: dict[TargetName, dict[UseID, np.ndarray]] = PrivateAttr(
+    _cache: dict[TargetName, dict[UseID, torch.Tensor]] = PrivateAttr(
         default_factory=dict
     )
     _targets_with_new_uses: set[TargetName] = PrivateAttr(default_factory=set)
@@ -94,13 +98,13 @@ class Cache(BaseModel):
             self._index = pd.json_normalize(self.metadata).assign(id=None, target=None)
             self._index = self._index.iloc[0:0]
 
-    def add_use(self, use: Use, embedding: np.ndarray) -> None:
+    def add_use(self, use: Use, embedding: torch.Tensor) -> None:
         self._targets_with_new_uses.add(use.target)
         if not use.target in self._cache:
             self._cache[use.target] = {}
         self._cache[use.target][use.identifier] = embedding
 
-    def retrieve(self, use: Use) -> np.ndarray | None:
+    def retrieve(self, use: Use) -> torch.Tensor | None:
         if not use.target in self._cache:
             loaded = self.load(use.target)
             if loaded is None:
@@ -108,7 +112,7 @@ class Cache(BaseModel):
             self._cache[use.target] = loaded
         return self._cache[use.target].get(use.identifier)  # this can still be None
 
-    def load(self, target: str) -> dict[UseID, np.ndarray] | None:
+    def load(self, target: str) -> dict[UseID, torch.Tensor] | None:
         df = pd.json_normalize(self.metadata).assign(target=target).merge(self._index)
         assert len(df) < 2
 
@@ -116,8 +120,8 @@ class Cache(BaseModel):
             return None
 
         identifier = df.id.iloc[0]
-        path = str(self._index_dir / f"{identifier}.npz")
-        return dict(np.load(path, mmap_mode="r"))
+        path = str(self._index_dir / f"{identifier}.pkl")
+        return dict(torch.load(path))
 
     def _ids(self) -> set[UseID]:
         try:
@@ -156,9 +160,9 @@ class Cache(BaseModel):
                 self._index.to_csv(path_or_buf=self._index_path, index=False)
                 log.info("Logged record of new embedding file")
 
-                with open(file=self._index_dir / f"{identifier}.npz", mode="wb") as f:
-                    np.savez(f, **self._cache[target])
-                    log.info(f"Saved embeddings to disk as {identifier}.npz")
+                with open(file=self._index_dir / f"{identifier}.pkl", mode="wb") as f:
+                    torch.save(self._cache[target], f)
+                    log.info(f"Saved embeddings to disk as {identifier}.pkl")
 
                 self._targets_with_new_uses.remove(target)
 
@@ -181,12 +185,6 @@ class ContextualEmbedder(WICModel):
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
-    _layer_mask: npt.NDArray[np.int8] = PrivateAttr(default=None)
-
-
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self._layer_mask = np.array(self.layers, dtype=int)
 
     def __enter__(self):
         pass
@@ -242,12 +240,12 @@ class ContextualEmbedder(WICModel):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
+    def predict(self, use_pairs: list[tuple[Use, Use]], type: Type[T] = np.ndarray) -> list[float]:
         with self:
             similarities = []
             for use_1, use_2 in use_pairs:
-                enc_1 = self.encode(use_1)
-                enc_2 = self.encode(use_2)
+                enc_1 = self.encode(use_1, type=type)
+                enc_2 = self.encode(use_2, type=type)
                 similarities.append(self.similarity_metric(enc_1, enc_2))
 
         return similarities
@@ -257,15 +255,14 @@ class ContextualEmbedder(WICModel):
             text=use.context, return_tensors="pt", add_special_tokens=True
         ).to(self.device)
 
-    def aggregate(self, embedding: np.ndarray) -> np.ndarray:
-        embedding = (
-            self.subword_aggregation(embedding)
-            .squeeze()
-            .take(indices=self._layer_mask, axis=0)
-        )
-        return self.layer_aggregation(embedding)
+    def aggregate(self, tensor: torch.Tensor, layers: list[int]) -> torch.Tensor:
+        tensor = self.subword_aggregation(tensor) # (1, layers, embedding)
+        tensor = self.layer_aggregation(tensor, layers) # (1, 1, embedding)
+        return tensor.squeeze()
 
-    def encode(self, use: Use) -> np.ndarray:
+
+    
+    def encode(self, use: Use, type: Type[T] = np.ndarray) -> T:
         embedding = None if self.cache is None else self.cache.retrieve(use)
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
@@ -281,7 +278,7 @@ class ContextualEmbedder(WICModel):
 
             log.info(f"Extracted {len(tokens)} tokens: {tokens}")
 
-            target_indices = [
+            subwords_bool_mask = [
                 span.start >= use.indices[0] and span.end <= (use.indices[1] + 1)
                 if span is not None
                 else False
@@ -290,16 +287,16 @@ class ContextualEmbedder(WICModel):
 
             # truncate input if the model cannot handle it
             if len(tokens) > 512:
-                lindex, rindex = self.truncation_indices(target_indices)
+                lindex, rindex = self.truncation_indices(subwords_bool_mask)
                 tokens = tokens[lindex:rindex]
                 input_ids = input_ids[:, lindex:rindex]
-                target_indices = target_indices[lindex:rindex]
+                subwords_bool_mask = subwords_bool_mask[lindex:rindex]
 
                 log.info(f"Truncated input")
                 log.info(f"New tokens: {tokens}")
 
             extracted_subwords = [
-                tokens[i] for i, value in enumerate(target_indices) if value
+                tokens[i] for i, value in enumerate(subwords_bool_mask) if value
             ]
             log.info(f"Selected subwords: {extracted_subwords}")
             log.info(f"Size of input_ids: {input_ids.size()}")
@@ -308,16 +305,10 @@ class ContextualEmbedder(WICModel):
                 outputs = self.model(input_ids, torch.ones_like(input_ids))  # type: ignore
 
             embedding = (
-                # stack the layers
-                torch.stack(outputs[2], dim=0)
-                # we don't vectorize in batches, so we can get rid of the batches dimension
-                .squeeze(dim=1)
-                # swap the subwords and layers dimension
-                .permute(1, 0, 2)
-                # select the target's subwords' embeddings
-                [torch.tensor(target_indices), :, :]
-                # convert to numpy array
-                .cpu().numpy()
+                torch.stack(outputs[2], dim=0)  # (layer, batch, subword, embedding)
+                .squeeze(dim=1)  # (layer, subword, embedding)
+                .permute(1, 0, 2)  # (subword, layer, embedding)
+                [torch.tensor(subwords_bool_mask), :, :]
             )
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
@@ -325,4 +316,8 @@ class ContextualEmbedder(WICModel):
             if self.cache is not None:
                 self.cache.add_use(use=use, embedding=embedding)
 
-        return self.aggregate(embedding)
+        embedding = self.aggregate(embedding, layers=self.layers)
+        if type == np.ndarray:
+            return embedding.cpu().numpy()
+        else:
+            return embedding  # type: ignore
