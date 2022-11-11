@@ -85,6 +85,7 @@ class Toklem(ContextPreprocessor):
         # extract tokens (in the DWUG datasets, each token is separated by space)
         # so no extra methods are needed
         tokens = context.split()
+        tokens[index] = lemma
         # get the initial character indices, before spelling normalization is applied
         start = self.start_char_index(token_index=index, tokens=tokens)
 
