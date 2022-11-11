@@ -2,11 +2,11 @@ import numpy as np
 from tqdm import tqdm
 
 from src import wic
-from src.lscd.model import GradedModel
+from src.lscd.model import GradedLSCDModel
 from src.lemma import Lemma
 
 
-class ApdCompareAll(GradedModel):
+class ApdCompareAll(GradedLSCDModel):
     wic: wic.WICModel
 
     def predict(self, lemma: Lemma) -> float:
