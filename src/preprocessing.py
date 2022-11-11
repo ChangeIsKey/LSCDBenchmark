@@ -7,6 +7,11 @@ from typing import Any
 
 from pandas import Series
 from pydantic import BaseModel
+from logging import getLogger
+
+log = getLogger(__name__)
+
+
 
 
 class ContextPreprocessor(BaseModel, ABC):
@@ -48,9 +53,8 @@ class ContextPreprocessor(BaseModel, ABC):
 
         return new_context, new_target_start
 
-    @staticmethod
     @abstractmethod
-    def fields_from_series(s: Series) -> dict[str, Any]:
+    def fields_from_series(self, s: Series) -> dict[str, Any]:
         pass
 
     @abstractmethod
@@ -70,8 +74,7 @@ class ContextPreprocessor(BaseModel, ABC):
 
 
 class Toklem(ContextPreprocessor):
-    @staticmethod
-    def fields_from_series(s: Series) -> dict[str, str | int]:
+    def fields_from_series(self, s: Series) -> dict[str, str | int]:
         return {
             "context": s.context_tokenized,
             "lemma": s.lemma.split("_")[0],
@@ -93,19 +96,13 @@ class Toklem(ContextPreprocessor):
 
         # adjust the end character index for possible changes in target length
         tokens[index] = lemma
-        context_preprocessed = " ".join(tokens)
-
-        try:
-            end = context_preprocessed.index(" ", start) - 1
-        except ValueError:
-            end = len(context_preprocessed) - 1
+        end = start + len(lemma) - 1
 
         return " ".join(tokens), start, end
 
 
-class KeepIntact(ContextPreprocessor):
-    @staticmethod
-    def fields_from_series(s: Series) -> dict[str, str | int]:
+class Raw(ContextPreprocessor):
+    def fields_from_series(self, s: Series) -> dict[str, str | int]:
         start, end = tuple(map(int, s.indexes_target_token.split(":")))
         return {"context": s.context, "start": start, "end": end}
 
@@ -114,8 +111,7 @@ class KeepIntact(ContextPreprocessor):
 
 
 class Lemmatize(ContextPreprocessor):
-    @staticmethod
-    def fields_from_series(s: Series) -> dict[str, str | int]:
+    def fields_from_series(self, s: Series) -> dict[str, str | int]:
         return {
             "context": s.context_lemmatized,
             # the spanish dataset has an index column for the lemmatized contexts, but all the others don't
@@ -131,17 +127,12 @@ class Lemmatize(ContextPreprocessor):
         if self.spelling_normalization is not None:
             context, start = self.normalize_spelling(context, start)
 
-        try:
-            end = context.index(" ", start) - 1
-        except ValueError:
-            end = len(context) - 1
-
+        end = start + len(tokens[index]) - 1
         return context, start, end
 
 
 class Tokenize(ContextPreprocessor):
-    @staticmethod
-    def fields_from_series(s: Series) -> dict[str, str | int]:
+    def fields_from_series(self, s: Series) -> dict[str, str | int]:
         return {
             "context": s.context_tokenized,
             "index": int(s.indexes_target_token_tokenized),
@@ -153,25 +144,27 @@ class Tokenize(ContextPreprocessor):
         if self.spelling_normalization is not None:
             context, start = self.normalize_spelling(context, start)
 
-        try:
-            end = context.index(" ", start) - 1
-        except ValueError:
-            end = len(context) - 1
-
+        end = start + len(tokens[index]) - 1
         return context, start, end
 
 
 class Normalize(ContextPreprocessor):
-    @staticmethod
-    def fields_from_series(s: Series) -> dict[str, str | int]:
+    default: str
+
+    def fields_from_series(self, s: Series) -> dict[str, str | int]:
+        context = s.get("context_normalized")
+        if context is None:
+            log.warn(f"(lemma={s.lemma}, use={s.identifier}) does not contain a pre-normalized context, {self.default} will be used")
+        context = s[self.default]
         return {
-            "context": s.get("context_normalized", default="context_tokenized"), # type: ignore
+            "context": context,
             "index": int(s.indexes_target_token_tokenized),
-        }  
+        }
 
     def preprocess(self, context: str, index: int) -> tuple[str, int, int]:
         tokens = context.split()
         start = self.start_char_index(token_index=index, tokens=tokens)
+
         if self.spelling_normalization is not None:
             context, start = self.normalize_spelling(context, start)
 
