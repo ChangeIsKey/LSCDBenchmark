@@ -1,7 +1,7 @@
 from .apd_compare_all import ApdCompareAll
 from .cluster_jsd import ClusterJSD
 from .cos import Cos
-from .model import BinaryThresholdModel, GradedModel
+from .model import BinaryThresholdModel, GradedLSCDModel
 from .permutation import Permutation
 
 __all__ = [
@@ -9,6 +9,6 @@ __all__ = [
     "Cos",
     "ClusterJSD",
     "BinaryThresholdModel",
-    "GradedModel",
+    "GradedLSCDModel",
     "Permutation",
 ]

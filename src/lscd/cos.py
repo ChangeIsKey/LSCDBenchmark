@@ -2,13 +2,13 @@ import numpy as np
 from scipy.spatial import distance
 from tqdm import tqdm
 
-from src.lscd.model import GradedModel
+from src.lscd.model import GradedLSCDModel
 from src.lemma import Lemma
 from src.use import Use
 from src.wic import ContextualEmbedder
 
 
-class Cos(GradedModel):
+class Cos(GradedLSCDModel):
     wic: ContextualEmbedder
 
     def predict(self, lemma: Lemma) -> float:

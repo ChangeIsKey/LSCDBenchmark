@@ -2,11 +2,11 @@ import scipy
 from tqdm import tqdm
 
 from src import wsi
-from src.lscd.model import GradedModel
+from src.lscd.model import GradedLSCDModel
 from src.lemma import Lemma
 
 
-class ClusterJSD(GradedModel):
+class ClusterJSD(GradedLSCDModel):
     wsi: wsi.WSIModel
 
     def predict(self, lemma: Lemma) -> float:

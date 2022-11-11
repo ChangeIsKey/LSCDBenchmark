@@ -2,13 +2,13 @@ import random
 import numpy as np
 import numpy.typing as npt
 
-from src.lscd.model import GradedModel
+from src.lscd.model import GradedLSCDModel
 from src.lemma import Lemma
 from src.use import Use
 from src.wic import ContextualEmbedder
 
 
-class Permutation(GradedModel):
+class Permutation(GradedLSCDModel):
     wic: ContextualEmbedder
     n_perms: int
     whiten: bool

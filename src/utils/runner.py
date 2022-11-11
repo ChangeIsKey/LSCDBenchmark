@@ -9,16 +9,12 @@ from tqdm import tqdm
 from src.dataset import Dataset
 from src.evaluation import Evaluation
 from src.wic.model import ThresholdedWicModel, WICModel
-from src.lscd import GradedModel, BinaryThresholdModel
+from src.lscd import GradedLSCDModel, BinaryThresholdModel
 from src.wsi.model import WSIModel
 
 
 Model: TypeAlias = (
-    WICModel
-    | ThresholdedWicModel 
-    | GradedModel 
-    | BinaryThresholdModel
-    | WSIModel
+    WICModel | ThresholdedWicModel | GradedLSCDModel | BinaryThresholdModel | WSIModel
 )
 
 
@@ -50,7 +46,7 @@ def run(
             ]
             predictions.update(dict(zip(id_pairs, model.predict(use_pairs))))
             # TODO: call thresholding for WIC models
-    elif isinstance(model, GradedModel):
+    elif isinstance(model, GradedLSCDModel):
         for lemma in lemma_pbar:
             predictions.update({lemma.name: model.predict(lemma)})
     elif isinstance(model, BinaryThresholdModel):
