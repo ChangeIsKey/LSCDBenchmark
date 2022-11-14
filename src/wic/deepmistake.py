@@ -52,7 +52,6 @@ class Cache(BaseModel):
     def retrieve(
         self, use_pairs: list[tuple[Use, Use]]
     ) -> dict[tuple[UseID, UseID], float]:
-        # TODO optimize: create one table to merge with the existing one, don't merge once for every use pair
         lookup_table = DataFrame(
             {
                 "use_0": [up[0].identifier for up in use_pairs],
