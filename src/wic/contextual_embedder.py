@@ -86,7 +86,7 @@ class Cache(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self._index_dir = utils.path(os.getenv("CACHE_DIR") or ".cache")
+        self._index_dir = utils.path(os.getenv("CACHE_DIR") or ".bert")
         self._index_path = self._index_dir / "index.csv"
 
         try:
