@@ -2,7 +2,6 @@ defaults:
   - preprocessing: toklem
 
 name: dwug_de
-bert: ClassCat/roberta-base-latin-v2
 cleaning: null
 test_on: null
 groupings: ["1", "2"]

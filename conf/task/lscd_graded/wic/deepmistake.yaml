@@ -1,4 +1,0 @@
-defaults:
-  - dm_ckpt@model: ???
-
-_target_: src.wic.DeepMistake

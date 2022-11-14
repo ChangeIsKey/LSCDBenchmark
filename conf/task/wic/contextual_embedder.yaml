@@ -1,0 +1,26 @@
+_target_: src.wic.ThresholdedWicModel
+thresholds: [-0.2, -0.1, 0.1, 0.2]
+wic:
+  _target_: src.wic.ContextualEmbedder
+  layers: [1, 12]
+  layer_aggregation: average
+  subword_aggregation: average
+  truncation_tokens_before_target: 0.5
+  similarity_metric:
+    _target_: scipy.spatial.distance.cosine
+    _partial_: true
+
+  gpu: null
+  ckpt: ???
+
+  cache:
+    _target_: src.wic.contextual_embedder.Cache
+    metadata:
+      dataset:
+        name: ${dataset.name}
+        version: ${dataset.version}
+        preprocessing: ${dataset.preprocessing.name}
+        spelling_normalization: ${dataset.spelling_normalization}
+      contextual_embedder:
+        pre_target_tokens: ${....truncation_tokens_before_target}
+

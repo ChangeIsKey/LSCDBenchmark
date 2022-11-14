@@ -2,7 +2,6 @@ defaults:
   - preprocessing: toklem
 
 name: dwug_es
-bert: dccuchile/bert-base-spanish-wwm-uncased
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
