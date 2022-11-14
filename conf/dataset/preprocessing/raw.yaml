@@ -1,0 +1,6 @@
+defaults:
+  - spelling_normalization: null
+
+
+name: None
+_target_: src.preprocessing.Raw
