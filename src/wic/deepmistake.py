@@ -63,11 +63,7 @@ class Cache(BaseModel):
         metadata = pd.concat([self.__metadata__ for _ in range(len(use_pairs))], ignore_index=True)
         lookup_table = pd.concat([metadata, lookup_table], axis=1)
         merged = lookup_table.merge(self._similarities, how="inner")
-        use_pairs_merged = [
-            tuple(list(use_pair))
-            for _, use_pair in merged[["use_0", "use_1"]].iterrows()
-        ]
-        return dict(zip(use_pairs_merged, merged["similarity"]))
+        return dict(zip(list(zip(merged["use_0"], merged["use_1"])), merged["similarity"]))
 
     @property
     def path(self) -> Path:
