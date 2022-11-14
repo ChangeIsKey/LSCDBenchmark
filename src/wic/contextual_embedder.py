@@ -10,7 +10,7 @@ import numpy.typing as npt
 import pandas as pd
 import torch
 from pandas import DataFrame
-from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist
+from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist, Field
 from transformers import (AutoModel, AutoTokenizer, BatchEncoding,
                           PreTrainedModel, PreTrainedTokenizerBase)
 from transformers import logging as trans_logging
@@ -174,14 +174,14 @@ class Cache(BaseModel):
 
 class ContextualEmbedder(WICModel):
     layers: conlist(item_type=PositiveInt, unique_items=True)  # type: ignore
-    layer_aggregation: LayerAggregator
-    subword_aggregation: SubwordAggregator
     truncation_tokens_before_target: float
     similarity_metric: Callable[..., float]
     normalization: None | Callable[[torch.Tensor], torch.Tensor]
     cache: Cache | None
     gpu: int | None
-    id: str
+    ckpt: str
+    layer_aggregator: LayerAggregator = Field(alias="layer_aggregation")
+    subword_aggregator: SubwordAggregator = Field(alias="subword_aggregation")
 
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
@@ -211,7 +211,7 @@ class ContextualEmbedder(WICModel):
     def tokenizer(self) -> PreTrainedTokenizerBase:
         if self._tokenizer is None:
             self._tokenizer: PreTrainedTokenizerBase = AutoTokenizer.from_pretrained(
-                self.id, use_fast=True, model_max_length=int(1e30)
+                self.ckpt, use_fast=True, model_max_length=int(1e30)
             )
         return self._tokenizer
 
@@ -219,7 +219,7 @@ class ContextualEmbedder(WICModel):
     def model(self) -> PreTrainedModel:
         if self._model is None:
             self._model = AutoModel.from_pretrained(
-                self.id, output_hidden_states=True
+                self.ckpt, output_hidden_states=True
             ).to(self.device)
             self._model.eval()
         return self._model
@@ -257,8 +257,8 @@ class ContextualEmbedder(WICModel):
         ).to(self.device)
 
     def aggregate(self, tensor: torch.Tensor, layers: list[int]) -> torch.Tensor:
-        tensor = self.subword_aggregation(tensor) # (1, layers, embedding)
-        tensor = self.layer_aggregation(tensor, layers) # (1, 1, embedding)
+        tensor = self.subword_aggregator(tensor) # (1, layers, embedding)
+        tensor = self.layer_aggregator(tensor, layers) # (1, 1, embedding)
         return tensor.squeeze()
 
 
