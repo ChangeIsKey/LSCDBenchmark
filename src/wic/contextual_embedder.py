@@ -178,6 +178,7 @@ class ContextualEmbedder(WICModel):
     subword_aggregation: SubwordAggregator
     truncation_tokens_before_target: float
     similarity_metric: Callable[..., float]
+    normalization: None | Callable[[torch.Tensor], torch.Tensor]
     cache: Cache | None
     gpu: int | None
     id: str
@@ -317,6 +318,9 @@ class ContextualEmbedder(WICModel):
                 self.cache.add_use(use=use, embedding=embedding)
 
         embedding = self.aggregate(embedding, layers=self.layers)
+        if self.normalization is not None:
+            embedding = self.normalization(embedding)
+            
         if type == np.ndarray:
             return embedding.cpu().numpy()
         else:
