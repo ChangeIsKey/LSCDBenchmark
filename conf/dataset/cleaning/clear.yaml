@@ -1,0 +1,3 @@
+kri_full:
+  threshold: 0.7
+  keep: above
