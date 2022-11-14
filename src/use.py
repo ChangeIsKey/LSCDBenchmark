@@ -41,29 +41,6 @@ class Use(BaseModel):
         return self.identifier < other.identifier
 
 
-def use_pair_group(use_pair: tuple[Use, Use]) -> str:
-    if use_pair[0].grouping != use_pair[1].grouping:
-        return "COMPARE"
-    else:
-        if use_pair[0].grouping == 0 and use_pair[1].grouping == 0:
-            return "EARLIER"
-        else:
-            return "LATER"
-
-
-def to_data_format(use_pair: tuple[Use, Use]) -> dict[str, str | int]:
-    return {
-        "id": f"{use_pair[0].target}.{np.random.randint(low=100000, high=1000000)}",
-        "start1": use_pair[0].indices[0],
-        "end1": use_pair[0].indices[1],
-        "sentence1": use_pair[0].context,
-        "start2": use_pair[1].indices[0],
-        "end2": use_pair[1].indices[1],
-        "sentence2": use_pair[1].context,
-        "lemma": use_pair[0].target,
-        "pos": "NOUN" if use_pair[0].pos == "NN" else use_pair[0].pos,
-        "grp": use_pair_group(use_pair),
-    }
 
 
 # {

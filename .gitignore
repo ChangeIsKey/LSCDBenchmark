@@ -13,7 +13,8 @@ multirun/*
 .vscode/
 conda/
 .conda/
-.cache/
+.bert/
+.deepmistake/
 venv/
 analysis/
 results/results.csv

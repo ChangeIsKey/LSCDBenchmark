@@ -2,3 +2,11 @@ defaults:
   - dm_ckpt@ckpt: ???
   
 _target_: src.wic.DeepMistake
+cache:
+  _target_: src.wic.deepmistake.Cache
+  metadata:
+    dataset:
+      name: ${dataset.name}
+      version: ${dataset.version}
+      preprocessing: ${dataset.preprocessing.name}
+      spelling_normalization: ${dataset.spelling_normalization}

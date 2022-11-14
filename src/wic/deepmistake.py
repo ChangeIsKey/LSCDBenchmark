@@ -1,42 +1,163 @@
 import json
 import os
-from pathlib import Path
 import shutil
-from typing import Literal, TypedDict
-
 import zipfile
+from pathlib import Path
+from typing import _TypedDict, Any, TypedDict
+
 import numpy as np
+import pandas as pd
 import requests
-from pydantic import BaseModel, HttpUrl
+from pandas import DataFrame
+from pydantic import BaseModel, HttpUrl, PrivateAttr
 from tqdm import tqdm
 
-from src.use import Use, to_data_format
+from src.use import Use, UseID
 from src.utils import utils
 from src.wic.model import WICModel
+
 
 class Model(BaseModel):
     name: str
     url: HttpUrl
 
-class DeepMistake(WICModel):
-    ckpt: Model
+
+class Cache(BaseModel):
+    metadata: dict[str, Any]
+    _similarities: DataFrame = PrivateAttr(default=None)
+    __metadata__: DataFrame = PrivateAttr(default=None)
+
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self.__metadata__ = pd.json_normalize(self.metadata)
+
+        try:
+            self._similarities = pd.read_csv(
+                filepath_or_buffer=self.path, engine="pyarrow"
+            )
+            self._similarities.drop_duplicates(inplace=True)
+        except FileNotFoundError:
+            self._similarities = pd.json_normalize(self.metadata).assign(
+                use_0=None, use_1=None, similarity=None, lemma=None
+            )
+            self._similarities = self._similarities.iloc[0:0]  # remove first dummy row
+        finally:
+            self._similarities["similarity"] = self._similarities["similarity"].astype(
+                float
+            )
+            self._similarities["use_0"] = self._similarities["use_0"].astype(str)
+            self._similarities["use_1"] = self._similarities["use_1"].astype(str)
+            self._similarities["lemma"] = self._similarities["lemma"].astype(str)
+
+    def retrieve(
+        self, use_pairs: list[tuple[Use, Use]]
+    ) -> dict[tuple[UseID, UseID], float]:
+        # TODO optimize: create one table to merge with the existing one, don't merge once for every use pair
+        lookup_table = DataFrame(
+            {
+                "use_0": [up[0].identifier for up in use_pairs],
+                "use_1": [up[1].identifier for up in use_pairs],
+                "lemma": [up[1].target for up in use_pairs],
+            }
+        )
+        metadata = pd.concat([self.__metadata__ for _ in range(len(use_pairs))], ignore_index=True)
+        lookup_table = pd.concat([metadata, lookup_table], axis=1)
+        merged = lookup_table.merge(self._similarities, how="inner")
+        use_pairs_merged = [
+            tuple(list(use_pair))
+            for _, use_pair in merged[["use_0", "use_1"]].iterrows()
+        ]
+        return dict(zip(use_pairs_merged, merged["similarity"]))
 
     @property
-    def cache_dir(self) -> Path:
-        cache = os.getenv("DEEPMISTAKE_CKPTS")
+    def path(self) -> Path:
+        cache = os.getenv("DEEPMISTAKE")
         if cache is None:
             cache = ".deepmistake"
-        return utils.path(cache)
-        
+        return utils.path(cache) / "similarities.csv"
+
+    def add_use_pair(self, use_pair: tuple[Use, Use], similarity: float) -> None:
+        row = self.__metadata__.assign(
+            use_0=use_pair[0].identifier,
+            use_1=use_pair[1].identifier,
+            similarity=similarity,
+            lemma=use_pair[0].target,
+        )
+        self._similarities = pd.concat([self._similarities, row], ignore_index=True)
+
+
+class Score(TypedDict):
+    id: str
+    score: tuple[str, str]
+
+
+def use_pair_group(use_pair: tuple[Use, Use]) -> str:
+    if use_pair[0].grouping != use_pair[1].grouping:
+        return "COMPARE"
+    else:
+        if use_pair[0].grouping == 0 and use_pair[1].grouping == 0:
+            return "EARLIER"
+        else:
+            return "LATER"
+
+
+class Input(TypedDict):
+    id: str
+    start1: int
+    end1: int
+    sentence1: str
+    start2: int
+    end2: int
+    sentence2: str
+    lemma: str
+    pos: str
+    grp: str
+
+
+def to_data_format(use_pair: tuple[Use, Use]) -> Input:
+    return {
+        "id": f"{use_pair[0].target}.{np.random.randint(low=100000, high=1000000)}",
+        "start1": use_pair[0].indices[0],
+        "end1": use_pair[0].indices[1],
+        "sentence1": use_pair[0].context,
+        "start2": use_pair[1].indices[0],
+        "end2": use_pair[1].indices[1],
+        "sentence2": use_pair[1].context,
+        "lemma": use_pair[0].target,
+        "pos": "NOUN" if use_pair[0].pos == "NN" else use_pair[0].pos,
+        "grp": use_pair_group(use_pair),
+    }
+
+
+class DeepMistake(WICModel):
+    ckpt: Model
+    cache: Cache | None
+
+    def __enter__(self) -> None:
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.cache is not None:
+            self.cache._similarities.to_csv(self.cache.path, index=False)
+
+    @property
+    def download_dir(self) -> Path:
+        cache = os.getenv("DEEPMISTAKE")
+        if cache is None:
+            cache = ".deepmistake"
+        return utils.path(cache) / "checkpoints"
+
     @property
     def ckpt_dir(self) -> Path:
-        return self.cache_dir / self.ckpt.name
+        return self.download_dir / self.ckpt.name
 
     def __unzip_ckpt(self, zipped: Path) -> None:
         with zipfile.ZipFile(file=zipped) as z:
             namelist = z.namelist()[1:]  # remove root element
 
-            for filename in tqdm(namelist, desc="Unzipping checkpoint files", leave=False):
+            for filename in tqdm(
+                namelist, desc="Unzipping checkpoint files", leave=False
+            ):
                 filename_p = Path(filename)
                 path = self.ckpt_dir / filename_p.parts[-1]
                 with path.open(mode="wb") as file_obj:
@@ -44,9 +165,8 @@ class DeepMistake(WICModel):
 
         zipped.unlink()
 
-
     def __download_ckpt(self) -> Path:
-        filename = self.ckpt.url.split('/')[-1]
+        filename = self.ckpt.url.split("/")[-1]
         assert filename.endswith(".zip")
 
         r = requests.get(self.ckpt.url, stream=True)
@@ -72,46 +192,87 @@ class DeepMistake(WICModel):
         return path
 
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
-        if not self.ckpt_dir.exists():
-            zipped = self.__download_ckpt()
-            self.__unzip_ckpt(zipped)
+        with self:
+            if not self.ckpt_dir.exists():
+                zipped = self.__download_ckpt()
+                self.__unzip_ckpt(zipped)
 
-        data_dir = self.ckpt_dir / "data"
-        output_dir = self.ckpt_dir / "scores"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        data_dir.mkdir(parents=True, exist_ok=True)
+            data_dir = self.ckpt_dir / "data"
+            output_dir = self.ckpt_dir / "scores"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
 
-        data = [to_data_format(up) for up in use_pairs]
-        path = data_dir / f"{use_pairs[0][0].target}.data"
-        with open(path, mode="w", encoding="utf8") as f:
-            json.dump(data, f)
+            scores: dict[tuple[UseID, UseID], float | None] = {
+                (use_pair[0].identifier, use_pair[1].identifier): None
+                for use_pair in use_pairs
+            }
 
-        script = utils.path("src") / "wic" / "mcl-wic" / "run_model.py"
+            non_cached_use_pairs: list[tuple[Use, Use]] = []
 
-        hydra_dir = os.getcwd()
+            inputs = [to_data_format(use_pair) for use_pair in use_pairs]
+            # list of pairs of use ids to index, deepmistake-formatted input, similarity, and original data
+            data: dict[tuple[UseID, UseID], tuple[Input, tuple[Use, Use]],] = {
+                (use_pair[0].identifier, use_pair[1].identifier): (
+                    inputs[i],
+                    use_pair,
+                )
+                for i, use_pair in enumerate(use_pairs)
+            }
 
-        os.chdir(self.ckpt_dir)
-        os.system(
-            f"python -u {script} \
-            --max_seq_len=500 \
-            --do_eval \
-            --ckpt_path {self.ckpt_dir} \
-            --eval_input_dir {data_dir} \
-            --eval_output_dir {output_dir} \
-            --output_dir {output_dir}"
-        )
-        path.unlink()
+            input_id_to_use_pair_ids = {
+                inputs[i]["id"]: (use_pair[0].identifier, use_pair[1].identifier)
+                for i, use_pair in enumerate(use_pairs)
+            }
 
-        with open(
-            file=output_dir / f"{use_pairs[0][0].target}.scores", encoding="utf8"
-        ) as f:
-            dumped_scores: list[dict[str, str | list[str]]] = json.load(f)
-            scores = []
-            for x in dumped_scores:
-                score_0 = float(x["score"][0])
-                score_1 = float(x["score"][1])
-                scores.append(np.mean([score_0, score_1]).item())
+            if self.cache is not None:
+                scores.update(self.cache.retrieve(use_pairs))
+                for pair, similarity in scores.items():
+                    if similarity is None:
+                        non_cached_use_pairs.append(data[pair][1])
 
-        os.chdir(hydra_dir)
+            if len(non_cached_use_pairs) > 0:
+                hydra_dir = os.getcwd()
 
-        return scores
+                input_ = [
+                    data[(up[0].identifier, up[1].identifier)][0]
+                    for up in non_cached_use_pairs
+                ]
+
+                path = data_dir / f"{use_pairs[0][0].target}.data"
+                with open(path, mode="w", encoding="utf8") as f:
+                    json.dump(input_, f)
+
+                script = utils.path("src") / "wic" / "mcl-wic" / "run_model.py"
+
+                os.chdir(self.ckpt_dir)
+                os.system(
+                    f"python -u {script} \
+                    --max_seq_len=500 \
+                    --do_eval \
+                    --ckpt_path {self.ckpt_dir} \
+                    --eval_input_dir {data_dir} \
+                    --eval_output_dir {output_dir} \
+                    --output_dir {output_dir}"
+                )
+                path.unlink()
+
+                with open(
+                    file=output_dir / f"{use_pairs[0][0].target}.scores",
+                    encoding="utf8",
+                ) as f:
+                    dumped_scores: list[Score] = json.load(f)
+                    for x in dumped_scores:
+                        id_ = x["id"]
+                        score_0 = float(x["score"][0])
+                        score_1 = float(x["score"][1])
+                        similarity = np.mean([score_0, score_1]).item()
+                        use_pair = input_id_to_use_pair_ids[id_]
+                        scores[use_pair] = similarity
+                        if self.cache is not None:
+                            self.cache.add_use_pair(
+                                use_pair=data[use_pair][1], similarity=similarity
+                            )
+
+                os.chdir(hydra_dir)
+
+            return [scores[(up[0].identifier, up[1].identifier)] for up in use_pairs] 
