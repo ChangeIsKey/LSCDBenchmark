@@ -169,9 +169,5 @@ class Normalize(ContextPreprocessor):
         if self.spelling_normalization is not None:
             context, start = self.normalize_spelling(context, start)
 
-        try:
-            end = context.index(" ", start) - 1
-        except ValueError:
-            end = len(context) - 1
-
+        end = start + len(tokens[index]) - 1
         return context, start, end
