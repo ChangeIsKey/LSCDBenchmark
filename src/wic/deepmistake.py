@@ -245,8 +245,7 @@ class DeepMistake(WICModel):
 
                 os.chdir(self.ckpt_dir)
                 output = subprocess.run([
-                    "python",
-                    f"-u {script}",
+                    f"python -u {script}",
                     "--max_seq_len=500",
                     "--do-eval",
                     f"--ckpt_path {self.ckpt_dir}",
