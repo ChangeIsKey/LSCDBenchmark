@@ -5,6 +5,7 @@ import subprocess
 import zipfile
 from pathlib import Path
 from typing import _TypedDict, Any, TypedDict
+from git import Repo
 
 import numpy as np
 import pandas as pd
@@ -140,16 +141,22 @@ class DeepMistake(WICModel):
         if self.cache is not None:
             self.cache._similarities.to_csv(self.cache.path, index=False)
 
+    def clone_repo(self) -> None:
+        Repo.clone_from(url="https://github.com/davletov-aa/mcl-wic.git", to_path=self.repo_dir)
+
     @property
-    def download_dir(self) -> Path:
+    def repo_dir(self) -> Path:
         cache = os.getenv("DEEPMISTAKE")
         if cache is None:
             cache = ".deepmistake"
-        return utils.path(cache) / "checkpoints"
+        return utils.path(cache) / "mcl-wic"
 
     @property
     def ckpt_dir(self) -> Path:
-        return self.download_dir / self.ckpt.name
+        cache = os.getenv("DEEPMISTAKE")
+        if cache is None:
+            cache = ".deepmistake"
+        return utils.path(cache) / "checkpoints" / self.ckpt.name
 
     def __unzip_ckpt(self, zipped: Path) -> None:
         with zipfile.ZipFile(file=zipped) as z:
@@ -245,6 +252,9 @@ class DeepMistake(WICModel):
                 script = utils.path("src") / "wic" / "mcl-wic" / "run_model.py"
 
                 os.chdir(self.ckpt_dir)
+
+                if not self.repo_dir.exists():
+                    self.clone_repo()
 
                 # run run_model.py and capture output (don't print it)
                 subprocess.check_output(
