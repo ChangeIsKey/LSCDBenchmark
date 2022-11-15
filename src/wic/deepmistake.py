@@ -255,6 +255,7 @@ class DeepMistake(WICModel):
                     f"--output_dir {output_dir}"
                 ], stdout=subprocess.PIPE)
 
+                print("hmm")
                 log.info(output)
 
                 path.unlink()
