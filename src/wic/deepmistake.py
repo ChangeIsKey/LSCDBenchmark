@@ -271,5 +271,6 @@ class DeepMistake(WICModel):
                 os.chdir(hydra_dir)
 
             results = [scores[(up[0].identifier, up[1].identifier)] for up in use_pairs] 
-            assert all([score is not None for score in results])
+            if any([score is None for score in results]):
+                return self.predict(use_pairs)
             return results
