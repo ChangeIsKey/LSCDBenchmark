@@ -272,5 +272,7 @@ class DeepMistake(WICModel):
 
             results = [scores[(up[0].identifier, up[1].identifier)] for up in use_pairs] 
             if any([score is None for score in results]):
+                if self.cache is not None:
+                    self.cache._similarities.to_csv(self.cache.path, index=False)
                 return self.predict(use_pairs)
             return results
