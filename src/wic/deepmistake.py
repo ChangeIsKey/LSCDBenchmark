@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 from typing import _TypedDict, Any, TypedDict
@@ -240,15 +241,20 @@ class DeepMistake(WICModel):
                 script = utils.path("src") / "wic" / "mcl-wic" / "run_model.py"
 
                 os.chdir(self.ckpt_dir)
-                os.system(
+
+                # run run_model.py and capture output (don't print it)
+                subprocess.check_output(
                     f"python -u {script} \
                     --max_seq_len=500 \
                     --do_eval \
                     --ckpt_path {self.ckpt_dir} \
                     --eval_input_dir {data_dir} \
                     --eval_output_dir {output_dir} \
-                    --output_dir {output_dir}"
+                    --output_dir {output_dir}", 
+                    shell=True, 
+                    stderr=subprocess.PIPE
                 )
+
                 path.unlink()
 
                 with open(
