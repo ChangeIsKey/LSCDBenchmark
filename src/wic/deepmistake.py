@@ -249,10 +249,10 @@ class DeepMistake(WICModel):
                     script,
                     "--max_seq_len=500",
                     "--do-eval",
-                    "--ckpt_path", self.ckpt_dir,
-                    "--eval_input_dir", data_dir,
-                    "--eval_output_dir", output_dir,
-                    "--output_dir", output_dir
+                    f"--ckpt_path {self.ckpt_dir}",
+                    f"--eval_input_dir {data_dir}",
+                    f"--eval_output_dir {output_dir}",
+                    f"--output_dir {output_dir}"
                 ], stdout=subprocess.PIPE)
 
                 log.info(output)
