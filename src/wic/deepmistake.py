@@ -249,12 +249,13 @@ class DeepMistake(WICModel):
                 with open(path, mode="w", encoding="utf8") as f:
                     json.dump(input_, f)
 
-                script = utils.path("src") / "wic" / "mcl-wic" / "run_model.py"
 
                 os.chdir(self.ckpt_dir)
 
                 if not self.repo_dir.exists():
                     self.clone_repo()
+
+                script = self.repo_dir / "run_model.py"
 
                 # run run_model.py and capture output (don't print it)
                 subprocess.check_output(
