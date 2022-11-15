@@ -12,10 +12,14 @@ import requests
 from pandas import DataFrame
 from pydantic import BaseModel, HttpUrl, PrivateAttr
 from tqdm import tqdm
+import subprocess
 
 from src.use import Use, UseID
 from src.utils import utils
 from src.wic.model import WICModel
+from logging import getLogger
+
+log = getLogger(__name__)
 
 
 class Model(BaseModel):
