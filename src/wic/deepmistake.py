@@ -11,10 +11,14 @@ import requests
 from pandas import DataFrame
 from pydantic import BaseModel, HttpUrl, PrivateAttr
 from tqdm import tqdm
+import subprocess
 
 from src.use import Use, UseID
 from src.utils import utils
 from src.wic.model import WICModel
+from logging import getLogger
+
+log = getLogger(__name__)
 
 
 class Model(BaseModel):
@@ -240,15 +244,19 @@ class DeepMistake(WICModel):
                 script = utils.path("src") / "wic" / "mcl-wic" / "run_model.py"
 
                 os.chdir(self.ckpt_dir)
-                os.system(
-                    f"python -u {script} \
-                    --max_seq_len=500 \
-                    --do_eval \
-                    --ckpt_path {self.ckpt_dir} \
-                    --eval_input_dir {data_dir} \
-                    --eval_output_dir {output_dir} \
-                    --output_dir {output_dir}"
-                )
+                output = subprocess.run([
+                    "python",
+                    f"-u {script}",
+                    "--max_seq_len=500",
+                    "--do-eval",
+                    f"--ckpt_path {self.ckpt_dir}",
+                    f"--eval_input_dir {data_dir}",
+                    f"--eval_output_dir {output_dir}",
+                    f"--output_dir {output_dir}"
+                ], stdout=subprocess.PIPE)
+
+                log.info(output)
+
                 path.unlink()
 
                 with open(
