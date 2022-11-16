@@ -265,7 +265,7 @@ class DeepMistake(WICModel):
                 os.chdir(self.ckpt_dir)
 
                 # run run_model.py and capture output (don't print it)
-                print(subprocess.check_output(
+                subprocess.check_output(
                     f"python -u {script} \
                     --max_seq_len=500 \
                     --do_eval \
@@ -276,7 +276,7 @@ class DeepMistake(WICModel):
                     shell=True, 
                     # if the script doesn't run, comment out the next line
                     stderr=subprocess.PIPE
-                ))
+                )
 
                 path.unlink()
 
