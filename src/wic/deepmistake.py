@@ -142,7 +142,7 @@ class DeepMistake(WICModel):
             self.cache._similarities.to_csv(self.cache.path, index=False)
 
     def clone_repo(self) -> None:
-        Repo.clone_from(url="https://github.com/davletov-aa/mcl-wic.git", to_path=self.repo_dir)
+        Repo.clone_from(url="https://github.com/ameta13/mcl-wic", to_path=self.repo_dir)
 
     @property
     def repo_dir(self) -> Path:
@@ -248,6 +248,7 @@ class DeepMistake(WICModel):
 
             if len(non_cached_use_pairs) > 0:
                 hydra_dir = os.getcwd()
+                os.chdir(self.ckpt_dir)
 
                 input_ = [
                     data[(up[0].identifier, up[1].identifier)][0]
@@ -262,7 +263,6 @@ class DeepMistake(WICModel):
                     self.clone_repo()
 
                 script = self.repo_dir / "run_model.py"
-                os.chdir(self.ckpt_dir)
 
                 # run run_model.py and capture output (don't print it)
                 subprocess.check_output(
@@ -272,7 +272,7 @@ class DeepMistake(WICModel):
                     --ckpt_path {self.ckpt_dir} \
                     --eval_input_dir {data_dir} \
                     --eval_output_dir {output_dir} \
-                    --output_dir {self.ckpt_dir}", 
+                    --output_dir {output_dir}", 
                     shell=True, 
                     # if the script doesn't run, comment out the next line
                     stderr=subprocess.PIPE
