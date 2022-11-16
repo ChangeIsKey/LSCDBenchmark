@@ -207,14 +207,6 @@ class DeepMistake(WICModel):
             data_dir = self.ckpt_dir / "data"
             output_dir = self.ckpt_dir / "scores"
 
-            # cleanup
-            for file in self.ckpt_dir.glob("*.log"):
-                file.unlink(missing_ok=True)
-            for file in data_dir.iterdir():
-                file.unlink(missing_ok=True)
-            for file in output_dir.iterdir():
-                file.unlink(missing_ok=True)
-
             output_dir.mkdir(parents=True, exist_ok=True)
             data_dir.mkdir(parents=True, exist_ok=True)
 
