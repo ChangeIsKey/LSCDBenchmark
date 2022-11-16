@@ -89,7 +89,7 @@ class Cache(BaseModel):
 
 class Score(TypedDict):
     id: str
-    score: tuple[str, str]
+    score: tuple[str, str] | str
 
 
 def use_pair_group(use_pair: tuple[Use, Use]) -> str:
@@ -206,6 +206,15 @@ class DeepMistake(WICModel):
 
             data_dir = self.ckpt_dir / "data"
             output_dir = self.ckpt_dir / "scores"
+
+            # cleanup
+            for file in self.ckpt_dir.glob("*.log"):
+                file.unlink(missing_ok=True)
+            for file in data_dir.iterdir():
+                file.unlink(missing_ok=True)
+            for file in output_dir.iterdir():
+                file.unlink(missing_ok=True)
+
             output_dir.mkdir(parents=True, exist_ok=True)
             data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -249,26 +258,25 @@ class DeepMistake(WICModel):
                 with open(path, mode="w", encoding="utf8") as f:
                     json.dump(input_, f)
 
-
-                os.chdir(self.ckpt_dir)
-
                 if not self.repo_dir.exists():
                     self.clone_repo()
 
                 script = self.repo_dir / "run_model.py"
+                os.chdir(self.ckpt_dir)
 
                 # run run_model.py and capture output (don't print it)
-                subprocess.check_output(
+                print(subprocess.check_output(
                     f"python -u {script} \
                     --max_seq_len=500 \
                     --do_eval \
                     --ckpt_path {self.ckpt_dir} \
                     --eval_input_dir {data_dir} \
                     --eval_output_dir {output_dir} \
-                    --output_dir {output_dir}", 
+                    --output_dir {self.ckpt_dir}", 
                     shell=True, 
+                    # if the script doesn't run, comment out the next line
                     stderr=subprocess.PIPE
-                )
+                ))
 
                 path.unlink()
 
@@ -279,9 +287,13 @@ class DeepMistake(WICModel):
                     dumped_scores: list[Score] = json.load(f)
                     for x in dumped_scores:
                         id_ = x["id"]
-                        score_0 = float(x["score"][0])
-                        score_1 = float(x["score"][1])
-                        similarity = np.mean([score_0, score_1]).item()
+                        if len(x["score"]) == 2:
+                            score_0 = float(x["score"][0])
+                            score_1 = float(x["score"][1])
+                            similarity = np.mean([score_0, score_1]).item()
+                        else:
+                            similarity = float(x["score"][0])
+
                         use_pair = input_id_to_use_pair_ids[id_]
                         scores[use_pair] = similarity
                         if self.cache is not None:
