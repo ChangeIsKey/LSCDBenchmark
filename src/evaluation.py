@@ -1,17 +1,23 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+import csv
+import os
 from typing import (
     Any,
     Callable,
     Literal,
     TypeAlias,
     TypeVar,
+    TypedDict,
 )
 
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr 
 
+from src.utils import utils
+from src.utils.utils import CsvParams
+from src.use import UseID
 from src.plots import Plotter
 
 EvaluationTask: TypeAlias = Literal[
@@ -25,6 +31,8 @@ class Evaluation(BaseModel, ABC):
     task: EvaluationTask | None
     metric: Callable[[list[float | int], list[float | int]], Any] | None
     plotter: Plotter | None
+    exclude_annotators: list[str]
+    __csv_params__: CsvParams = PrivateAttr(default_factory=CsvParams)
 
     def preprocess_results(self, results: DataFrame) -> DataFrame:
         return results
@@ -70,7 +78,11 @@ class Evaluation(BaseModel, ABC):
         )
 
         return merged
-
+    
+    @abstractmethod
+    def get_labels(self, *args, **kwargs) -> dict[Any, float]:
+        pass
+        
 
 class WsiEvaluation(Evaluation):
     def preprocess_results(self, results: DataFrame) -> DataFrame:
@@ -79,6 +91,26 @@ class WsiEvaluation(Evaluation):
 
 
 class WicEvaluation(Evaluation):
+    binarize: bool
     def preprocess_results(self, results: DataFrame) -> DataFrame:
         results["label"] = results["label"].replace(to_replace=0, value=np.nan)
         return results
+
+    def get_labels(
+        self, 
+        dataset_name: str, 
+        dataset_version: str, 
+        lemma: str, 
+    ) -> dict[tuple[UseID, UseID], float]:
+        path = utils.dataset_path(dataset_name, dataset_version) / "data" / lemma / "judgments.csv"
+        judgments_df: DataFrame = pd.read_csv(path, **self.__csv_params__.dict()) # type: ignore
+        judgments_df["judgment"] = judgments_df["judgment"].astype(float)
+        judgments_df = judgments_df[~judgments_df["annotator"].isin(self.exclude_annotators)]
+        judgments_df = judgments_df.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
+
+        if self.binarize:
+            judgments_df = judgments_df[judgments_df["judgment"].isin([4.0, 1.0])]
+        
+        judgments_df.sort_values(by=["identifier1", "identifier2"], inplace=True)
+        annotated_pairs = zip(judgments_df.identifier1, judgments_df.identifier2)
+        return dict(zip(list(annotated_pairs), judgments_df.judgment))

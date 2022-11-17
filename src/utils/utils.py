@@ -1,21 +1,38 @@
+import csv
+import os
 from pathlib import Path
 from typing import (
 	Any,
+	Literal,
 	TypeGuard,
+	TypedDict,
 )
 
 import hydra
 import networkx as nx
 import numpy as np
+from pydantic import BaseModel
 
 
 class ShouldNotHappen(Exception):
 	...
 
 
+class CsvParams(BaseModel):
+    delimiter: str = "\t"
+    encoding: str = "utf8"
+    quoting: Literal[0, 1, 2, 3] = csv.QUOTE_NONE
+
+
+
 def path(path: str) -> Path:
 	return Path(hydra.utils.to_absolute_path(path)).resolve()
 
+def dataset_path(name: str, version: str) -> Path:
+	root = os.getenv("DATA_DIR")
+	if root is None:
+		root = "wug"
+	return path(root) / name / version
 
 def xor(a: bool, b: bool):
 	return (a and not b) or (not a and b)
