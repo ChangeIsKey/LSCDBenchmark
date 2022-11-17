@@ -145,18 +145,19 @@ class DeepMistake(WICModel):
         Repo.clone_from(url="https://github.com/ameta13/mcl-wic", to_path=self.repo_dir)
 
     @property
+    def path(self) -> Path:
+        path = os.getenv("DEEPMISTAKE")
+        if path is None:
+            path = ".deepmistake"
+        return utils.path(path)
+    
+    @property
     def repo_dir(self) -> Path:
-        cache = os.getenv("DEEPMISTAKE")
-        if cache is None:
-            cache = ".deepmistake"
-        return utils.path(cache) / "mcl-wic"
+        return self.path / "mcl-wic"
 
     @property
     def ckpt_dir(self) -> Path:
-        cache = os.getenv("DEEPMISTAKE")
-        if cache is None:
-            cache = ".deepmistake"
-        return utils.path(cache) / "checkpoints" / self.ckpt.name
+        return self.path / "checkpoints" / self.ckpt.name
 
     def __unzip_ckpt(self, zipped: Path) -> None:
         with zipfile.ZipFile(file=zipped) as z:
