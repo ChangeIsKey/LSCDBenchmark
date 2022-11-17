@@ -77,7 +77,7 @@ class Lemma(BaseModel):
     def judgments_df(self) -> DataFrame:
         if self._judgments_df is None:
             path = self.path / "data" / self.name / "judgments.csv"
-            self._judgments_df = pd.read_csv(path, **self._csv_params)
+            self._judgments_df = pd.read_csv(path, **self._csv_params.dict())
             self._judgments_df["judgment"] = self._judgments_df["judgment"].astype(float)
             self.judgments_schema.validate(self._judgments_df)
         return self._judgments_df
