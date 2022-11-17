@@ -39,14 +39,11 @@ class Evaluation(BaseModel, ABC):
     exclude_annotators: list[str]
     __csv_params__: CsvParams = PrivateAttr(default_factory=CsvParams)
 
-    def preprocess_results(self, results: DataFrame) -> DataFrame:
-        return results
 
     def __call__(self, predictions: dict[K, V], labels: dict[K, V], write: bool) -> int | float:
         results = self.combine_inputs(labels=labels, predictions=predictions)
         if write:
             results.to_csv("predictions.csv", sep="\t")
-        results = self.preprocess_results(results)
         results = results.dropna(how="any")
 
         score = np.nan
@@ -130,19 +127,18 @@ class WsiEvaluation(Evaluation):
 
 
 class WicEvaluation(Evaluation):
-    binarize: bool
 
     def get_labels(self, dataset: DatasetMetadata) -> dict[tuple[UseID, UseID], float]:
-
         judgments_path = utils.dataset_path(dataset["name"], dataset["version"]) / "data" / "judgments.parquet"
         judgments = pd.read_parquet(judgments_path, engine="pyarrow")
         judgments["judgment"] = judgments["judgment"].astype(float)
         judgments = judgments[~judgments["annotator"].isin(self.exclude_annotators)]
         judgments = judgments.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
         judgments.replace(to_replace=0, value=np.nan, inplace=True)
-
-        if self.binarize:
-            judgments = judgments[judgments["judgment"].isin([4.0, 1.0])]
-        
         annotated_pairs = zip(judgments.identifier1, judgments.identifier2)
         return dict(zip(list(annotated_pairs), judgments.judgment))
+
+class BinaryWicEvaluation(WicEvaluation):
+    def get_labels(self, dataset: DatasetMetadata) -> dict[tuple[UseID, UseID], float]:
+        labels = super().get_labels(dataset)
+        return {use_pair: judgment for use_pair, judgment in labels.items() if judgment in [4.0, 1.0]}
