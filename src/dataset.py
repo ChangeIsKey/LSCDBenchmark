@@ -68,10 +68,7 @@ class Dataset(BaseModel):
     @property
     def path(self) -> Path:
         if self._path is None:
-            path = os.getenv("DATA_DIR")
-            if path is None:
-                path = "wug"
-            self._path = utils.path(path) / self.name / self.version
+            self._path = utils.dataset_path(self.name, self.version)
         return self._path
 
     @property

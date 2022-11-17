@@ -89,7 +89,7 @@ class Cache(BaseModel):
 
 class Score(TypedDict):
     id: str
-    score: tuple[str, str]
+    score: tuple[str, str] | str
 
 
 def use_pair_group(use_pair: tuple[Use, Use]) -> str:
@@ -142,21 +142,22 @@ class DeepMistake(WICModel):
             self.cache._similarities.to_csv(self.cache.path, index=False)
 
     def clone_repo(self) -> None:
-        Repo.clone_from(url="https://github.com/davletov-aa/mcl-wic.git", to_path=self.repo_dir)
+        Repo.clone_from(url="https://github.com/ameta13/mcl-wic", to_path=self.repo_dir)
 
     @property
+    def path(self) -> Path:
+        path = os.getenv("DEEPMISTAKE")
+        if path is None:
+            path = ".deepmistake"
+        return utils.path(path)
+    
+    @property
     def repo_dir(self) -> Path:
-        cache = os.getenv("DEEPMISTAKE")
-        if cache is None:
-            cache = ".deepmistake"
-        return utils.path(cache) / "mcl-wic"
+        return self.path / "mcl-wic"
 
     @property
     def ckpt_dir(self) -> Path:
-        cache = os.getenv("DEEPMISTAKE")
-        if cache is None:
-            cache = ".deepmistake"
-        return utils.path(cache) / "checkpoints" / self.ckpt.name
+        return self.path / "checkpoints" / self.ckpt.name
 
     def __unzip_ckpt(self, zipped: Path) -> None:
         with zipfile.ZipFile(file=zipped) as z:
@@ -206,6 +207,7 @@ class DeepMistake(WICModel):
 
             data_dir = self.ckpt_dir / "data"
             output_dir = self.ckpt_dir / "scores"
+
             output_dir.mkdir(parents=True, exist_ok=True)
             data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -239,6 +241,7 @@ class DeepMistake(WICModel):
 
             if len(non_cached_use_pairs) > 0:
                 hydra_dir = os.getcwd()
+                os.chdir(self.ckpt_dir)
 
                 input_ = [
                     data[(up[0].identifier, up[1].identifier)][0]
@@ -248,9 +251,6 @@ class DeepMistake(WICModel):
                 path = data_dir / f"{use_pairs[0][0].target}.data"
                 with open(path, mode="w", encoding="utf8") as f:
                     json.dump(input_, f)
-
-
-                os.chdir(self.ckpt_dir)
 
                 if not self.repo_dir.exists():
                     self.clone_repo()
@@ -267,6 +267,7 @@ class DeepMistake(WICModel):
                     --eval_output_dir {output_dir} \
                     --output_dir {output_dir}", 
                     shell=True, 
+                    # if the script doesn't run, comment out the next line
                     stderr=subprocess.PIPE
                 )
 
@@ -279,9 +280,13 @@ class DeepMistake(WICModel):
                     dumped_scores: list[Score] = json.load(f)
                     for x in dumped_scores:
                         id_ = x["id"]
-                        score_0 = float(x["score"][0])
-                        score_1 = float(x["score"][1])
-                        similarity = np.mean([score_0, score_1]).item()
+                        if len(x["score"]) == 2:
+                            score_0 = float(x["score"][0])
+                            score_1 = float(x["score"][1])
+                            similarity = np.mean([score_0, score_1]).item()
+                        else:
+                            similarity = float(x["score"][0])
+
                         use_pair = input_id_to_use_pair_ids[id_]
                         scores[use_pair] = similarity
                         if self.cache is not None:
