@@ -4,6 +4,5 @@ defaults:
 _target_: src.evaluation.WicEvaluation
 task: semantic_proximity
 metric: 
-  _target_: sklearn.metrics.f1_score
+  _target_: src.wrappers.spearmanr
   _partial_: true
-  average: macro
