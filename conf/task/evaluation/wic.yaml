@@ -6,3 +6,4 @@ task: semantic_proximity
 metric: 
   _target_: src.wrappers.spearmanr
   _partial_: true
+binarize: false
