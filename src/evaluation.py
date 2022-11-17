@@ -80,7 +80,7 @@ class Evaluation(BaseModel, ABC):
         return merged
     
     @abstractmethod
-    def get_labels(self, *args, **kwargs) -> dict[Any, float]:
+    def get_labels(self, dataset_name: str, dataset_version: str) -> dict[Any, float]:
         pass
         
 

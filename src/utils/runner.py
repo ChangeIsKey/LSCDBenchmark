@@ -30,7 +30,7 @@ def run(
 ) -> float:
 
     cwd = os.getcwd()
-    labels = dataset.get_labels(evaluation.task)
+    labels = evaluation.get_labels(dataset.name, dataset.version)
     predictions: Any = {}
 
     lemma_pbar = tqdm(dataset.lemmas, desc="Processing lemmas")
