@@ -26,13 +26,7 @@ from src.use import (
     Use,
     UseID,
 )
-from src.utils.utils import ShouldNotHappen
-
-
-class CsvParams(TypedDict):
-    delimiter: str
-    encoding: str
-    quoting: Literal[0, 1, 2, 3]
+from src.utils.utils import ShouldNotHappen, CsvParams
 
 
 class Lemma(BaseModel):
@@ -45,18 +39,14 @@ class Lemma(BaseModel):
     _judgments_df: DataFrame | None = PrivateAttr(default=None)
     _augmented_judgments_df: DataFrame | None = PrivateAttr(default=None)
     _clusters_df: DataFrame | None = PrivateAttr(default=None)
-    _csv_params: CsvParams = PrivateAttr(
-        default_factory=lambda: CsvParams(
-            delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
-        )
-    )
+    _csv_params: CsvParams = PrivateAttr(default_factory=CsvParams)
 
     @property
     def uses_df(self) -> DataFrame:
         if self._uses_df is None:
             # load uses
             path = self.path / "data" / self.name / "uses.csv"
-            self._uses_df = pd.read_csv(path, **self._csv_params)
+            self._uses_df: DataFrame = pd.read_csv(path, **self._csv_params.dict()) # type: ignore
             # filter by grouping
             self._uses_df.grouping = self._uses_df.grouping.astype(str)
             self._uses_df = self._uses_df[self._uses_df.grouping.isin(self.groupings)]

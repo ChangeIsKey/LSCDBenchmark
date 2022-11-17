@@ -52,11 +52,7 @@ class Dataset(BaseModel):
     _clusters: DataFrame = PrivateAttr(default=None)
     _targets: list[Lemma] = PrivateAttr(default=None)
     _path: Path = PrivateAttr(default=None)
-    _csv_params: CsvParams = PrivateAttr(
-        default_factory=lambda: CsvParams(
-            delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
-        )
-    )
+    _csv_params: CsvParams = PrivateAttr(default_factory=CsvParams)
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -121,8 +117,12 @@ class Dataset(BaseModel):
                     target_path.parent.mkdir(parents=True, exist_ok=True)
                     with target_path.open(mode="wb") as file_obj:
                         shutil.copyfileobj(z.open(filename, mode="r"), file_obj)
-
         zipped.unlink()
+
+        uses = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "data").iterdir() if file.name == "uses.csv"])  # type: ignore
+        judgments = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "data").iterdir() if file.name == "judgments.csv"])  # type: ignore
+        uses.to_parquet(self.path / "data" / "uses.parquet")
+        judgments.to_parquet(self.path / "judgments" / "uses.parquet")
 
     @property
     def stats_groupings_df(self) -> DataFrame:

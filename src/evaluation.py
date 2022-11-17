@@ -92,6 +92,7 @@ class WsiEvaluation(Evaluation):
 
 class WicEvaluation(Evaluation):
     binarize: bool
+
     def preprocess_results(self, results: DataFrame) -> DataFrame:
         results["label"] = results["label"].replace(to_replace=0, value=np.nan)
         return results
@@ -100,10 +101,9 @@ class WicEvaluation(Evaluation):
         self, 
         dataset_name: str, 
         dataset_version: str, 
-        lemma: str, 
     ) -> dict[tuple[UseID, UseID], float]:
-        path = utils.dataset_path(dataset_name, dataset_version) / "data" / lemma / "judgments.csv"
-        judgments_df: DataFrame = pd.read_csv(path, **self.__csv_params__.dict()) # type: ignore
+        path = utils.dataset_path(dataset_name, dataset_version) / "data" / "judgments.parquet"
+        judgments_df: DataFrame = pd.read_parquet(path, **self.__csv_params__.dict()) # type: ignore
         judgments_df["judgment"] = judgments_df["judgment"].astype(float)
         judgments_df = judgments_df[~judgments_df["annotator"].isin(self.exclude_annotators)]
         judgments_df = judgments_df.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
