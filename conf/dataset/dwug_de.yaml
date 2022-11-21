@@ -1,14 +1,18 @@
+# the Dataset class also requires a `standard_split` argument
+# however, Hydra cannot interpolate values in the defaults list with values 
+# in the final config (i.e., outside the defaults list)
+# therefore this field is added at runtime in utils/runner.py
+
 defaults:
-  - _self_
   - preprocessing: toklem
   - spelling_normalization: german
-  - standard_split: ${dataset}_${version}
 
 name: dwug_de
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
 version: "2.1.0"
+standard_split: ${.name}_${.version}
 pairing: [COMPARE]
 sampling: [annotated]
 split:

@@ -1,10 +1,9 @@
-from itertools import product
 from typing import Any, TypeAlias
 from hydra import utils
-from numpy import isin
-import numpy as np
+from pathlib import Path
 import os
-from omegaconf import DictConfig
+import yaml
+from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 from src.dataset import Dataset
 from src.evaluation import Evaluation
@@ -17,8 +16,36 @@ Model: TypeAlias = (
     WICModel | ThresholdedWicModel | GradedLSCDModel | BinaryThresholdModel | WSIModel
 )
 
+def populate_config(config: DictConfig) -> DictConfig:
+    # Hydra cannot interpolate values from the final config in the defaults list
+    # So we need a workaround
+    with open(
+        file=f"../../../splits/{config.dataset.name}_{config.dataset.version}.yaml",
+        mode="r",
+        encoding="utf8"
+    ) as f:
+        config.dataset.standard_split = yaml.safe_load(f)
+    return config
+    
+def overwrite_config_file(config: DictConfig) -> None:
+    """Hydra writes a config file to its working directory at .hydra/config.yaml
+    However, this file only contains the values at launch time 
+    (i.e., it does not contain fields added at runtime such as dataset.standard_split).
+    It also doesn't write the interpolated config, which makes inspection of the resulting config
+    more complicated
+
+    Args:
+        config (DictConfig): _description_
+    """
+    with open(file=f"{Path(os.getcwd()) / '.hydra' / 'config.yaml'}", mode="w", encoding="utf8") as f:
+        config_copy = config.copy()
+        OmegaConf.resolve(config_copy)
+        f.write(OmegaConf.to_yaml(config_copy))
 
 def instantiate(config: DictConfig) -> tuple[Dataset, Model, Evaluation]:
+    config = populate_config(config)
+    overwrite_config_file(config)
+
     dataset: Dataset = utils.instantiate(config.dataset, _convert_="all")
     model: Model = utils.instantiate(config.task.model, _convert_="all")
     evaluation: Evaluation = utils.instantiate(config.task.evaluation, _convert_="all")
