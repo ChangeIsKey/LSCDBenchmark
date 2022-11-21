@@ -139,10 +139,12 @@ class Dataset(BaseModel):
                         shutil.copyfileobj(z.open(filename, mode="r"), file_obj)
         zipped.unlink()
 
-        uses = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "data").iterdir() if file.name == "uses.csv"])  # type: ignore
-        judgments = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "data").iterdir() if file.name == "judgments.csv"])  # type: ignore
+        uses: DataFrame = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "data").glob("*/uses.csv")])  # type: ignore
+        judgments: DataFrame = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "data").glob("*/judgments.csv")])  # type: ignore
+        clusters: DataFrame = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "clusters" / "opt").glob("*.csv")])  # type: ignore
         uses.to_parquet(self.path / "data" / "uses.parquet")
-        judgments.to_parquet(self.path / "judgments" / "uses.parquet")
+        judgments.to_parquet(self.path / "data" / "judgments.parquet")
+        clusters.to_parquet(self.path / "clusters" / "opt" / "clusters.csv")
 
     @property
     def stats_groupings_df(self) -> DataFrame:
@@ -284,7 +286,7 @@ class Dataset(BaseModel):
                     to_load = self.test_on
                 else:
                     to_load = sorted(
-                        [folder.name for folder in (self.path / "data").iterdir()]
+                        [folder.name for folder in (self.path / "data").iterdir() if folder.is_dir()]
                     )
                     if utils.is_int(self.test_on):
                         to_load = to_load[: self.test_on]

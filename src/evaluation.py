@@ -27,6 +27,11 @@ K = TypeVar("K", str, tuple[str, str])
 V = TypeVar("V", int, float)
 
 
+class DatasetMetadata(TypedDict):
+    name: str
+    version: str
+
+
 class Evaluation(BaseModel, ABC):
     task: EvaluationTask | None
     metric: Callable[[list[float | int], list[float | int]], Any] | None
@@ -34,14 +39,11 @@ class Evaluation(BaseModel, ABC):
     exclude_annotators: list[str]
     __csv_params__: CsvParams = PrivateAttr(default_factory=CsvParams)
 
-    def preprocess_results(self, results: DataFrame) -> DataFrame:
-        return results
 
     def __call__(self, predictions: dict[K, V], labels: dict[K, V], write: bool) -> int | float:
         results = self.combine_inputs(labels=labels, predictions=predictions)
         if write:
             results.to_csv("predictions.csv", sep="\t")
-        results = self.preprocess_results(results)
         results = results.dropna(how="any")
 
         score = np.nan
@@ -80,37 +82,63 @@ class Evaluation(BaseModel, ABC):
         return merged
     
     @abstractmethod
-    def get_labels(self, dataset_name: str, dataset_version: str) -> dict[Any, float]:
+    def get_labels(self, dataset: DatasetMetadata) -> dict[Any, float]:
         pass
-        
+
+
+class LSCDEvaluation(Evaluation):
+    def get_stats_groupings(self, dataset: DatasetMetadata) -> DataFrame:
+        stats_groupings = "stats_groupings.csv"
+        dataset_path = utils.dataset_path(dataset["name"], dataset["version"])
+        path = dataset_path / "stats" / "semeval" / stats_groupings
+        if not path.exists():
+            path = dataset_path / "stats" / "opt" / stats_groupings
+        if not path.exists():
+            path = dataset_path / "stats" / stats_groupings
+        return pd.read_csv(path, **self.__csv_params__.dict()) # type: ignore
+    
+
+class LSCDGradedEvaluation(LSCDEvaluation):
+    def get_labels(self, dataset: DatasetMetadata) -> dict[str, float]:
+        stats_groupings = self.get_stats_groupings(dataset)
+        return dict(zip(stats_groupings.lemma, stats_groupings.change_graded))
+
+
+class LSCDBinaryEvaluation(LSCDEvaluation):
+    def get_labels(self, dataset: DatasetMetadata) -> dict[str, float]:
+        stats_groupings = self.get_stats_groupings(dataset)
+        return dict(zip(stats_groupings.lemma, stats_groupings.change_binary))
+
+
+class LSCDCompareEvaluation(LSCDEvaluation):
+    def get_labels(self, dataset: DatasetMetadata) -> dict[str, float]:
+        stats_groupings = self.get_stats_groupings(dataset)
+        return dict(zip(stats_groupings.lemma, stats_groupings.COMPARE))
+
 
 class WsiEvaluation(Evaluation):
-    def preprocess_results(self, results: DataFrame) -> DataFrame:
-        results["label"] = results["label"].replace(-1, np.nan)
-        return results
+    def get_labels(self, dataset: DatasetMetadata) -> dict[UseID, float]:
+        path = utils.dataset_path(dataset["name"], dataset["version"]) / "clusters" / "opt" / "clusters.parquet"
+        clusters = (
+            pd.read_parquet(path, engine="pyarrow")
+            .replace(to_replace=-1, value=np.nan)
+        )
+        return dict(zip(clusters.identifier, clusters.cluster))
 
 
 class WicEvaluation(Evaluation):
-    binarize: bool
 
-    def preprocess_results(self, results: DataFrame) -> DataFrame:
-        results["label"] = results["label"].replace(to_replace=0, value=np.nan)
-        return results
+    def get_labels(self, dataset: DatasetMetadata) -> dict[tuple[UseID, UseID], float]:
+        judgments_path = utils.dataset_path(dataset["name"], dataset["version"]) / "data" / "judgments.parquet"
+        judgments = pd.read_parquet(judgments_path, engine="pyarrow")
+        judgments["judgment"] = judgments["judgment"].astype(float)
+        judgments = judgments[~judgments["annotator"].isin(self.exclude_annotators)]
+        judgments = judgments.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
+        judgments.replace(to_replace=0, value=np.nan, inplace=True)
+        annotated_pairs = zip(judgments.identifier1, judgments.identifier2)
+        return dict(zip(list(annotated_pairs), judgments.judgment))
 
-    def get_labels(
-        self, 
-        dataset_name: str, 
-        dataset_version: str, 
-    ) -> dict[tuple[UseID, UseID], float]:
-        path = utils.dataset_path(dataset_name, dataset_version) / "data" / "judgments.parquet"
-        judgments_df: DataFrame = pd.read_parquet(path, **self.__csv_params__.dict()) # type: ignore
-        judgments_df["judgment"] = judgments_df["judgment"].astype(float)
-        judgments_df = judgments_df[~judgments_df["annotator"].isin(self.exclude_annotators)]
-        judgments_df = judgments_df.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
-
-        if self.binarize:
-            judgments_df = judgments_df[judgments_df["judgment"].isin([4.0, 1.0])]
-        
-        judgments_df.sort_values(by=["identifier1", "identifier2"], inplace=True)
-        annotated_pairs = zip(judgments_df.identifier1, judgments_df.identifier2)
-        return dict(zip(list(annotated_pairs), judgments_df.judgment))
+class BinaryWicEvaluation(WicEvaluation):
+    def get_labels(self, dataset: DatasetMetadata) -> dict[tuple[UseID, UseID], float]:
+        labels = super().get_labels(dataset)
+        return {use_pair: judgment for use_pair, judgment in labels.items() if judgment in [4.0, 1.0]}

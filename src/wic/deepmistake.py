@@ -31,6 +31,7 @@ class Model(BaseModel):
 class Cache(BaseModel):
     metadata: dict[str, Any]
     _similarities: DataFrame = PrivateAttr(default=None)
+    _similarities_filtered: DataFrame = PrivateAttr(default=None)
     __metadata__: DataFrame = PrivateAttr(default=None)
 
     def __init__(self, **data: Any) -> None:
@@ -43,7 +44,7 @@ class Cache(BaseModel):
             )
             self._similarities.drop_duplicates(inplace=True)
         except FileNotFoundError:
-            self._similarities = pd.json_normalize(self.metadata).assign(
+            self._similarities = self.__metadata__.assign(
                 use_0=None, use_1=None, similarity=None, lemma=None
             )
             self._similarities = self._similarities.iloc[0:0]  # remove first dummy row
@@ -53,7 +54,10 @@ class Cache(BaseModel):
             )
             self._similarities["use_0"] = self._similarities["use_0"].astype(str)
             self._similarities["use_1"] = self._similarities["use_1"].astype(str)
-            self._similarities["lemma"] = self._similarities["lemma"].astype(str)
+            self._similarities["lemma"] = self._similarities["lemma"].astype("category")
+        
+        self._similarities_filtered = self._similarities.merge(self.__metadata__)
+        
 
     def retrieve(
         self, use_pairs: list[tuple[Use, Use]]
@@ -65,10 +69,14 @@ class Cache(BaseModel):
                 "lemma": [up[1].target for up in use_pairs],
             }
         )
-        metadata = pd.concat([self.__metadata__ for _ in range(len(use_pairs))], ignore_index=True)
-        lookup_table = pd.concat([metadata, lookup_table], axis=1)
-        merged = lookup_table.merge(self._similarities, how="inner")
+        merged = lookup_table.merge(self._similarities_filtered, how="inner")
         return dict(zip(list(zip(merged["use_0"], merged["use_1"])), merged["similarity"]))
+
+    def persist(self) -> None:
+        self._similarities = pd.concat([self._similarities, self._similarities_filtered], ignore_index=True)
+        self._similarities.drop_duplicates(inplace=True)
+        self._similarities.to_csv(self.path, index=False)
+        
 
     @property
     def path(self) -> Path:
@@ -84,7 +92,7 @@ class Cache(BaseModel):
             similarity=similarity,
             lemma=use_pair[0].target,
         )
-        self._similarities = pd.concat([self._similarities, row], ignore_index=True)
+        self._similarities_filtered = pd.concat([self._similarities_filtered, row], ignore_index=True)
 
 
 class Score(TypedDict):
@@ -139,7 +147,7 @@ class DeepMistake(WICModel):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.cache is not None:
-            self.cache._similarities.to_csv(self.cache.path, index=False)
+            self.cache.persist()
 
     def clone_repo(self) -> None:
         Repo.clone_from(url="https://github.com/ameta13/mcl-wic", to_path=self.repo_dir)
@@ -299,6 +307,6 @@ class DeepMistake(WICModel):
             results = [scores[(up[0].identifier, up[1].identifier)] for up in use_pairs] 
             if any([score is None for score in results]):
                 if self.cache is not None:
-                    self.cache._similarities.to_csv(self.cache.path, index=False)
+                    self.cache.persist()
                 return self.predict(use_pairs)
             return results

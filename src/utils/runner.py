@@ -30,11 +30,11 @@ def run(
 ) -> float:
 
     cwd = os.getcwd()
-    labels = evaluation.get_labels(dataset.name, dataset.version)
+    labels = evaluation.get_labels(dataset={"name": dataset.name, "version": dataset.version})
     predictions: Any = {}
 
     lemma_pbar = tqdm(dataset.lemmas, desc="Processing lemmas")
-    if isinstance(model, ThresholdedWicModel):
+    if isinstance(model, WICModel):
         assert dataset.sampling is not None
         assert dataset.pairing is not None
         for lemma in lemma_pbar:
