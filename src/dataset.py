@@ -4,7 +4,7 @@ import os
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 import pandas as pd
 import pandera as pa
@@ -34,12 +34,32 @@ class UnknownDataset(Exception):
     pass
 
 
+class SplitSize(TypedDict):
+    dev: float
+    test: float
+
+
+class DevTestSplit(TypedDict):
+    how: Literal["standard", "random"]
+    sizes: SplitSize
+    use: Literal["dev", "test"]
+
+
+class NoSplit(TypedDict):
+    how: Literal["no_split"]
+
+
+class Split(BaseModel):
+    how: DevTestSplit | NoSplit
+
+
 class Dataset(BaseModel):
     name: str
     groupings: tuple[str, str]
     cleaning: Cleaning | None
     preprocessing: ContextPreprocessor
     version: str
+    split: Split
     test_on: list[str] | int | None
     pairing: list[Literal["COMPARE", "EARLIER", "LATER"]] | None
     sampling: list[Literal["all", "sampled", "annotated"]] | None
