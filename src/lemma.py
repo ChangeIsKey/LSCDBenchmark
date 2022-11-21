@@ -35,10 +35,10 @@ class Lemma(BaseModel):
     path: Path
     preprocessing: ContextPreprocessor
 
-    _uses_df: DataFrame | None = PrivateAttr(default=None)
-    _judgments_df: DataFrame | None = PrivateAttr(default=None)
-    _augmented_judgments_df: DataFrame | None = PrivateAttr(default=None)
-    _clusters_df: DataFrame | None = PrivateAttr(default=None)
+    _uses_df: DataFrame = PrivateAttr(default=None)
+    _annotated_pairs_df: DataFrame = PrivateAttr(default=None)
+    _augmented_annotated_pairs: DataFrame = PrivateAttr(default=None)
+    _clusters_df: DataFrame = PrivateAttr(default=None)
     _csv_params: CsvParams = PrivateAttr(default_factory=CsvParams)
 
     @property
@@ -46,7 +46,7 @@ class Lemma(BaseModel):
         if self._uses_df is None:
             # load uses
             path = self.path / "data" / self.name / "uses.csv"
-            self._uses_df: DataFrame = pd.read_csv(path, **self._csv_params.dict()) # type: ignore
+            self._uses_df = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
             # filter by grouping
             self._uses_df.grouping = self._uses_df.grouping.astype(str)
             self._uses_df = self._uses_df[self._uses_df.grouping.isin(self.groupings)]
@@ -58,11 +58,11 @@ class Lemma(BaseModel):
                 ],
                 axis=1,
             )
-            self._uses_df = self.__uses_schema.validate(self._uses_df)
+            self._uses_df = self.uses_schema.validate(self._uses_df)
         return self._uses_df
 
     @property
-    def __uses_schema(self) -> DataFrameSchema:
+    def uses_schema(self) -> DataFrameSchema:
         return DataFrameSchema(
             {
                 "identifier": Column(dtype=str, unique=True),
@@ -74,55 +74,43 @@ class Lemma(BaseModel):
         )
 
     @property
-    def judgments_df(self) -> DataFrame:
-        if self._judgments_df is None:
+    def annotated_pairs_df(self) -> DataFrame:
+        if self._annotated_pairs_df is None:
             path = self.path / "data" / self.name / "judgments.csv"
-            self._judgments_df = pd.read_csv(path, **self._csv_params.dict())
-            self._judgments_df["judgment"] = self._judgments_df["judgment"].astype(float)
-            self.judgments_schema.validate(self._judgments_df)
-        return self._judgments_df
+            self._annotated_pairs_df = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE, usecols=["identifier1", "identifier2"])
+            self.annotated_pairs_schema.validate(self._annotated_pairs_df)
+        return self._annotated_pairs_df
 
     @property
-    def augmented_judgments_df(self) -> DataFrame:
-        if self._augmented_judgments_df is None:
-            self._augmented_judgments_df = pd.merge(
-                self.judgments_df,
+    def augmented_annotated_pairs_df(self) -> DataFrame:
+        if self._augmented_annotated_pairs is None:
+            self._augmented_annotated_pairs = pd.merge(
+                self.annotated_pairs_df,
                 self.uses_df,
                 left_on="identifier1",
                 right_on="identifier",
                 how="left",
             )
-            self._augmented_judgments_df = pd.merge(
-                self._augmented_judgments_df,
+            self._augmented_annotated_pairs = pd.merge(
+                self._augmented_annotated_pairs,
                 self.uses_df,
                 left_on="identifier2",
                 right_on="identifier",
                 how="left",
             )
-        return self._augmented_judgments_df
+            drop_cols = [col for col in self._augmented_annotated_pairs.columns 
+                         if col not in ["identifier1", "identifier2", "grouping_x", "grouping_y"]]
+            self._augmented_annotated_pairs.drop(columns=drop_cols)
+
+        return self._augmented_annotated_pairs
 
     @property
-    def judgments_schema(self) -> DataFrameSchema:
+    def annotated_pairs_schema(self) -> DataFrameSchema:
         return DataFrameSchema(
             {
                 "identifier1": Column(dtype=str),
                 "identifier2": Column(dtype=str),
-                "judgment": Column(dtype=float, nullable=True),
             }
-        )
-
-    @property
-    def clusters_df(self) -> DataFrame:
-        if self._clusters_df is None:
-            path = self.path / "clusters" / "opt" / f"{self.name}.csv"
-            self._clusters_df = pd.read_csv(path, **self._csv_params)
-            self._clusters_df = self.clusters_schema.validate(self._clusters_df)
-        return self._clusters_df
-
-    @property
-    def clusters_schema(self) -> DataFrameSchema:
-        return DataFrameSchema(
-            {"identifier": Column(dtype=str, unique=True), "cluster": Column(int)}
         )
 
     def useid_to_grouping(self) -> Dict[UseID, str]:
@@ -210,12 +198,12 @@ class Lemma(BaseModel):
             case "LATER":
                 group_0, group_1 = self.groupings[1], self.groupings[1]
 
-        judgments = self.augmented_judgments_df[
-            (self.augmented_judgments_df.grouping_x == group_0)
-            & (self.augmented_judgments_df.grouping_y == group_1)
+        filtered = self.augmented_annotated_pairs_df[
+            (self.augmented_annotated_pairs_df.grouping_x == group_0)
+            & (self.augmented_annotated_pairs_df.grouping_y == group_1)
         ]
 
         return (
-            judgments.identifier1.tolist(),
-            judgments.identifier2.tolist(),
+            filtered.identifier1.tolist(),
+            filtered.identifier2.tolist(),
         )

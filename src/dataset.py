@@ -5,6 +5,7 @@ import shutil
 import zipfile
 from pathlib import Path
 from typing import Any, Literal, TypedDict
+import numpy as np
 
 import pandas as pd
 import pandera as pa
@@ -19,6 +20,7 @@ from pandera import (
 )
 from pydantic import BaseModel, PrivateAttr, HttpUrl
 from tqdm import tqdm
+from src.use import UseID
 
 import src.utils.utils as utils
 from src.cleaning import Cleaning
@@ -67,6 +69,7 @@ class Dataset(BaseModel):
     version: str
     split: Split | RandomSplit | NoSplit
     standard_split: StandardSplit
+    exclude_annotators: list[str]
     test_on: set[str] | int | None
     pairing: list[Literal["COMPARE", "EARLIER", "LATER"]] | None
     sampling: list[Literal["all", "sampled", "annotated"]] | None
@@ -146,13 +149,6 @@ class Dataset(BaseModel):
                         shutil.copyfileobj(z.open(filename, mode="r"), file_obj)
         zipped.unlink()
 
-        uses: DataFrame = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "data").glob("*/uses.csv")])  # type: ignore
-        judgments: DataFrame = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "data").glob("*/judgments.csv")])  # type: ignore
-        clusters: DataFrame = pd.concat([pd.read_csv(file, **self._csv_params.dict()) for file in (self.path / "clusters" / "opt").glob("*.csv")])  # type: ignore
-        uses.to_parquet(self.path / "data" / "uses.parquet")
-        judgments.to_parquet(self.path / "data" / "judgments.parquet")
-        clusters.to_parquet(self.path / "clusters" / "opt" / "clusters.csv")
-
     @property
     def stats_groupings_df(self) -> DataFrame:
         if self._stats_groupings is None:
@@ -162,7 +158,7 @@ class Dataset(BaseModel):
                 path = self.path / "stats" / "opt" / stats_groupings
             if not path.exists():
                 path = self.path / "stats" / stats_groupings
-            self._stats_groupings = pd.read_csv(path, **self._csv_params)
+            self._stats_groupings = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
         return self._stats_groupings
 
     @stats_groupings_df.setter
@@ -201,7 +197,6 @@ class Dataset(BaseModel):
         stats_groupings = self.get_stats_groupings_schema("change_graded").validate(
             self.stats_groupings_df
         )
-        stats_groupings.sort_values(by="lemma", inplace=True)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_graded))
 
     @property
@@ -209,7 +204,6 @@ class Dataset(BaseModel):
         stats_groupings = self.get_stats_groupings_schema("COMPARE").validate(
             self.stats_groupings_df
         )
-        stats_groupings.sort_values(by="lemma", inplace=True)
         return dict(zip(stats_groupings.lemma, stats_groupings.COMPARE))
 
     @property
@@ -217,25 +211,31 @@ class Dataset(BaseModel):
         stats_groupings = self.get_stats_groupings_schema("change_binary").validate(
             self.stats_groupings_df
         )
-        stats_groupings.sort_values(by="lemma", inplace=True)
         return dict(zip(stats_groupings.lemma, stats_groupings.change_binary))
 
     @property
-    def semantic_proximity_labels(self) -> dict[tuple[str, str], float]:
-        self.judgments_df.sort_values(by=["identifier1", "identifier2"], inplace=True)
-        annotated_pairs = list(
-            zip(self.judgments_df.identifier1, self.judgments_df.identifier2)
-        )
-        return dict(zip(annotated_pairs, self.judgments_df.judgment))
+    def wic_labels(self) -> dict[tuple[UseID, UseID], float]:
+        judgments = self.judgments_df[~self.judgments_df["annotator"].isin(self.exclude_annotators)].copy(deep=True)
+        judgments.replace(to_replace=0, value=np.nan, inplace=True)
+        # pandas.core.groupby.GroupBy.median ignores missing values -> no need for nanmedian
+        judgments = judgments.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
+        annotated_pairs = zip(judgments.identifier1, judgments.identifier2)
+        return dict(zip(list(annotated_pairs), judgments.judgment))
+
+    @property
+    def binary_wic_labels(self) -> dict[tuple[UseID, UseID], float]:
+        labels = self.wic_labels
+        return {use_pair: judgment for use_pair, judgment in labels.items() if judgment in [4.0, 1.0]}
+        
 
     @property
     def wsi_labels(self) -> dict[str, int]:
-        self.clusters_df.sort_values(by="identifier", inplace=True)
-        return dict(zip(self.clusters_df.identifier, self.clusters_df.cluster))
+        clusters = self.clusters_df.replace(-1, np.nan)
+        return dict(zip(clusters.identifier, clusters.cluster))
 
     def get_labels(
         self, evaluation_task: EvaluationTask | None
-    ) -> dict[Any, float] | dict[Any, int]:
+    ) -> dict[Any, Any]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
         # this value should be a list returned by any of the models
@@ -248,8 +248,10 @@ class Dataset(BaseModel):
                 return self.binary_change_labels
             case "COMPARE":
                 return self.compare_labels
-            case "semantic_proximity":
-                return self.semantic_proximity_labels
+            case "wic":
+                return self.wic_labels
+            case "binary_wic":
+                return self.binary_wic_labels
             case "wsi":
                 return self.wsi_labels
             case _:
@@ -259,7 +261,7 @@ class Dataset(BaseModel):
     def stats_agreement_df(self) -> DataFrame:
         if self._agreements is None:
             path = self.path / "stats" / "stats_agreement.csv"
-            self._agreements = pd.read_csv(path, **self._csv_params)
+            self._agreements = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
         return self._agreements
 
     @property
@@ -271,14 +273,43 @@ class Dataset(BaseModel):
     @property
     def judgments_df(self):
         if self._judgments is None:
-            self._judgments = pd.concat([target.judgments_df for target in self.lemmas])
+            tables = []
+            for lemma in self.lemmas:
+                path = self.path / "data" / lemma.name / "judgments.csv"
+                judgments = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+                judgments = self.judgments_schema.validate(judgments)
+                tables.append(judgments)
+            self._judgments = pd.concat(tables)
         return self._judgments
+
+    @property
+    def judgments_schema(self) -> DataFrameSchema:
+        return DataFrameSchema(
+            {
+                "identifier1": Column(dtype=str),
+                "identifier2": Column(dtype=str),
+                "judgment": Column(dtype=float),
+                "annotator": Column(dtype=str)
+            }
+        )
 
     @property
     def clusters_df(self):
         if self._clusters is None:
-            self._clusters = pd.concat([target.clusters_df for target in self.lemmas])
+            tables = []
+            for lemma in self.lemmas:
+                path = self.path / "clusters" / "opt" / f"{lemma.name}.csv"
+                clusters = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+                clusters = self.clusters_schema.validate(clusters)
+                tables.append(clusters)
+            self._clusters = pd.concat(tables)
         return self._clusters
+
+    @property
+    def clusters_schema(self) -> DataFrameSchema:
+        return DataFrameSchema(
+            {"identifier": Column(dtype=str, unique=True), "cluster": Column(int)}
+        )
 
     def dev_test_split(self) -> set[str]:
         all_lemmas = sorted(

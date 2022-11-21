@@ -1,11 +1,10 @@
 defaults:
   - plotter: histogram
 
-_target_: src.evaluation.WicEvaluation
-task: semantic_proximity
+_target_: src.evaluation.Evaluation
+task: wic
 metric: 
   _target_: src.wrappers.spearmanr
   _partial_: true
   nan_policy: omit
-binarize: false
 exclude_annotators: []

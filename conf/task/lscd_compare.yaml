@@ -1,3 +1,2 @@
 defaults: 
   - lscd_compare@model: ???
-  - evaluation: compare

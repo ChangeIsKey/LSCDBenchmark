@@ -55,7 +55,7 @@ def run(
 ) -> float:
 
     cwd = os.getcwd()
-    labels = evaluation.get_labels(dataset={"name": dataset.name, "version": dataset.version})
+    labels = dataset.get_labels(evaluation_task=evaluation.task)
     predictions: Any = {}
 
     lemmas = dataset.filter_lemmas(dataset.lemmas)

@@ -1,3 +1,2 @@
 defaults: 
   - lscd_graded@model: ???
-  - evaluation: change_graded

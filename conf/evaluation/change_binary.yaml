@@ -1,0 +1,8 @@
+defaults:
+  - plotter: histogram
+
+_target_: src.evaluation.Evaluation
+task: change_binary
+metric: 
+  _target_: sklearn.metrics.f1_score
+  _partial_: true

@@ -1,0 +1,10 @@
+defaults:
+  - plotter: histogram
+
+_target_: src.evaluation.Evaluation
+task: binary_wic
+metric: 
+  _target_: src.wrappers.spearmanr
+  _partial_: true
+  nan_policy: omit
+exclude_annotators: []
