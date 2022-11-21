@@ -133,8 +133,9 @@ class WicEvaluation(Evaluation):
         judgments = pd.read_parquet(judgments_path, engine="pyarrow")
         judgments["judgment"] = judgments["judgment"].astype(float)
         judgments = judgments[~judgments["annotator"].isin(self.exclude_annotators)]
-        judgments = judgments.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
         judgments.replace(to_replace=0, value=np.nan, inplace=True)
+        # pandas.core.groupby.GroupBy.median ignores missing values -> no need for nanmedian
+        judgments = judgments.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
         annotated_pairs = zip(judgments.identifier1, judgments.identifier2)
         return dict(zip(list(annotated_pairs), judgments.judgment))
 
