@@ -1,7 +1,8 @@
 defaults:
   - plotter: histogram
 
-_target_: src.evaluation.Evaluation
+_target_: src.evaluation.LSCDGradedEvaluation
+exclude_annotators: []
 task: change_graded
 metric: 
   _target_: src.wrappers.spearmanr

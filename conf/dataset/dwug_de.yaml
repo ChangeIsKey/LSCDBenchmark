@@ -1,6 +1,8 @@
 defaults:
+  - _self_
   - preprocessing: toklem
   - spelling_normalization: german
+  - standard_split: ${dataset}_${version}
 
 name: dwug_de
 cleaning: null
@@ -9,6 +11,9 @@ groupings: ["1", "2"]
 version: "2.1.0"
 pairing: [COMPARE]
 sampling: [annotated]
+split:
+  how: standard
+  use: ???
 
 urls:
   "2.1.0": "https://zenodo.org/record/7295410/files/dwug_de.zip"

@@ -1,5 +1,7 @@
 defaults:
+  - _self_
   - preprocessing: toklem
+  - standard_split: ${dataset}_${version}
 
 name: dwug_es
 cleaning: null

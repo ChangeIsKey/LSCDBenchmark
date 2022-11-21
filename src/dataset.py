@@ -34,23 +34,29 @@ class UnknownDataset(Exception):
     pass
 
 
-class SplitSize(TypedDict):
+class SplitSize(BaseModel):
     dev: float
     test: float
 
 
-class DevTestSplit(TypedDict):
-    how: Literal["standard", "random"]
-    sizes: SplitSize
-    use: Literal["dev", "test"]
-
-
-class NoSplit(TypedDict):
-    how: Literal["no_split"]
+class StandardSplit(BaseModel):
+    dev: list[str]
+    test: list[str]
 
 
 class Split(BaseModel):
-    how: DevTestSplit | NoSplit
+    how: Literal["standard"]
+    use: Literal["dev", "test"]
+
+
+class RandomSplit(Split):
+    how: Literal["random"]  # type: ignore
+    use: Literal["dev", "test"]
+    sizes: SplitSize
+
+
+class NoSplit(BaseModel):
+    how: Literal["no_split"]
 
 
 class Dataset(BaseModel):
@@ -59,8 +65,9 @@ class Dataset(BaseModel):
     cleaning: Cleaning | None
     preprocessing: ContextPreprocessor
     version: str
-    split: Split
-    test_on: list[str] | int | None
+    split: Split | RandomSplit | NoSplit
+    standard_split: StandardSplit
+    test_on: set[str] | int | None
     pairing: list[Literal["COMPARE", "EARLIER", "LATER"]] | None
     sampling: list[Literal["all", "sampled", "annotated"]] | None
     urls: dict[str, HttpUrl]
@@ -70,7 +77,7 @@ class Dataset(BaseModel):
     _judgments: DataFrame = PrivateAttr(default=None)
     _agreements: DataFrame = PrivateAttr(default=None)
     _clusters: DataFrame = PrivateAttr(default=None)
-    _targets: list[Lemma] = PrivateAttr(default=None)
+    _lemmas: list[Lemma] = PrivateAttr(default=None)
     _path: Path = PrivateAttr(default=None)
     _csv_params: CsvParams = PrivateAttr(default_factory=CsvParams)
 
@@ -273,25 +280,64 @@ class Dataset(BaseModel):
             self._clusters = pd.concat([target.clusters_df for target in self.lemmas])
         return self._clusters
 
-    @property
-    def lemmas(self) -> list[Lemma]:
-        if self._targets is None:
+    def dev_test_split(self) -> set[str]:
+        all_lemmas = sorted(
+            [
+                folder.name
+                for folder in (self.path / "data").iterdir()
+                if folder.is_dir()
+            ]
+        )
+        match self.split.how:
+            case "no_split":
+                assert isinstance(self.split, NoSplit)
+                return set(all_lemmas)
+            case "random":
+                assert isinstance(self.split, RandomSplit)
+                dev = (
+                    Series(all_lemmas)
+                    .sample(frac=self.split.sizes.dev, replace=False)
+                    .tolist()
+                )
+                match self.split.use:
+                    case "dev":
+                        return set(dev)
+                    case "test":
+                        return set(all_lemmas).difference(dev)
+            case "standard":
+                assert isinstance(self.split, Split)
+                match self.split.use:
+                    case "dev":
+                        return set(self.standard_split.dev)
+                    case "test":
+                        return set(self.standard_split.test)
+            case _:
+                raise ValueError
+
+    def filter_lemmas(self, lemmas: list[Lemma]) -> list[Lemma]:
+        if utils.is_str_set(self.test_on):
+            keep = self.test_on
+        elif utils.is_int(self.test_on):
+            keep = set([lemma.name for lemma in lemmas[: self.test_on]])
+        else:
+            keep = self.dev_test_split()
             if self.cleaning is not None and len(self.cleaning.stats) > 0:
                 # remove "data=full" row
                 agreements = self.stats_agreement_df.iloc[1:, :].copy()
                 agreements = self.cleaning(agreements)
-                to_load = agreements.data.unique().tolist()
-            else:
-                if utils.is_str_list(self.test_on):
-                    to_load = self.test_on
-                else:
-                    to_load = sorted(
-                        [folder.name for folder in (self.path / "data").iterdir() if folder.is_dir()]
-                    )
-                    if utils.is_int(self.test_on):
-                        to_load = to_load[: self.test_on]
+                keep = set(keep).intersection(agreements.data.unique().tolist())
 
-            self._targets = [
+        return [lemma for lemma in lemmas if lemma.name in keep]
+
+    @property
+    def lemmas(self) -> list[Lemma]:
+        if self._lemmas is None:
+            to_load = [
+                folder.name
+                for folder in (self.path / "data").iterdir()
+                if folder.is_dir()
+            ]
+            self._lemmas = [
                 Lemma(
                     name=target,
                     groupings=self.groupings,
@@ -301,4 +347,4 @@ class Dataset(BaseModel):
                 for target in to_load
             ]
 
-        return self._targets
+        return self._lemmas

@@ -33,7 +33,8 @@ def run(
     labels = evaluation.get_labels(dataset={"name": dataset.name, "version": dataset.version})
     predictions: Any = {}
 
-    lemma_pbar = tqdm(dataset.lemmas, desc="Processing lemmas")
+    lemmas = dataset.filter_lemmas(dataset.lemmas)
+    lemma_pbar = tqdm(lemmas, desc="Processing lemmas")
     if isinstance(model, WICModel):
         assert dataset.sampling is not None
         assert dataset.pairing is not None

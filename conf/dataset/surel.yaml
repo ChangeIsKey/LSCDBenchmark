@@ -1,6 +1,8 @@
 defaults:
+  - _self_
   - preprocessing: toklem
   - spelling_normalization: german
+  - standard_split: ${dataset}_${version}
 
 name: dwug_de
 cleaning: null
@@ -15,4 +17,4 @@ _target_: src.dataset.Dataset
 urls:
   "3.0.0": "https://zenodo.org/record/5784569/files/surel.zip"
   "2.0.0": "https://zenodo.org/record/5543348/files/surel.zip"
-  "1.0.0": "https://zenodo.org/record/5543307/files/SURel.zip"
+  # "1.0.0": "https://zenodo.org/record/5543307/files/SURel.zip"
