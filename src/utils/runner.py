@@ -33,10 +33,8 @@ def overwrite_config_file(config: DictConfig) -> None:
     (i.e., it does not contain fields added at runtime such as dataset.standard_split).
     It also doesn't write the interpolated config, which makes inspection of the resulting config
     more complicated
-
-    Args:
-        config (DictConfig): _description_
     """
+
     with open(file=f"{Path(os.getcwd()) / '.hydra' / 'config.yaml'}", mode="w", encoding="utf8") as f:
         config_copy = config.copy()
         OmegaConf.resolve(config_copy)
