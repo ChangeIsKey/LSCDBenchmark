@@ -6,6 +6,7 @@ import zipfile
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 import numpy as np
+from git import Repo
 
 import pandas as pd
 import pandera as pa
@@ -60,6 +61,9 @@ class RandomSplit(Split):
 class NoSplit(BaseModel):
     how: Literal["no_split"]
 
+class Version(BaseModel):
+    url: HttpUrl
+    path: Path
 
 class Dataset(BaseModel):
     name: str
@@ -73,7 +77,7 @@ class Dataset(BaseModel):
     test_on: set[str] | int | None
     pairing: list[Literal["COMPARE", "EARLIER", "LATER"]] | None
     sampling: list[Literal["all", "sampled", "annotated"]] | None
-    urls: dict[str, HttpUrl]
+    versions: dict[str, Version]
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)
@@ -88,36 +92,47 @@ class Dataset(BaseModel):
         super().__init__(**data)
         if not self.path.exists():
             self.path.parent.parent.mkdir(parents=True, exist_ok=True)
-            self.__download()
-            self.__unzip(self.path.parent.parent)
+            self.__download(path=self.data_dir / self.versions[self.version].path.parts[0])
 
+    @property
+    def data_dir(self) -> Path:
+        root = os.getenv("DATA_DIR")
+        if root is None:
+            root = "wug"
+        return utils.path(root)
+        
     @property
     def path(self) -> Path:
         if self._path is None:
-            self._path = utils.dataset_path(self.name, self.version)
+            self._path = self.data_dir / self.versions[self.version].path
         return self._path
 
     @property
     def __zipped_filename(self) -> Path:
         return utils.path(f"{self.name}-{self.version}.zip")
 
-    def __download(self) -> None:
-        r = requests.get(self.urls[self.version], stream=True)
-        with open(file=self.__zipped_filename, mode="wb") as f:
-            pbar = tqdm(
-                desc=f"Downloading dataset '{self.name}' (version {self.version})",
-                unit="B",
-                unit_scale=True,
-                unit_divisor=1024,
-                total=int(r.headers["Content-Length"]),
-                leave=False,
-            )
-            pbar.clear()  # clear 0% info
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk:  # filter out keep-alive new chunks
-                    pbar.update(len(chunk))
-                    f.write(chunk)
-            pbar.close()
+    def __download(self, path: Path) -> None:
+        version = self.versions[self.version]
+        if "github" in version.url and version.url.endswith(".git"):
+            Repo.clone_from(version.url, to_path=path)
+        else:
+            r = requests.get(self.versions[self.version].url, stream=True)
+            with open(file=self.__zipped_filename, mode="wb") as f:
+                pbar = tqdm(
+                    desc=f"Downloading dataset '{self.name}' (version {self.version})",
+                    unit="B",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    total=int(r.headers["Content-Length"]),
+                    leave=False,
+                )
+                pbar.clear()  # clear 0% info
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk:  # filter out keep-alive new chunks
+                        pbar.update(len(chunk))
+                        f.write(chunk)
+                pbar.close()
+            self.__unzip(path)
 
     def __unzip(self, output_dir: Path) -> None:
         zipped = self.__zipped_filename
@@ -125,7 +140,7 @@ class Dataset(BaseModel):
 
         with zipfile.ZipFile(file=zipped) as z:
             namelist = z.namelist()
-            root = output_dir / namelist[0]
+            root = output_dir
             root.mkdir(parents=True, exist_ok=True)
 
             for filename in tqdm(

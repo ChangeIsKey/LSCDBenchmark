@@ -1,0 +1,34 @@
+# the Dataset class also requires a `standard_split` argument
+# however, Hydra cannot interpolate values in the defaults list with values
+# in the final config (i.e., outside the defaults list)
+# therefore this field is added at runtime in utils/runner.py
+
+defaults:
+  - preprocessing: toklem
+
+name: rushifteval
+cleaning: null
+test_on: null
+groupings: ["1", "2"]
+spelling_normalization: null
+version: ???
+standard_split: ${.name}_${.version}
+pairing: [COMPARE]
+sampling: [annotated]
+exclude_annotators: []
+split:
+  how: standard
+  use: dev
+
+versions:
+  1:
+    url: "https://github.com/akutuzov/rushifteval_public.git"
+    path: rushifteval/durel/rushifteval1
+  2:
+    url: "https://github.com/akutuzov/rushifteval_public.git"
+    path: rushifteval/durel/rushifteval2
+  3:
+    url: "https://github.com/akutuzov/rushifteval_public.git"
+    path: rushifteval/durel/rushifteval3
+
+_target_: src.dataset.Dataset

@@ -27,13 +27,6 @@ def path(path: str) -> Path:
     return Path(hydra.utils.to_absolute_path(path)).resolve()
 
 
-def dataset_path(name: str, version: str) -> Path:
-    root = os.getenv("DATA_DIR")
-    if root is None:
-        root = "wug"
-    return path(root) / name / version
-
-
 def xor(a: bool, b: bool):
     return (a and not b) or (not a and b)
 

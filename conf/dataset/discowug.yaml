@@ -16,8 +16,12 @@ version: "1.1.0"
 pairing: [COMPARE]
 sampling: [annotated]
 
-urls:
-  "1.1.0": "https://zenodo.org/record/5791125/files/discowug.zip"
-  "1.0.0": "https://zenodo.org/record/5544580/files/discowug.zip"
+versions:
+  1.1.0: 
+    url: "https://zenodo.org/record/5791125/files/discowug.zip"
+    path: discowug/1.1.0
+  1.0.0: 
+    url: "https://zenodo.org/record/5544580/files/discowug.zip"
+    path: discowug/1.0.0
 
 _target_: src.dataset.Dataset

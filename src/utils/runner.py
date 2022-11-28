@@ -46,7 +46,7 @@ def instantiate(config: DictConfig) -> tuple[Dataset, Model, Evaluation]:
 
     dataset: Dataset = utils.instantiate(config.dataset, _convert_="all")
     model: Model = utils.instantiate(config.task.model, _convert_="all")
-    evaluation: Evaluation = utils.instantiate(config.task.evaluation, _convert_="all")
+    evaluation: Evaluation = utils.instantiate(config.evaluation, _convert_="all")
     return dataset, model, evaluation
 
 
