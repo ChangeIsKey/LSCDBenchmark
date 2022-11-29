@@ -19,6 +19,7 @@ from pydantic import (
     BaseModel,
     PrivateAttr,
     validate_arguments,
+    DirectoryPath
 )
 
 from src.preprocessing import ContextPreprocessor
@@ -30,22 +31,36 @@ from src.utils.utils import ShouldNotHappen, CsvParams
 
 
 class Lemma(BaseModel):
-    name: str
+    """The Lemma class represents one lemma in a DWUG-
+    like dataset (i.e., one of the words represented as folders in the `data` directory)
+
+    :param groupings: The time periods to extract uses and use pairs from
+    :type groupings: tuple[str, str]
+    :param path: The path to the folder containing uses.csv for the desired lemma
+    :type path: pathlib.Path
+    :param preprocessing: The kind of preprocessing to apply to the context of each use of the lemma
+    """    
+
     groupings: tuple[str, str]
-    path: Path
+    path: DirectoryPath
     preprocessing: ContextPreprocessor
 
     _uses_df: DataFrame = PrivateAttr(default=None)
     _annotated_pairs_df: DataFrame = PrivateAttr(default=None)
     _augmented_annotated_pairs: DataFrame = PrivateAttr(default=None)
+    _predefined_use_pairs_df: DataFrame = PrivateAttr(default=None)
+    _augmented_predefined_use_pairs_df: DataFrame = PrivateAttr(default=None)
     _clusters_df: DataFrame = PrivateAttr(default=None)
-    _csv_params: CsvParams = PrivateAttr(default_factory=CsvParams)
+
+    @property
+    def name(self) -> str:
+        return self.path.name
 
     @property
     def uses_df(self) -> DataFrame:
         if self._uses_df is None:
             # load uses
-            path = self.path / "data" / self.name / "uses.csv"
+            path = self.path / "uses.csv"
             self._uses_df = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
             # filter by grouping
             self._uses_df.grouping = self._uses_df.grouping.astype(str)
@@ -76,7 +91,7 @@ class Lemma(BaseModel):
     @property
     def annotated_pairs_df(self) -> DataFrame:
         if self._annotated_pairs_df is None:
-            path = self.path / "data" / self.name / "judgments.csv"
+            path = self.path / "judgments.csv"
             self._annotated_pairs_df = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE, usecols=["identifier1", "identifier2"])
             self.annotated_pairs_schema.validate(self._annotated_pairs_df)
         return self._annotated_pairs_df
@@ -153,7 +168,7 @@ class Lemma(BaseModel):
     def use_pairs(
         self,
         pairing: Literal["COMPARE", "EARLIER", "LATER"],
-        sampling: Literal["all", "sampled", "annotated"],
+        sampling: Literal["all", "sampled", "annotated", "predefined"],
         n: int | None = None,
         replace: bool | None = None,
     ) -> list[tuple[Use, Use]]:
@@ -174,6 +189,9 @@ class Lemma(BaseModel):
                 ids1, ids2 = self.split_uses(p)
                 ids1 = [np.random.choice(ids1, replace=replace) for _ in range(n)]
                 ids2 = [np.random.choice(ids2, replace=replace) for _ in range(n)]
+                use_pairs = list(zip(ids1, ids2))
+            case ("predefined", p):
+                ids1, ids2 = self._split_predefined_uses(p)
                 use_pairs = list(zip(ids1, ids2))
             case _:
                 raise ShouldNotHappen
@@ -201,6 +219,53 @@ class Lemma(BaseModel):
         filtered = self.augmented_annotated_pairs_df[
             (self.augmented_annotated_pairs_df.grouping_x == group_0)
             & (self.augmented_annotated_pairs_df.grouping_y == group_1)
+        ]
+
+        return (
+            filtered.identifier1.tolist(),
+            filtered.identifier2.tolist(),
+        )
+
+    @property
+    def predefined_use_pairs_df(self) -> DataFrame:
+        if self._predefined_use_pairs_df is None:
+            self._predefined_use_pairs_df = pd.read_csv(self.path / "predefined_use_pairs.csv", encoding="utf8", delimiter="\t", quoting=csv.QUOTE_NONE)
+        return self._predefined_use_pairs_df
+    
+    @property
+    def augmented_predefined_use_pairs_df(self) -> DataFrame:
+        if self._augmented_predefined_use_pairs_df is None:
+            self._augmented_predefined_use_pairs_df = self.predefined_use_pairs_df.merge(
+                right=self.uses_df,
+                left_on="identifier1",
+                right_on="identifier",
+                how="left",
+            )
+            self._augmented_predefined_use_pairs_df = self._augmented_predefined_use_pairs_df.merge(
+                right=self.uses_df,
+                left_on="identifier2",
+                right_on="identifier",
+                how="left",
+            )
+
+            drop_cols = [col for col in self._augmented_predefined_use_pairs_df.columns 
+                        if col not in ["identifier1", "identifier2", "grouping_x", "grouping_y"]]
+            self._augmented_predefined_use_pairs_df.drop(columns=drop_cols)
+        return self._augmented_predefined_use_pairs_df
+        
+
+    def _split_predefined_uses(self, pairing: Literal["COMPARE", "EARLIER", "LATER"]) -> tuple[list[UseID], list[UseID]]:
+        match pairing:
+            case "COMPARE":
+                group_0, group_1 = self.groupings
+            case "EARLIER":
+                group_0, group_1 = self.groupings[0], self.groupings[0]
+            case "LATER":
+                group_0, group_1 = self.groupings[1], self.groupings[1]
+
+        filtered = self.augmented_predefined_use_pairs_df[
+            (self.augmented_predefined_use_pairs_df.grouping_x == group_0)
+            & (self.augmented_predefined_use_pairs_df.grouping_y == group_1)
         ]
 
         return (

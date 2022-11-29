@@ -158,7 +158,9 @@ class Dataset(BaseModel):
                 path = self.path / "stats" / "opt" / stats_groupings
             if not path.exists():
                 path = self.path / "stats" / stats_groupings
-            self._stats_groupings = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+            self._stats_groupings = pd.read_csv(
+                path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+            )
         return self._stats_groupings
 
     @stats_groupings_df.setter
@@ -215,27 +217,34 @@ class Dataset(BaseModel):
 
     @property
     def wic_labels(self) -> dict[tuple[UseID, UseID], float]:
-        judgments = self.judgments_df[~self.judgments_df["annotator"].isin(self.exclude_annotators)].copy(deep=True)
+        judgments = self.judgments_df[
+            ~self.judgments_df["annotator"].isin(self.exclude_annotators)
+        ].copy(deep=True)
         judgments.replace(to_replace=0, value=np.nan, inplace=True)
         # pandas.core.groupby.GroupBy.median ignores missing values -> no need for nanmedian
-        judgments = judgments.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
+        judgments = (
+            judgments.groupby(by=["identifier1", "identifier2"])["judgment"]
+            .median()
+            .reset_index()
+        )
         annotated_pairs = zip(judgments.identifier1, judgments.identifier2)
         return dict(zip(list(annotated_pairs), judgments.judgment))
 
     @property
     def binary_wic_labels(self) -> dict[tuple[UseID, UseID], float]:
         labels = self.wic_labels
-        return {use_pair: judgment for use_pair, judgment in labels.items() if judgment in [4.0, 1.0]}
-        
+        return {
+            use_pair: judgment
+            for use_pair, judgment in labels.items()
+            if judgment in [4.0, 1.0]
+        }
 
     @property
     def wsi_labels(self) -> dict[str, int]:
         clusters = self.clusters_df.replace(-1, np.nan)
         return dict(zip(clusters.identifier, clusters.cluster))
 
-    def get_labels(
-        self, evaluation_task: EvaluationTask | None
-    ) -> dict[Any, Any]:
+    def get_labels(self, evaluation_task: EvaluationTask | None) -> dict[Any, Any]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
         # this value should be a list returned by any of the models
@@ -261,7 +270,9 @@ class Dataset(BaseModel):
     def stats_agreement_df(self) -> DataFrame:
         if self._agreements is None:
             path = self.path / "stats" / "stats_agreement.csv"
-            self._agreements = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+            self._agreements = pd.read_csv(
+                path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+            )
         return self._agreements
 
     @property
@@ -276,7 +287,9 @@ class Dataset(BaseModel):
             tables = []
             for lemma in self.lemmas:
                 path = self.path / "data" / lemma.name / "judgments.csv"
-                judgments = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+                judgments = pd.read_csv(
+                    path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+                )
                 judgments = self.judgments_schema.validate(judgments)
                 tables.append(judgments)
             self._judgments = pd.concat(tables)
@@ -289,7 +302,7 @@ class Dataset(BaseModel):
                 "identifier1": Column(dtype=str),
                 "identifier2": Column(dtype=str),
                 "judgment": Column(dtype=float),
-                "annotator": Column(dtype=str)
+                "annotator": Column(dtype=str),
             }
         )
 
@@ -299,7 +312,9 @@ class Dataset(BaseModel):
             tables = []
             for lemma in self.lemmas:
                 path = self.path / "clusters" / "opt" / f"{lemma.name}.csv"
-                clusters = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+                clusters = pd.read_csv(
+                    path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+                )
                 clusters = self.clusters_schema.validate(clusters)
                 tables.append(clusters)
             self._clusters = pd.concat(tables)
@@ -363,16 +378,11 @@ class Dataset(BaseModel):
     @property
     def lemmas(self) -> list[Lemma]:
         if self._lemmas is None:
-            to_load = [
-                folder.name
-                for folder in (self.path / "data").iterdir()
-                if folder.is_dir()
-            ]
+            to_load = [folder for folder in (self.path / "data").iterdir()]
             self._lemmas = [
                 Lemma(
-                    name=target,
+                    path=target,
                     groupings=self.groupings,
-                    path=self.path,
                     preprocessing=self.preprocessing,
                 )
                 for target in to_load
