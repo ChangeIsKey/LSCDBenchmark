@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import (
     Dict,
     Literal,
-    TypedDict,
 )
 
 import numpy as np
@@ -28,6 +27,8 @@ from src.use import (
 )
 from src.utils.utils import ShouldNotHappen, CsvParams
 
+Pairing = Literal["COMPARE", "EARLIER", "LATER"]
+Sampling = Literal["all", "sampled", "annotated"]
 
 class Lemma(BaseModel):
     name: str
@@ -135,9 +136,7 @@ class Lemma(BaseModel):
         ids = self.uses_df[self.uses_df.grouping == self.groupings[1]]
         return ids.identifier.tolist(), ids.identifier.tolist()
 
-    def split_uses(
-        self, pairing: Literal["COMPARE", "EARLIER", "LATER"]
-    ) -> tuple[list[UseID], list[UseID]]:
+    def split_uses(self, pairing: Pairing) -> tuple[list[UseID], list[UseID]]:
         match pairing:
             case "COMPARE":
                 return self._split_compare_uses()
@@ -152,8 +151,8 @@ class Lemma(BaseModel):
     @validate_arguments
     def use_pairs(
         self,
-        pairing: Literal["COMPARE", "EARLIER", "LATER"],
-        sampling: Literal["all", "sampled", "annotated"],
+        pairing: Pairing,
+        sampling: Sampling,
         n: int | None = None,
         replace: bool | None = None,
     ) -> list[tuple[Use, Use]]:
@@ -186,10 +185,7 @@ class Lemma(BaseModel):
 
         return use_pairs_instances
 
-    def _split_annotated_uses(
-        self,
-        pairing: Literal["COMPARE", "EARLIER", "LATER"],
-    ) -> tuple[list[UseID], list[UseID]]:
+    def _split_annotated_uses(self, pairing: Pairing) -> tuple[list[UseID], list[UseID]]:
         match pairing:
             case "COMPARE":
                 group_0, group_1 = self.groupings

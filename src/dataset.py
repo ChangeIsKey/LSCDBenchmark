@@ -30,6 +30,8 @@ from src.preprocessing import ContextPreprocessor
 from src.lemma import (
     CsvParams,
     Lemma,
+    Pairing, 
+    Sampling
 )
 
 
@@ -75,8 +77,8 @@ class Dataset(BaseModel):
     standard_split: StandardSplit
     exclude_annotators: list[str]
     test_on: set[str] | int | None
-    pairing: list[Literal["COMPARE", "EARLIER", "LATER"]] | None
-    sampling: list[Literal["all", "sampled", "annotated"]] | None
+    pairing: list[Pairing] | None
+    sampling: list[Sampling] | None
     versions: dict[str, Version]
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
