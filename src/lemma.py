@@ -28,7 +28,7 @@ from src.use import (
 )
 from src.utils.utils import ShouldNotHappen, CsvParams
 
-Pairing = Literal["COMPARE", "EARLIER", "LATER"]
+Pairing = Literal["COMPARE", "EARLIER", "LATER", "ALL"]
 Sampling = Literal["all", "sampled", "annotated", "predefined"]
 
 class Lemma(BaseModel):
@@ -159,6 +159,15 @@ class Lemma(BaseModel):
                 return self._split_earlier_uses()
             case "LATER":
                 return self._split_later_uses()
+            case "ALL":
+                compare_0, compare_1 = self._split_compare_uses()
+                earlier_0, earlier_1 = self._split_earlier_uses()
+                later_0, later_1 = self._split_later_uses()
+                return (
+                    compare_0 + earlier_0 + later_0,
+                    compare_1 + earlier_1 + later_1
+                )
+                
 
     def get_uses(self) -> list[Use]:
         return [Use.from_series(row) for _, row in self.uses_df.iterrows()]
@@ -230,7 +239,16 @@ class Lemma(BaseModel):
             self._augmented_predefined_use_pairs_df.drop(columns=drop_cols)
         return self._augmented_predefined_use_pairs_df
         
-    def _split_augmented_uses(self, pairing: Literal["COMPARE", "EARLIER", "LATER"], augmented_uses: DataFrame) -> tuple[list[UseID], list[UseID]]:
+    def _split_augmented_uses(self, pairing: Pairing, augmented_uses: DataFrame) -> tuple[list[UseID], list[UseID]]:
+        if pairing == "ALL":
+            compare_0, compare_1 = self._split_augmented_uses("COMPARE", augmented_uses)
+            earlier_0, earlier_1 = self._split_augmented_uses("EARLIER", augmented_uses)
+            later_0, later_1 = self._split_augmented_uses("LATER", augmented_uses)
+            return (
+                compare_0 + earlier_0 + later_0,
+                compare_1 + earlier_1 + later_1
+            )
+
         match pairing:
             case "COMPARE":
                 group_0, group_1 = self.groupings
