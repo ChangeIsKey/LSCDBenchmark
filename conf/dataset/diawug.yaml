@@ -1,34 +1,79 @@
-# the Dataset class also requires a `standard_split` argument
-# however, Hydra cannot interpolate values in the defaults list with values 
-# in the final config (i.e., outside the defaults list)
-# therefore this field is added at runtime in utils/runner.py
-
-defaults:
-  - _self_
-  - preprocessing: toklem
-  - spelling_normalization: german
-
-name: diawug
+_target_: src.dataset.Dataset
 cleaning: null
-test_on: null
-groupings: ["1", "2"]
-version: "1.1.0"
-pairing: [COMPARE]
-sampling: [annotated]
-standard_split: ${.name}_${.version}
+defaults:
+- _self_
+- preprocessing: toklem
+- spelling_normalization: german
 exclude_annotators: []
+groupings:
+- '1'
+- '2'
+name: diawug
+pairing:
+- COMPARE
+sampling:
+- annotated
 split:
   how: standard
   use: dev
-
-
+test_on: null
+version: 1.1.0
 versions:
-  1.1.0: 
-    url: "https://zenodo.org/record/5791193/files/diawug.zip"
-    path: diawug/1.1.0
-  1.0.0: 
-    url: "https://zenodo.org/record/5544554/files/diawug.zip"
+  1.0.0:
     path: diawug/1.0.0
-
-_target_: src.dataset.Dataset
-
+    standard_split:
+      dev:
+      - chamaco_pibe_chico
+      - banco
+      - botar
+      - vereda
+      - vidriera_escaparate
+      - argolla
+      - flete
+      - tinto
+      - bolo
+      - guagua_colectivo
+      - baúl_maletero
+      - coche_carro
+      test:
+      - churro
+      - volante_timón
+      - sindicar_acusar
+      - amarrar_atar
+      - gato
+      - franela
+      - saco
+      - plomero_fontanero
+      - vaina
+      - pollera_falda
+      - cartera_bolso
+    url: https://zenodo.org/record/5544554/files/diawug.zip
+  1.1.0:
+    path: diawug/1.1.0
+    standard_split:
+      dev:
+      - banco
+      - baúl_maletero
+      - bolo
+      - tinto
+      - volante_timón
+      - plomero_fontanero
+      - amarrar_atar
+      - vaina
+      - franela
+      - saco
+      - cartera_bolso
+      - vereda
+      test:
+      - churro
+      - vidriera_escaparate
+      - botar
+      - flete
+      - sindicar_acusar
+      - chamaco_pibe_chico
+      - coche_carro
+      - gato
+      - argolla
+      - guagua_colectivo
+      - pollera_falda
+    url: https://zenodo.org/record/5791193/files/diawug.zip

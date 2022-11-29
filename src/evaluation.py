@@ -31,26 +31,26 @@ class DatasetMetadata(TypedDict):
 
 
 class Evaluation(BaseModel, ABC):
-    task: EvaluationTask | None
-    metric: Callable[[list[float | int], list[float | int]], Any] | None
+    task: EvaluationTask 
+    metric: Callable[[list[float | int], list[float | int]], Any] 
     plotter: Plotter | None
+    write: bool
 
 
-    def __call__(self, predictions: dict[K, V], labels: dict[K, V], write: bool) -> int | float:
+    def __call__(self, predictions: dict[K, V], labels: dict[K, V]) -> int | float:
+        if self.write and self.plotter is not None:
+            self.plotter(predictions=predictions, labels=labels)
+
         results = self.combine_inputs(labels=labels, predictions=predictions)
-        if write:
+        if self.write:
             results.to_csv("predictions.csv", sep="\t")
         results = results.dropna(how="any")
 
-        score = np.nan
-        if self.metric is not None:
-            y_true = results.label.tolist()
-            y_pred = results.prediction.tolist()
-            score = self.metric(y_true, y_pred)
-            if write and self.plotter is not None:
-                self.plotter(predictions=predictions, labels=labels)
+        y_true = results.label.tolist()
+        y_pred = results.prediction.tolist()
+        score = self.metric(y_true, y_pred)
 
-        if write:
+        if self.write:
             with open(file="score.txt", mode="w", encoding="utf8") as f:
                 f.write(str(score))
 

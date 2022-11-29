@@ -1,32 +1,78 @@
-# the Dataset class also requires a `standard_split` argument
-# however, Hydra cannot interpolate values in the defaults list with values 
-# in the final config (i.e., outside the defaults list)
-# therefore this field is added at runtime in utils/runner.py
-
-defaults:
-  - _self_
-  - preprocessing: toklem
-  - spelling_normalization: german
-
-name: surel
+_target_: src.dataset.Dataset
 cleaning: null
-test_on: null
-groupings: ["1", "2"]
-version: "3.0.0"
-pairing: [COMPARE]
-sampling: [annotated]
-standard_split: ${.name}_${.version}
+defaults:
+- _self_
+- preprocessing: toklem
+- spelling_normalization: german
 exclude_annotators: []
+groupings:
+- '1'
+- '2'
+name: surel
+pairing:
+- COMPARE
+sampling:
+- annotated
 split:
   how: standard
   use: dev
-
-_target_: src.dataset.Dataset
-
+standard_split: ${.name}_${.version}
+test_on: null
+version: 3.0.0
 versions:
-  3.0.0: 
-    url: "https://zenodo.org/record/5784569/files/surel.zip"
-    path: surel/3.0.0
-  2.0.0: 
-    url: "https://zenodo.org/record/5543348/files/surel.zip"
+  2.0.0:
     path: surel/2.0.0
+    standard_split:
+      dev:
+      - Glas
+      - schlagen
+      - abschrecken
+      - Rum
+      - Form
+      - Messerspitze
+      - Eiweiß
+      - Paprika
+      - Strudel
+      - Blech
+      - Salz
+      test:
+      - trennen
+      - Hamburger
+      - Gemüse
+      - Schuß
+      - Gericht
+      - Schokolade
+      - Schnee
+      - Mandel
+      - Schnittlauch
+      - Messer
+      - Prise
+    url: https://zenodo.org/record/5543348/files/surel.zip
+  3.0.0:
+    path: surel/3.0.0
+    standard_split:
+      dev:
+      - abschrecken
+      - Glas
+      - Salz
+      - Schnee
+      - Hamburger
+      - schlagen
+      - Mandel
+      - trennen
+      - Schnittlauch
+      - Messer
+      - Form
+      test:
+      - Eiweiß
+      - Blech
+      - Paprika
+      - Gemüse
+      - Schuß
+      - Gericht
+      - Schokolade
+      - Rum
+      - Strudel
+      - Prise
+      - Messerspitze
+    url: https://zenodo.org/record/5784569/files/surel.zip

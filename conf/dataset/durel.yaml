@@ -1,37 +1,105 @@
-# the Dataset class also requires a `standard_split` argument
-# however, Hydra cannot interpolate values in the defaults list with values 
-# in the final config (i.e., outside the defaults list)
-# therefore this field is added at runtime in utils/runner.py
-
-defaults:
-  - _self_
-  - preprocessing: toklem
-  - spelling_normalization: german
-
-name: durel
+_target_: src.dataset.Dataset
 cleaning: null
-test_on: null
-groupings: ["1", "2"]
-version: "3.0.0"
-pairing: [COMPARE]
-sampling: [annotated]
-standard_split: ${.name}_${.version}
+defaults:
+- _self_
+- preprocessing: toklem
+- spelling_normalization: german
 exclude_annotators: []
+groupings:
+- '1'
+- '2'
+name: durel
+pairing:
+- COMPARE
+sampling:
+- annotated
 split:
   how: standard
   use: dev
-
+test_on: null
+version: 3.0.0
 versions:
-  3.0.0: 
-    url: "https://zenodo.org/record/5784453/files/durel.zip"
-    path: durel/3.0.0
-  2.1.0: 
-    url: "https://zenodo.org/record/5554145/files/durel.zip"
-    path: durel/2.1.0
-  2.0.0: 
-    url: "https://zenodo.org/record/5541340/files/durel.zip"
+  2.0.0:
     path: durel/2.0.0
-
-_target_: src.dataset.Dataset
-
-
+    standard_split:
+      dev:
+      - technisch
+      - billig
+      - Feine
+      - Feder
+      - geharnischt
+      - Anstalt
+      - Kinderstube
+      - Donnerwetter
+      - Presse
+      - Anstellung
+      - locker
+      test:
+      - packen
+      - Steckenpferd
+      - Motiv
+      - flott
+      - Abend
+      - Vorwort
+      - Reichstag
+      - Museum
+      - englisch
+      - Zufall
+      - Bilanz
+    url: https://zenodo.org/record/5541340/files/durel.zip
+  2.1.0:
+    path: durel/2.1.0
+    standard_split:
+      dev:
+      - Kinderstube
+      - Feine
+      - geharnischt
+      - packen
+      - Museum
+      - Presse
+      - flott
+      - locker
+      - Vorwort
+      - Zufall
+      - Feder
+      test:
+      - Steckenpferd
+      - Motiv
+      - Anstalt
+      - technisch
+      - billig
+      - Abend
+      - Donnerwetter
+      - Anstellung
+      - Reichstag
+      - englisch
+      - Bilanz
+    url: https://zenodo.org/record/5554145/files/durel.zip
+  3.0.0:
+    path: durel/3.0.0
+    standard_split:
+      dev:
+      - flott
+      - geharnischt
+      - Zufall
+      - Steckenpferd
+      - Feine
+      - Feder
+      - Museum
+      - Abend
+      - Motiv
+      - Anstellung
+      - Presse
+      test:
+      - packen
+      - locker
+      - Anstalt
+      - technisch
+      - billig
+      - Kinderstube
+      - Donnerwetter
+      - Vorwort
+      - Reichstag
+      - englisch
+      - Bilanz
+    url: https://zenodo.org/record/5784453/files/durel.zip

@@ -1,32 +1,125 @@
-# the Dataset class also requires a `standard_split` argument
-# however, Hydra cannot interpolate values in the defaults list with values 
-# in the final config (i.e., outside the defaults list)
-# therefore this field is added at runtime in utils/runner.py
-
-defaults:
-  - _self_
-  - preprocessing: toklem
-  - spelling_normalization: english
-
-name: dwug_en
+_target_: src.dataset.Dataset
 cleaning: null
-test_on: null
-groupings: ["1", "2"]
-version: "2.0.0"
-pairing: [COMPARE]
-sampling: [annotated]
-standard_split: ${.name}_${.version}
+defaults:
+- _self_
+- preprocessing: toklem
+- spelling_normalization: english
 exclude_annotators: []
+groupings:
+- '1'
+- '2'
+name: dwug_en
+pairing:
+- COMPARE
+sampling:
+- annotated
 split:
   how: standard
   use: dev
-
+test_on: null
+version: 2.0.0
 versions:
-  2.0.0: 
-    url: "https://zenodo.org/record/5796878/files/dwug_en.zip"
-    path: dwug_en/2.0.0
-  1.0.0: 
-    url: "https://zenodo.org/record/5544444/files/dwug_en.zip"
+  1.0.0:
     path: dwug_en/1.0.0
-
-_target_: src.dataset.Dataset
+    standard_split:
+      dev:
+      - savage_nn
+      - chef_nn
+      - chairman_nn
+      - ball_nn
+      - fiction_nn
+      - attack_nn
+      - heel_nn
+      - pin_vb
+      - lass_nn
+      - circle_vb
+      - record_nn
+      - prop_nn
+      - face_nn
+      - include_vb
+      - land_nn
+      - edge_nn
+      - stab_nn
+      - twist_nn
+      - contemplation_nn
+      - part_nn
+      - player_nn
+      - head_nn
+      - pick_vb
+      test:
+      - maxim_nn
+      - afternoon_nn
+      - multitude_nn
+      - bit_nn
+      - thump_nn
+      - risk_nn
+      - ounce_nn
+      - tree_nn
+      - lane_nn
+      - grain_nn
+      - quilt_nn
+      - tip_vb
+      - gas_nn
+      - bar_nn
+      - word_nn
+      - donkey_nn
+      - graft_nn
+      - plane_nn
+      - relationship_nn
+      - stroke_vb
+      - rag_nn
+      - bag_nn
+      - rally_nn
+    url: https://zenodo.org/record/5544444/files/dwug_en.zip
+  2.0.0:
+    path: dwug_en/2.0.0
+    standard_split:
+      dev:
+      - bag_nn
+      - rally_nn
+      - edge_nn
+      - chef_nn
+      - pick_vb
+      - prop_nn
+      - multitude_nn
+      - part_nn
+      - tip_vb
+      - afternoon_nn
+      - tree_nn
+      - lane_nn
+      - donkey_nn
+      - bar_nn
+      - savage_nn
+      - maxim_nn
+      - ball_nn
+      - player_nn
+      - stroke_vb
+      - stab_nn
+      - twist_nn
+      - rag_nn
+      - head_nn
+      test:
+      - gas_nn
+      - chairman_nn
+      - attack_nn
+      - word_nn
+      - include_vb
+      - risk_nn
+      - thump_nn
+      - ounce_nn
+      - land_nn
+      - fiction_nn
+      - heel_nn
+      - pin_vb
+      - record_nn
+      - grain_nn
+      - bit_nn
+      - face_nn
+      - plane_nn
+      - circle_vb
+      - relationship_nn
+      - contemplation_nn
+      - quilt_nn
+      - lass_nn
+      - graft_nn
+    url: https://zenodo.org/record/5796878/files/dwug_en.zip

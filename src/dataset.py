@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import zipfile
+import yaml
 from pathlib import Path
 from typing import Any, Literal, TypedDict
 import numpy as np
@@ -27,16 +28,7 @@ import src.utils.utils as utils
 from src.cleaning import Cleaning
 from src.evaluation import EvaluationTask
 from src.preprocessing import ContextPreprocessor
-from src.lemma import (
-    CsvParams,
-    Lemma,
-    Pairing, 
-    Sampling
-)
-
-
-class UnknownDataset(Exception):
-    pass
+from src.lemma import CsvParams, Lemma, Pairing, Sampling
 
 
 class SplitSize(BaseModel):
@@ -63,9 +55,12 @@ class RandomSplit(Split):
 class NoSplit(BaseModel):
     how: Literal["no_split"]
 
+
 class Version(BaseModel):
-    url: HttpUrl | None = Field(default=None)
     path: Path
+    url: HttpUrl | None = Field(default=None)
+    standard_split: StandardSplit | None = Field(default=None)
+
 
 class Dataset(BaseModel):
     name: str
@@ -74,7 +69,6 @@ class Dataset(BaseModel):
     preprocessing: ContextPreprocessor
     version: str
     split: Split | RandomSplit | NoSplit
-    standard_split: StandardSplit
     exclude_annotators: list[str]
     test_on: set[str] | int | None
     pairing: list[Pairing] | None
@@ -88,13 +82,24 @@ class Dataset(BaseModel):
     _clusters: DataFrame = PrivateAttr(default=None)
     _lemmas: list[Lemma] = PrivateAttr(default=None)
     _path: Path = PrivateAttr(default=None)
-    _csv_params: CsvParams = PrivateAttr(default_factory=CsvParams)
 
     def __init__(self, **data):
         super().__init__(**data)
         if not self.path.exists():
-            self.path.parent.parent.mkdir(parents=True, exist_ok=True)
-            self.__download(path=self.data_dir / self.versions[self.version].path.parts[0])
+            self.__download(
+                path=self.data_dir / self.versions[self.version].path.parts[0]
+            )
+        if self.versions[self.version].standard_split is None:
+            self.versions[
+                self.version
+            ].standard_split = self.get_standard_split()
+            path = utils.path("conf") / "dataset" / f"{self.name}.yaml"
+            with path.open(mode="r", encoding="utf8") as f:
+                config = yaml.safe_load(f)
+            with path.open(mode="w", encoding="utf8") as f:
+                config["versions"][self.version]["standard_split"] = self.versions[self.version].standard_split.dict()
+                yaml.safe_dump(config, f, encoding="utf8", allow_unicode=True, default_flow_style=False)
+
 
     @property
     def data_dir(self) -> Path:
@@ -102,47 +107,50 @@ class Dataset(BaseModel):
         if root is None:
             root = "wug"
         return utils.path(root)
-        
+
     @property
     def path(self) -> Path:
         if self._path is None:
             self._path = self.data_dir / self.versions[self.version].path
         return self._path
 
-    @property
-    def __zipped_filename(self) -> Path:
-        return utils.path(f"{self.name}-{self.version}.zip")
+    def __download_from_git(self, url: HttpUrl, path: Path) -> None:
+        Repo.clone_from(url, to_path=path)
+
+    def __download_zip(self, url: HttpUrl, path: Path) -> None:
+        zipped = utils.path(f"{self.name}-{self.version}.zip")
+        r = requests.get(url, stream=True)
+        with open(file=zipped, mode="wb") as f:
+            pbar = tqdm(
+                desc=f"Downloading dataset '{self.name}' (version {self.version})",
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                total=int(r.headers["Content-Length"]),
+                leave=False,
+            )
+            pbar.clear()  # clear 0% info
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:  # filter out keep-alive new chunks
+                    pbar.update(len(chunk))
+                    f.write(chunk)
+            pbar.close()
+        self.__unzip(zip_file=zipped, output_dir=path)
 
     def __download(self, path: Path) -> None:
         version = self.versions[self.version]
         assert version.url is not None
 
-        if "github" in version.url and version.url.endswith(".git"):
-            Repo.clone_from(version.url, to_path=path)
+        if version.url.endswith(".git"):
+            self.__download_from_git(version.url, path)
         else:
-            r = requests.get(version.url, stream=True)
-            with open(file=self.__zipped_filename, mode="wb") as f:
-                pbar = tqdm(
-                    desc=f"Downloading dataset '{self.name}' (version {self.version})",
-                    unit="B",
-                    unit_scale=True,
-                    unit_divisor=1024,
-                    total=int(r.headers["Content-Length"]),
-                    leave=False,
-                )
-                pbar.clear()  # clear 0% info
-                for chunk in r.iter_content(chunk_size=1024):
-                    if chunk:  # filter out keep-alive new chunks
-                        pbar.update(len(chunk))
-                        f.write(chunk)
-                pbar.close()
-            self.__unzip(path)
+            self.__download_zip(version.url, path)
 
-    def __unzip(self, output_dir: Path) -> None:
-        zipped = self.__zipped_filename
+    def __unzip(self, zip_file: Path, output_dir: Path) -> None:
         trans_table = {"ó": "ó", "á": "á", "é": "é", "ú": "ú"}
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        with zipfile.ZipFile(file=zipped) as z:
+        with zipfile.ZipFile(file=zip_file) as z:
             namelist = z.namelist()
             root = output_dir
             root.mkdir(parents=True, exist_ok=True)
@@ -166,7 +174,7 @@ class Dataset(BaseModel):
                     target_path.parent.mkdir(parents=True, exist_ok=True)
                     with target_path.open(mode="wb") as file_obj:
                         shutil.copyfileobj(z.open(filename, mode="r"), file_obj)
-        zipped.unlink()
+        zip_file.unlink()
 
     @property
     def stats_groupings_df(self) -> DataFrame:
@@ -177,7 +185,9 @@ class Dataset(BaseModel):
                 path = self.path / "stats" / "opt" / stats_groupings
             if not path.exists():
                 path = self.path / "stats" / stats_groupings
-            self._stats_groupings = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+            self._stats_groupings = pd.read_csv(
+                path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+            )
         return self._stats_groupings
 
     @stats_groupings_df.setter
@@ -234,32 +244,38 @@ class Dataset(BaseModel):
 
     @property
     def wic_labels(self) -> dict[tuple[UseID, UseID], float]:
-        judgments = self.judgments_df[~self.judgments_df["annotator"].isin(self.exclude_annotators)].copy(deep=True)
+        judgments = self.judgments_df[
+            ~self.judgments_df["annotator"].isin(self.exclude_annotators)
+        ].copy(deep=True)
         judgments.replace(to_replace=0, value=np.nan, inplace=True)
         # pandas.core.groupby.GroupBy.median ignores missing values -> no need for nanmedian
-        judgments = judgments.groupby(by=["identifier1", "identifier2"])["judgment"].median().reset_index()
+        judgments = (
+            judgments.groupby(by=["identifier1", "identifier2"])["judgment"]
+            .median()
+            .reset_index()
+        )
         annotated_pairs = zip(judgments.identifier1, judgments.identifier2)
         return dict(zip(list(annotated_pairs), judgments.judgment))
 
     @property
     def binary_wic_labels(self) -> dict[tuple[UseID, UseID], float]:
         labels = self.wic_labels
-        return {use_pair: judgment for use_pair, judgment in labels.items() if judgment in [4.0, 1.0]}
+        return {
+            use_pair: judgment
+            for use_pair, judgment in labels.items()
+            if judgment in [4.0, 1.0]
+        }
 
     @property
     def wsi_labels(self) -> dict[str, int]:
         clusters = self.clusters_df.replace(-1, np.nan)
         return dict(zip(clusters.identifier, clusters.cluster))
 
-    def get_labels(
-        self, evaluation_task: EvaluationTask | None
-    ) -> dict[Any, Any]:
+    def get_labels(self, evaluation_task: EvaluationTask) -> dict[Any, Any]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels
         # to be able to return the correct subset, we need the `keys` parameter
         # this value should be a list returned by any of the models
         match evaluation_task:
-            case None:
-                return {}
             case "change_graded":
                 return self.graded_change_labels
             case "change_binary":
@@ -279,7 +295,9 @@ class Dataset(BaseModel):
     def stats_agreement_df(self) -> DataFrame:
         if self._agreements is None:
             path = self.path / "stats" / "stats_agreement.csv"
-            self._agreements = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+            self._agreements = pd.read_csv(
+                path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+            )
         return self._agreements
 
     @property
@@ -294,7 +312,9 @@ class Dataset(BaseModel):
             tables = []
             for lemma in self.lemmas:
                 path = self.path / "data" / lemma.name / "judgments.csv"
-                judgments = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+                judgments = pd.read_csv(
+                    path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+                )
                 judgments = self.judgments_schema.validate(judgments)
                 tables.append(judgments)
             self._judgments = pd.concat(tables)
@@ -307,7 +327,7 @@ class Dataset(BaseModel):
                 "identifier1": Column(dtype=str),
                 "identifier2": Column(dtype=str),
                 "judgment": Column(dtype=float),
-                "annotator": Column(dtype=str)
+                "annotator": Column(dtype=str),
             }
         )
 
@@ -317,7 +337,9 @@ class Dataset(BaseModel):
             tables = []
             for lemma in self.lemmas:
                 path = self.path / "clusters" / "opt" / f"{lemma.name}.csv"
-                clusters = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+                clusters = pd.read_csv(
+                    path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
+                )
                 clusters = self.clusters_schema.validate(clusters)
                 tables.append(clusters)
             self._clusters = pd.concat(tables)
@@ -329,14 +351,14 @@ class Dataset(BaseModel):
             {"identifier": Column(dtype=str, unique=True), "cluster": Column(int)}
         )
 
+    def get_standard_split(self) -> StandardSplit:
+        all_lemmas = [folder.name for folder in (self.path / "data").iterdir()]
+        dev = Series(all_lemmas).sample(frac=0.5, replace=False).tolist()
+        test = set(all_lemmas).difference(dev)
+        return StandardSplit(dev=dev, test=list(test))
+
     def dev_test_split(self) -> set[str]:
-        all_lemmas = sorted(
-            [
-                folder.name
-                for folder in (self.path / "data").iterdir()
-                if folder.is_dir()
-            ]
-        )
+        all_lemmas = sorted([folder.name for folder in (self.path / "data").iterdir()])
         match self.split.how:
             case "no_split":
                 assert isinstance(self.split, NoSplit)
@@ -357,9 +379,9 @@ class Dataset(BaseModel):
                 assert isinstance(self.split, Split)
                 match self.split.use:
                     case "dev":
-                        return set(self.standard_split.dev)
+                        return set(self.versions[self.version].standard_split.dev)
                     case "test":
-                        return set(self.standard_split.test)
+                        return set(self.versions[self.version].standard_split.test)
             case _:
                 raise ValueError
 

@@ -6,3 +6,4 @@ task: wsi
 metric:
   _target_: sklearn.metrics.adjusted_rand_score
   _partial_: true
+write: true

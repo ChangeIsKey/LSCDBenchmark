@@ -8,3 +8,4 @@ defaults:
 hydra:
   job:
     chdir: true
+  

@@ -1,33 +1,77 @@
-# the Dataset class also requires a `standard_split` argument
-# however, Hydra cannot interpolate values in the defaults list with values 
-# in the final config (i.e., outside the defaults list)
-# therefore this field is added at runtime in utils/runner.py
-
-defaults:
-  - _self_
-  - preprocessing: toklem
-  - spelling_normalization: german
-
-name: refwug
+_target_: src.dataset.Dataset
 cleaning: null
-test_on: null
-groupings: ["1", "2"]
-version: "1.1.0"
-pairing: [COMPARE]
-sampling: [annotated]
-standard_split: ${.name}_${.version}
+defaults:
+- _self_
+- preprocessing: toklem
+- spelling_normalization: german
 exclude_annotators: []
+groupings:
+- '1'
+- '2'
+name: refwug
+pairing:
+- COMPARE
+sampling:
+- annotated
 split:
   how: standard
   use: dev
-
+test_on: null
+version: 1.1.0
 versions:
-  1.1.0:
-    url: "https://zenodo.org/record/5791269/files/refwug.zip"
-    path: refwug/1.1.0
-  1.0.0: 
-    url: "https://zenodo.org/record/5544578/files/refwug.zip"
+  1.0.0:
     path: refwug/1.0.0
-
-_target_: src.dataset.Dataset
-
+    standard_split:
+      dev:
+      - Feder
+      - Bilanz
+      - Museum
+      - geharnischt
+      - englisch
+      - Steckenpferd
+      - Donnerwetter
+      - billig
+      - Feine
+      - Anstellung
+      - Reichstag
+      test:
+      - Motiv
+      - Kinderstube
+      - flott
+      - technisch
+      - Vorwort
+      - Zufall
+      - Anstalt
+      - packen
+      - Presse
+      - locker
+      - Abend
+    url: https://zenodo.org/record/5544578/files/refwug.zip
+  1.1.0:
+    path: refwug/1.1.0
+    standard_split:
+      dev:
+      - Bilanz
+      - technisch
+      - Reichstag
+      - packen
+      - Motiv
+      - billig
+      - geharnischt
+      - Presse
+      - englisch
+      - Feder
+      - flott
+      test:
+      - Steckenpferd
+      - Kinderstube
+      - Anstellung
+      - Vorwort
+      - Zufall
+      - Donnerwetter
+      - Anstalt
+      - locker
+      - Abend
+      - Feine
+      - Museum
+    url: https://zenodo.org/record/5791269/files/refwug.zip

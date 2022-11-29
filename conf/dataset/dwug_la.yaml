@@ -1,29 +1,67 @@
-# the Dataset class also requires a `standard_split` argument
-# however, Hydra cannot interpolate values in the defaults list with values 
-# in the final config (i.e., outside the defaults list)
-# therefore this field is added at runtime in utils/runner.py
-
-defaults:
-  - _self_
-  - preprocessing: toklem
-
-name: dwug_la
+_target_: src.dataset.Dataset
 cleaning: null
-test_on: null
-groupings: ["1", "2"]
-version: "1"
-pairing: [COMPARE]
-sampling: [annotated]
-spelling_normalization: null
-standard_split: ${.name}_${.version}
+defaults:
+- _self_
+- preprocessing: toklem
 exclude_annotators: []
+groupings:
+- '1'
+- '2'
+name: dwug_la
+pairing:
+- COMPARE
+sampling:
+- annotated
+spelling_normalization: null
 split:
   how: standard
   use: dev
-
+test_on: null
+version: '1'
 versions:
-  1: 
-    url: "https://zenodo.org/record/5255228/files/dwug_la.zip"
+  '1':
     path: dwug_la/1
-
-_target_: src.dataset.Dataset
+    standard_split:
+      dev:
+      - acerbus
+      - hostis
+      - potestas
+      - beatus
+      - nobilitas
+      - senatus
+      - nepos
+      - sapientia
+      - necessarius
+      - dubius
+      - scriptura
+      - virtus
+      - poena
+      - sensus
+      - adsumo
+      - oportet
+      - dolus
+      - imperator
+      - templum
+      - simplex
+      test:
+      - titulus
+      - honor
+      - pontifex
+      - consilium
+      - itero
+      - fidelis
+      - licet
+      - jus
+      - salus
+      - cohors
+      - humanitas
+      - ancilla
+      - civitas
+      - consul
+      - sacramentum
+      - regnum
+      - dux
+      - sanctus
+      - voluntas
+      - credo
+    url: https://zenodo.org/record/5255228/files/dwug_la.zip

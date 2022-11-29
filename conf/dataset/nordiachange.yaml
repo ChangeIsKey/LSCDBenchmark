@@ -1,0 +1,113 @@
+_target_: src.dataset.Dataset
+cleaning: null
+defaults:
+- _self_
+- preprocessing: toklem
+exclude_annotators: []
+groupings:
+- '1'
+- '2'
+name: nordiachange
+pairing:
+- COMPARE
+sampling:
+- annotated
+spelling_normalization: null
+split:
+  how: standard
+  use: dev
+test_on: null
+version: subset1
+versions:
+  subset1:
+    path: nor_dia_change/subset1
+    standard_split:
+      dev:
+      - idiot
+      - horisont
+      - tro
+      - sete
+      - rev
+      - etterforskning
+      - tropp
+      - kloakk
+      - husrom
+      - operasjon
+      - landet
+      - katt
+      - plattform
+      - data
+      - mål
+      - varsel
+      - bølge
+      - ris
+      - pære
+      - linse
+      test:
+      - damp
+      - fag
+      - kart
+      - fil
+      - mening
+      - bit
+      - stoff
+      - lyng
+      - formiddagen
+      - rad
+      - leilighet
+      - anfektelse
+      - gress
+      - forhold
+      - frakk
+      - ørret
+      - leder
+      - kjemi
+      - egg
+      - skjerm
+    url: https://github.com/ltgoslo/nor_dia_change.git
+  subset2:
+    path: nor_dia_change/subset2
+    standard_split:
+      dev:
+      - oppvarming
+      - kanal
+      - kreft
+      - side
+      - papir
+      - kohort
+      - mus
+      - tavle
+      - test
+      - vert
+      - utakt
+      - storby
+      - driftsregnskap
+      - melding
+      - tendens
+      - sky
+      - mappe
+      - tjener
+      - Syden
+      - fjær
+      test:
+      - kjøpepress
+      - stryk
+      - moment
+      - terror
+      - virkelighet
+      - overflate
+      - innstilling
+      - særforbund
+      - nett
+      - strøm
+      - bystyrerepresentant
+      - melk
+      - virus
+      - kode
+      - tape
+      - fane
+      - bank
+      - rådgiver
+      - vindu
+      - spill
+    url: https://github.com/ltgoslo/nor_dia_change.git

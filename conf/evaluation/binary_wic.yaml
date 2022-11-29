@@ -7,4 +7,4 @@ metric:
   _target_: src.wrappers.spearmanr
   _partial_: true
   nan_policy: omit
-exclude_annotators: []
+write: true
