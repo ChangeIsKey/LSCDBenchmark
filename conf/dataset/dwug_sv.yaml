@@ -14,9 +14,19 @@ test_on: null
 groupings: ["1", "2"]
 pairing: [COMPARE]
 sampling: [annotated]
+standard_split: ${.name}_${.version}
+exclude_annotators: []
+split:
+  how: standard
+  use: dev
 
 version: "2.0.0"
-urls:
-  "2.0.0": "https://zenodo.org/record/5801358/files/dwug_sv.zip"
-  "1.0.0": "https://zenodo.org/record/5090648/files/dwug_sv.zip" 
+versions:
+  2.0.0: 
+    url: "https://zenodo.org/record/5801358/files/dwug_sv.zip"
+    path: dwug_sv/2.0.0
+  1.0.0: 
+    url: "https://zenodo.org/record/5090648/files/dwug_sv.zip" 
+    path: dwug_sv/1.0.0
+
 _target_: src.dataset.Dataset

@@ -19,7 +19,7 @@ from pandera import (
     Column,
     DataFrameSchema,
 )
-from pydantic import BaseModel, PrivateAttr, HttpUrl
+from pydantic import BaseModel, PrivateAttr, HttpUrl, Field
 from tqdm import tqdm
 from src.use import UseID
 
@@ -62,7 +62,7 @@ class NoSplit(BaseModel):
     how: Literal["no_split"]
 
 class Version(BaseModel):
-    url: HttpUrl
+    url: HttpUrl | None = Field(default=None)
     path: Path
 
 class Dataset(BaseModel):
@@ -113,10 +113,12 @@ class Dataset(BaseModel):
 
     def __download(self, path: Path) -> None:
         version = self.versions[self.version]
+        assert version.url is not None
+
         if "github" in version.url and version.url.endswith(".git"):
             Repo.clone_from(version.url, to_path=path)
         else:
-            r = requests.get(self.versions[self.version].url, stream=True)
+            r = requests.get(version.url, stream=True)
             with open(file=self.__zipped_filename, mode="wb") as f:
                 pbar = tqdm(
                     desc=f"Downloading dataset '{self.name}' (version {self.version})",
@@ -241,7 +243,6 @@ class Dataset(BaseModel):
     def binary_wic_labels(self) -> dict[tuple[UseID, UseID], float]:
         labels = self.wic_labels
         return {use_pair: judgment for use_pair, judgment in labels.items() if judgment in [4.0, 1.0]}
-        
 
     @property
     def wsi_labels(self) -> dict[str, int]:

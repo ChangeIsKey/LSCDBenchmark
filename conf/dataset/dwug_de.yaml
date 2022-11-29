@@ -12,10 +12,10 @@ cleaning: null
 test_on: null
 groupings: ["1", "2"]
 version: "2.1.0"
-standard_split: ${.name}_${.version}
 pairing: [COMPARE]
-exclude_annotators: []
 sampling: [annotated]
+standard_split: ${.name}_${.version}
+exclude_annotators: []
 split:
   how: standard
   use: dev

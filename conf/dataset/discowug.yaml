@@ -8,13 +8,18 @@ defaults:
   - preprocessing: toklem
   - spelling_normalization: german
 
-name: dwug_de
+name: discowug
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
 version: "1.1.0"
 pairing: [COMPARE]
 sampling: [annotated]
+standard_split: ${.name}_${.version}
+exclude_annotators: []
+split:
+  how: standard
+  use: dev
 
 versions:
   1.1.0: 

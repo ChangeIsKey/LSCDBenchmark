@@ -15,12 +15,27 @@ version: "4.0.0"
 spelling_normalization: null
 pairing: [COMPARE]
 sampling: [annotated]
+standard_split: ${.name}_${.version}
+exclude_annotators: []
+split:
+  how: standard
+  use: dev
 
-urls:
-  "4.0.0": "https://zenodo.org/record/6433667/files/dwug_es.zip"
-  "3.0.0": "https://zenodo.org/record/6433398/files/dwug_es.zip"
-  "2.0.0": "https://zenodo.org/record/6433350/files/dwug_es.zip"
-  "1.0.1": "https://zenodo.org/record/6433203/files/dwug_es.zip"
-  "1.0.0": "https://zenodo.org/record/6300105/files/dwug_es.zip"
+versions:
+  4.0.0: 
+    url: "https://zenodo.org/record/6433667/files/dwug_es.zip"
+    path: dwug_es/4.0.0
+  3.0.0: 
+    url: "https://zenodo.org/record/6433398/files/dwug_es.zip"
+    path: dwug_es/3.0.0
+  2.0.0: 
+    url: "https://zenodo.org/record/6433350/files/dwug_es.zip"
+    path: dwug_es/2.0.0
+  1.0.1: 
+    url: "https://zenodo.org/record/6433203/files/dwug_es.zip"
+    path: dwug_es/1.0.1
+  1.0.0: 
+    url: "https://zenodo.org/record/6300105/files/dwug_es.zip"
+    path: dwug_es/1.0.0
 
 _target_: src.dataset.Dataset

@@ -8,17 +8,25 @@ defaults:
   - preprocessing: toklem
   - spelling_normalization: german
 
-name: dwug_de
+name: surel
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
 version: "3.0.0"
 pairing: [COMPARE]
 sampling: [annotated]
+standard_split: ${.name}_${.version}
+exclude_annotators: []
+split:
+  how: standard
+  use: dev
 
 _target_: src.dataset.Dataset
 
-urls:
-  "3.0.0": "https://zenodo.org/record/5784569/files/surel.zip"
-  "2.0.0": "https://zenodo.org/record/5543348/files/surel.zip"
-  # "1.0.0": "https://zenodo.org/record/5543307/files/SURel.zip" # does not contain a data/ folder
+versions:
+  3.0.0: 
+    url: "https://zenodo.org/record/5784569/files/surel.zip"
+    path: surel/3.0.0
+  2.0.0: 
+    url: "https://zenodo.org/record/5543348/files/surel.zip"
+    path: surel/2.0.0

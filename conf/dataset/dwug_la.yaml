@@ -7,7 +7,7 @@ defaults:
   - _self_
   - preprocessing: toklem
 
-name: dwug_de
+name: dwug_la
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
@@ -15,8 +15,15 @@ version: "1"
 pairing: [COMPARE]
 sampling: [annotated]
 spelling_normalization: null
+standard_split: ${.name}_${.version}
+exclude_annotators: []
+split:
+  how: standard
+  use: dev
 
-urls:
-  "1": "https://zenodo.org/record/5255228/files/dwug_la.zip"
+versions:
+  1: 
+    url: "https://zenodo.org/record/5255228/files/dwug_la.zip"
+    path: dwug_la/1
 
 _target_: src.dataset.Dataset

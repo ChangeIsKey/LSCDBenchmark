@@ -8,17 +8,26 @@ defaults:
   - preprocessing: toklem
   - spelling_normalization: german
 
-name: dwug_de
+name: refwug
 cleaning: null
 test_on: null
 groupings: ["1", "2"]
 version: "1.1.0"
 pairing: [COMPARE]
 sampling: [annotated]
+standard_split: ${.name}_${.version}
+exclude_annotators: []
+split:
+  how: standard
+  use: dev
 
-urls:
-  "1.1.0": "https://zenodo.org/record/5791269/files/refwug.zip"
-  "1.0.0": "https://zenodo.org/record/5544578/files/refwug.zip"
+versions:
+  1.1.0:
+    url: "https://zenodo.org/record/5791269/files/refwug.zip"
+    path: refwug/1.1.0
+  1.0.0: 
+    url: "https://zenodo.org/record/5544578/files/refwug.zip"
+    path: refwug/1.0.0
 
 _target_: src.dataset.Dataset
 
