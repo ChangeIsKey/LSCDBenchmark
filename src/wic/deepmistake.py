@@ -309,4 +309,5 @@ class DeepMistake(WICModel):
                 if self.cache is not None:
                     self.cache.persist()
                 return self.predict(use_pairs)
+            self.predictions = scores
             return results

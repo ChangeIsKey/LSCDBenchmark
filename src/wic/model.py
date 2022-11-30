@@ -2,11 +2,12 @@ from abc import (
     ABC,
     abstractmethod,
 )
+from typing import Any
 
 import numpy as np
 import more_itertools as mit
 from pandas import DataFrame
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from tqdm import tqdm
 
 from src.lemma import Lemma
@@ -17,24 +18,13 @@ from src.use import (
 
 
 class WICModel(BaseModel, ABC):
+    scaler: Any # should be a scikit-learn scaler
+    predictions: dict[tuple[UseID, UseID], float] = Field(default_factory=dict)
+
     @abstractmethod
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         ...
 
-
-class ThresholdedWicModel(BaseModel):
-    thresholds: list[float]
-    wic: WICModel
-
-    def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
-        predictions = self.wic.predict(use_pairs)
-        threshold_spans = list(
-            mit.windowed([float("-inf"), *self.thresholds, float("inf")], n=2, step=1)
-        )
-        for i, x in enumerate(predictions):
-            for j, (floor, ceil) in enumerate(threshold_spans):
-                assert floor is not None and ceil is not None
-                if floor <= x < ceil:
-                    predictions[i] = float(j)
-                    break
-        return predictions
+    def predict_all(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
+        predictions = self.predict(use_pairs)
+        return self.scaler.fit_transform(predictions)

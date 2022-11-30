@@ -14,6 +14,10 @@ class GradedLSCDModel(BaseModel, ABC):
     def predict(self, lemma: Lemma) -> float:
         ...
 
+    def predict_all(self, lemmas: list[Lemma]) -> list[float]:
+        use_pairs = []
+        for lemma in lemmas:
+            predictions.update({lemma.name: model.predict(lemma)})
 
 class BinaryModel(BaseModel, ABC):
     ...

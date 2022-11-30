@@ -183,6 +183,7 @@ class ContextualEmbedder(WICModel):
     layer_aggregator: LayerAggregator = Field(alias="layer_aggregation")
     subword_aggregator: SubwordAggregator = Field(alias="subword_aggregation")
 
+    _embeddings: dict[UseID, np.ndarray] = PrivateAttr(default_factory=dict)
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
@@ -245,12 +246,16 @@ class ContextualEmbedder(WICModel):
         with self:
             similarities = []
             for use_1, use_2 in use_pairs:
-                enc_1 = self.encode(use_1, type=type)
-                enc_2 = self.encode(use_2, type=type)
-                similarities.append(self.similarity_metric(enc_1, enc_2))
+                if (use_1.identifier, use_2.identifier) not in self.predictions:
+                    enc_1 = self.encode(use_1, type=type)
+                    enc_2 = self.encode(use_2, type=type)
+                    sim = self.similarity_metric(enc_1, enc_2)
+                    self.predictions[use_1.identifier, use_2.identifier] = sim
+                else:
+                    similarities.append(self.predictions[use_1.identifier, use_2.identifier])
 
         return similarities
-
+    
     def tokenize(self, use: Use) -> BatchEncoding:
         return self.tokenizer.encode_plus(
             text=use.context, return_tensors="pt", add_special_tokens=True
@@ -261,10 +266,11 @@ class ContextualEmbedder(WICModel):
         tensor = self.layer_aggregator(tensor, layers) # (1, 1, embedding)
         return tensor.squeeze()
 
-
+    def encode_all(self, uses: list[Use]) -> list[T]:
+        return [self.encode(use, type=np.ndarray) for use in uses] # type: ignore
     
     def encode(self, use: Use, type: Type[T] = np.ndarray) -> T:
-        embedding = None if self.cache is None else self.cache.retrieve(use)
+        embedding = self._embeddings.get(use.identifier, None if self.cache is None else self.cache.retrieve(use))
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
             log.info(f"Target character indices: {use.indices}")
@@ -316,6 +322,7 @@ class ContextualEmbedder(WICModel):
 
             if self.cache is not None:
                 self.cache.add_use(use=use, embedding=embedding)
+            self._embeddings[use.identifier] = embedding.cpu().numpy()
 
         embedding = self.aggregate(embedding, layers=self.layers)
         if self.normalization is not None:
