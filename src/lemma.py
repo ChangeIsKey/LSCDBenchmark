@@ -27,8 +27,13 @@ from src.use import (
 )
 from src.utils.utils import ShouldNotHappen, CsvParams
 
+class SampledSampling(BaseModel):
+    n: int
+    replace: bool
+
+
 Pairing = Literal["COMPARE", "EARLIER", "LATER"]
-Sampling = Literal["all", "sampled", "annotated"]
+Sampling = Literal["all", "annotated"] | SampledSampling
 
 class Lemma(BaseModel):
     name: str
@@ -153,8 +158,6 @@ class Lemma(BaseModel):
         self,
         pairing: Pairing,
         sampling: Sampling,
-        n: int | None = None,
-        replace: bool | None = None,
     ) -> list[tuple[Use, Use]]:
 
         match (sampling, pairing):
@@ -164,18 +167,12 @@ class Lemma(BaseModel):
             case ("all", p):
                 ids1, ids2 = self.split_uses(p)
                 use_pairs = list(product(ids1, ids2))
-            case ("sampled", p):
-                if replace is None:
-                    raise ValueError("'replace' parameter not provided for sampling")
-                if n is None:
-                    raise ValueError("'n' parameter not provided for sampling")
-
+            case (sampled, p):
+                assert isinstance(sampled, SampledSampling)
                 ids1, ids2 = self.split_uses(p)
-                ids1 = [np.random.choice(ids1, replace=replace) for _ in range(n)]
-                ids2 = [np.random.choice(ids2, replace=replace) for _ in range(n)]
+                ids1 = [np.random.choice(ids1, replace=sampled.replace) for _ in range(sampled.n)]
+                ids2 = [np.random.choice(ids2, replace=sampled.replace) for _ in range(sampled.n)]
                 use_pairs = list(zip(ids1, ids2))
-            case _:
-                raise ShouldNotHappen
 
         use_pairs_instances = []
         for id1, id2 in use_pairs:

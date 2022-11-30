@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+  - /task/wic@wic: ???
+
+_target_: src.lscd.APD
+sampling:
+  n: 50
+  replace: false
+pairing: COMPARE
