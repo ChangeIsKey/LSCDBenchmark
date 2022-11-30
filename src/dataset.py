@@ -403,16 +403,11 @@ class Dataset(BaseModel):
     @property
     def lemmas(self) -> list[Lemma]:
         if self._lemmas is None:
-            to_load = [
-                folder.name
-                for folder in (self.path / "data").iterdir()
-                if folder.is_dir()
-            ]
+            to_load = [folder for folder in (self.path / "data").iterdir()]
             self._lemmas = [
                 Lemma(
-                    name=target,
+                    path=target,
                     groupings=self.groupings,
-                    path=self.path,
                     preprocessing=self.preprocessing,
                 )
                 for target in to_load
