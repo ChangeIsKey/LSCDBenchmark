@@ -11,10 +11,9 @@ from typing import (
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from pydantic import BaseModel, PrivateAttr 
+from pydantic import BaseModel, Field, PrivateAttr 
 
 from src.utils import utils
-from src.utils.utils import CsvParams
 from src.use import UseID
 from src.plots import Plotter
 
@@ -33,8 +32,8 @@ class DatasetMetadata(TypedDict):
 class Evaluation(BaseModel, ABC):
     task: EvaluationTask 
     metric: Callable[[list[float | int], list[float | int]], Any] 
-    plotter: Plotter | None
     write: bool
+    plotter: Plotter | None = Field(...)
 
 
     def __call__(self, predictions: dict[K, V], labels: dict[K, V]) -> int | float:

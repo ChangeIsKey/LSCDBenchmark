@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import numpy.typing as npt
+from pydantic import Field
 
 from src.lscd.model import GradedLSCDModel
 from src.lemma import Lemma
@@ -12,7 +13,7 @@ class Permutation(GradedLSCDModel):
     wic: ContextualEmbedder
     n_perms: int
     whiten: bool
-    k: int | None
+    k: int | None = Field(...)
 
     @staticmethod
     def compute_kernel_bias(

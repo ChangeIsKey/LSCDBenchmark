@@ -38,9 +38,6 @@ class WSIModel(BaseModel, ABC):
 
         return similarity_matrix
 
-    class Config:
-        arbitrary_types_allowed = True
-
     @abstractmethod
     def predict(self, uses: list[Use]) -> list[int]:
         ...
