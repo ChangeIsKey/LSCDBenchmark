@@ -77,8 +77,8 @@ class Dataset(BaseModel):
     pairing: list[Pairing] | None = Field(...)
     sampling: list[Sampling] | None = Field(...)
     cleaning: Cleaning | None = Field(...)
-
     preprocessing: ContextPreprocessor | None = Field(...)
+
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)
     _judgments: DataFrame = PrivateAttr(default=None)
