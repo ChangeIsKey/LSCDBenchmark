@@ -177,9 +177,9 @@ class ContextualEmbedder(WICModel):
     truncation_tokens_before_target: float
     similarity_metric: Callable[..., float]
     normalization: None | Callable[[torch.Tensor], torch.Tensor]
-    cache: Cache | None
-    gpu: int | None
     ckpt: str
+    cache: Cache | None = Field(...)
+    gpu: int | None = Field(...)
     layer_aggregator: LayerAggregator = Field(alias="layer_aggregation")
     subword_aggregator: SubwordAggregator = Field(alias="subword_aggregation")
 

@@ -26,7 +26,6 @@ from src.use import (
     Use,
     UseID,
 )
-from src.utils.utils import ShouldNotHappen, CsvParams
 
 class SampledSampling(BaseModel):
     n: int
@@ -37,19 +36,27 @@ Pairing = Literal["COMPARE", "EARLIER", "LATER", "ALL"]
 Sampling = Literal["all", "annotated", "predefined"] | SampledSampling
 
 class Lemma(BaseModel):
-    """The Lemma class represents one lemma in a DWUG-
-    like dataset (i.e., one of the words represented as folders in the `data` directory)
-
-    :param groupings: The time periods to extract uses and use pairs from
-    :type groupings: tuple[str, str]
-    :param path: The path to the folder containing uses.csv for the desired lemma
-    :type path: pathlib.Path
-    :param preprocessing: The kind of preprocessing to apply to the context of each use of the lemma
-    """    
+    """Class representing one lemma in a DWUG-like dataset
+    (i.e., one of the words represented as folders in the data/ directory)
+    """
 
     groupings: tuple[str, str]
+    """
+    Each of the DWUG datasets consists of word usages from multiple groups.
+    In most cases, there are only two, which represent time periods. In other
+    datasets, there are more than two, in which case they represent regional variations.
+    """
+
     path: DirectoryPath
+    """
+    The path to the directory containing the corresponding lemma within its dataset.
+    Must be a valid existing directory.
+    """
+
     preprocessing: ContextPreprocessor
+    """
+    A context preprocessing strategy
+    """
 
     _uses_df: DataFrame = PrivateAttr(default=None)
     _annotated_pairs_df: DataFrame = PrivateAttr(default=None)
@@ -60,6 +67,7 @@ class Lemma(BaseModel):
 
     @property
     def name(self) -> str:
+        """The name of the lemma, based on instance's path"""
         return self.path.name
 
     @property

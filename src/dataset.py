@@ -28,7 +28,7 @@ import src.utils.utils as utils
 from src.cleaning import Cleaning
 from src.evaluation import EvaluationTask
 from src.preprocessing import ContextPreprocessor
-from src.lemma import CsvParams, Lemma, Pairing, Sampling
+from src.lemma import Lemma, Pairing, Sampling
 
 
 class SplitSize(BaseModel):
@@ -63,17 +63,21 @@ class Version(BaseModel):
 
 
 class Dataset(BaseModel):
-    name: str
+    name: str 
+    """
+    The name of the specified dataset.
+    .. hint:: Doesn't need to correlate with its folder name
+    """
     groupings: tuple[str, str]
-    cleaning: Cleaning | None
     preprocessing: ContextPreprocessor
     version: str
     split: Split | RandomSplit | NoSplit
     exclude_annotators: list[str]
-    test_on: set[str] | int | None
-    pairing: list[Pairing] | None
-    sampling: list[Sampling] | None
     versions: dict[str, Version]
+    test_on: set[str] | int | None = Field(...)
+    pairing: list[Pairing] | None = Field(...)
+    sampling: list[Sampling] | None = Field(...)
+    cleaning: Cleaning | None = Field(...)
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)
@@ -197,6 +201,10 @@ class Dataset(BaseModel):
     def get_stats_groupings_schema(
         self, evaluation_task: EvaluationTask
     ) -> DataFrameSchema:
+        """
+        Examples:
+        >>> self.add(1, 2)
+        """
         def validate_grouping(s: Series) -> bool:
             for _, item in s.items():
                 parts = item.split("_")
@@ -402,6 +410,19 @@ class Dataset(BaseModel):
 
     @property
     def lemmas(self) -> list[Lemma]:
+        """Returns the list of lemmas in the dataset
+
+        Returns:
+            list[Lemma]: _description_
+
+        Examples
+        --------
+        >>> np.angle([1.0, 1.0j, 1+1j])               # in radians
+        array([ 0.        ,  1.57079633,  0.78539816]) # may vary
+        >>> np.angle(1+1j, deg=True)                  # in degrees
+        45.0
+        """
+        
         if self._lemmas is None:
             to_load = [folder for folder in (self.path / "data").iterdir()]
             self._lemmas = [

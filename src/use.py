@@ -1,11 +1,11 @@
 import uuid
-from typing import NewType
+from typing import NewType, TypeAlias
 
 import numpy as np
 from pandas import Series
 from pydantic import BaseModel
 
-UseID = NewType("UseID", str)
+UseID: TypeAlias = str
 
 
 class Use(BaseModel):

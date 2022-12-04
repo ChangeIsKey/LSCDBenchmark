@@ -7,13 +7,13 @@ from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 from src.dataset import Dataset
 from src.evaluation import Evaluation
-from src.wic.model import ThresholdedWicModel, WICModel
+from src.wic import WICModel
 from src.lscd import GradedLSCDModel, BinaryThresholdModel
-from src.wsi.model import WSIModel
+from src.wsi import WSIModel
 
 
 Model: TypeAlias = (
-    WICModel | ThresholdedWicModel | GradedLSCDModel | BinaryThresholdModel | WSIModel
+    WICModel | GradedLSCDModel | BinaryThresholdModel | WSIModel
 )
 
 

@@ -6,6 +6,7 @@ src/lscd/__pycache__/
 .huggingface/
 .vscode-server/
 envs/
+docs/build/
 outputs/
 multirun/*
 *__pycache__*

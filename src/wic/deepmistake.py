@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import requests
 from pandas import DataFrame
-from pydantic import BaseModel, HttpUrl, PrivateAttr
+from pydantic import BaseModel, Field, HttpUrl, PrivateAttr
 from tqdm import tqdm
 import subprocess
 
@@ -140,7 +140,7 @@ def to_data_format(use_pair: tuple[Use, Use]) -> Input:
 
 class DeepMistake(WICModel):
     ckpt: Model
-    cache: Cache | None
+    cache: Cache | None = Field(...)
 
     def __enter__(self) -> None:
         pass

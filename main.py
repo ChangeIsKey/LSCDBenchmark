@@ -1,4 +1,3 @@
-from typing import Any
 import dotenv
 import hydra
 from omegaconf import DictConfig
