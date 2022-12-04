@@ -1,3 +1,5 @@
-kri_full:
+stats:
+ kri_full:
   threshold: 0.7
   keep: above
+match: all
