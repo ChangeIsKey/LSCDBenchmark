@@ -11,8 +11,7 @@ from pydantic import (
 
 class CleaningParam(BaseModel):
     threshold: float
-    keep: Literal["above", "below"] = Field(default="above")
-
+    keep: Literal["above", "below"]
 
 class Cleaning(BaseModel):
     stats: dict[str, CleaningParam]
