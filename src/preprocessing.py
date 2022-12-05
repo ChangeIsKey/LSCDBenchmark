@@ -15,7 +15,7 @@ class ContextPreprocessor(BaseModel):
 
     # """Dictionary of substring replacements to apply on the contexts"""
 
-    def __init__(self, spelling_normalization: dict[str, str]) -> None:
+    def __init__(self, **data) -> None:
         """_summary_
 
         Parameters
@@ -28,7 +28,7 @@ class ContextPreprocessor(BaseModel):
         the spelling normalization table (replaces underscores with spaces)
         """
 
-        super().__init__(**{"spelling_normalization": spelling_normalization})
+        super().__init__(**data)
 
         if self.spelling_normalization is not None:
             self.spelling_normalization = {
