@@ -219,12 +219,6 @@ class DeepMistake(WICModel):
             output_dir.mkdir(parents=True, exist_ok=True)
             data_dir.mkdir(parents=True, exist_ok=True)
 
-            scores: dict[tuple[UseID, UseID], float | None] = {
-                (use_pair[0].identifier, use_pair[1].identifier): None
-                for use_pair in use_pairs
-            }
-
-            non_cached_use_pairs: list[tuple[Use, Use]] = []
 
             inputs = [to_data_format(use_pair) for use_pair in use_pairs]
             # list of pairs of use ids to index, deepmistake-formatted input, similarity, and original data
@@ -241,11 +235,16 @@ class DeepMistake(WICModel):
                 for i, use_pair in enumerate(use_pairs)
             }
 
-            scores = {}
+            scores: dict[tuple[UseID, UseID], float | None] = {
+                (use_pair[0].identifier, use_pair[1].identifier): None
+                for use_pair in use_pairs
+            }
+            non_cached_use_pairs: list[tuple[Use, Use]] = []
+
             if self.cache is not None:
                 scores.update(self.cache.retrieve(use_pairs))
                 for pair, similarity in scores.items():
-                    if similarity is None and pair in use_pairs:
+                    if similarity is None:
                         non_cached_use_pairs.append(data[pair][1])
 
             if len(non_cached_use_pairs) > 0:
@@ -277,7 +276,7 @@ class DeepMistake(WICModel):
                     --output_dir {output_dir}", 
                     shell=True, 
                     # if the script doesn't run, comment out the next line
-                    stderr=subprocess.PIPE
+                    # stderr=subprocess.PIPE
                 )
 
                 path.unlink()
@@ -305,9 +304,10 @@ class DeepMistake(WICModel):
 
                 os.chdir(hydra_dir)
 
-            results = [scores[(up[0].identifier, up[1].identifier)] for up in use_pairs] 
-            if any([score is None for score in results]):
+
+            try:
+                return [scores[(up[0].identifier, up[1].identifier)] for up in use_pairs] 
+            except KeyError:
                 if self.cache is not None:
                     self.cache.persist()
                 return self.predict(use_pairs)
-            return results

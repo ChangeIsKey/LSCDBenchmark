@@ -26,7 +26,7 @@ class WICModel(BaseModel, ABC):
         ...
 
     def predict_all(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
-        predictions = self.predict(use_pairs=tqdm(use_pairs, desc="Computing WiC predictions", leave=False))
+        predictions = self.predict(use_pairs=use_pairs)
         if self.scaler is not None:
             predictions = np.array(predictions).reshape(-1, 1)
             predictions = self.scaler.fit_transform(predictions).flatten().tolist()
