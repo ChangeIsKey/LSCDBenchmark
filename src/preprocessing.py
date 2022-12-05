@@ -8,11 +8,10 @@ from logging import getLogger
 log = getLogger(__name__)
 
 
-
-
 class ContextPreprocessor(BaseModel):
     """Base class for all kinds of context preprocessing strategies"""
 
+    spelling_normalization: dict[str, str] | None = Field(...)
     # """Dictionary of substring replacements to apply on the contexts"""
 
     def __init__(self, **data) -> None:
@@ -22,8 +21,8 @@ class ContextPreprocessor(BaseModel):
         ----------
         spelling_normalization : dict[str, str]
             _description_
-        """        
-        
+        """
+
         """Creates a new context preprocessor and postprocesses 
         the spelling normalization table (replaces underscores with spaces)
         """
@@ -57,8 +56,8 @@ class ContextPreprocessor(BaseModel):
         ------
         ValueError
             If the token is not found
-        """      
-        
+        """
+
         char_idx = -1
         for i, token in enumerate(tokens):
             if i == token_index:
@@ -69,7 +68,7 @@ class ContextPreprocessor(BaseModel):
         raise ValueError
 
     def normalize_spelling(self, context: str, start: int) -> tuple[str, int]:
-        """Applies the preprocessor's spelling normalization table and 
+        """Applies the preprocessor's spelling normalization table and
         the new start character index of the target word after all modifications
 
         Parameters
@@ -83,7 +82,7 @@ class ContextPreprocessor(BaseModel):
         -------
         tuple[str, int]
             A tuple consisting of the modified string and the new start character index
-        """        
+        """
         assert self.spelling_normalization is not None
 
         new_target_start = start
@@ -281,7 +280,9 @@ class Normalize(ContextPreprocessor):
     def fields_from_series(self, s: Series) -> dict[str, str | int]:
         context = s.get("context_normalized")
         if context is None:
-            log.warn(f"(lemma={s.lemma}, use={s.identifier}) does not contain a pre-normalized context, {self.default} will be used")
+            log.warn(
+                f"(lemma={s.lemma}, use={s.identifier}) does not contain a pre-normalized context, {self.default} will be used"
+            )
         context = s[self.default]
         return {
             "context": context,
