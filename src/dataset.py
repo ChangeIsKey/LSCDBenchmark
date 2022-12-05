@@ -27,7 +27,7 @@ from src.use import UseID
 import src.utils.utils as utils
 from src.cleaning import Cleaning
 from src.evaluation import EvaluationTask
-from src.preprocessing import ContextPreprocessor
+from src.preprocessing import ContextPreprocessor, Raw
 from src.lemma import Lemma, Pairing, Sampling
 
 
@@ -69,7 +69,6 @@ class Dataset(BaseModel):
     .. hint:: Doesn't need to correlate with its folder name
     """
     groupings: tuple[str, str]
-    preprocessing: ContextPreprocessor
     version: str
     split: Split | RandomSplit | NoSplit
     exclude_annotators: list[str]
@@ -78,6 +77,7 @@ class Dataset(BaseModel):
     pairing: list[Pairing] | None = Field(...)
     sampling: list[Sampling] | None = Field(...)
     cleaning: Cleaning | None = Field(...)
+    preprocessing: ContextPreprocessor | None = Field(...)
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)
@@ -89,6 +89,8 @@ class Dataset(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
+        if self.preprocessing is None:
+            self.preprocessing = Raw(spelling_normalization=None)
         if not self.path.exists():
             self.__download(
                 path=self.data_dir / self.versions[self.version].path.parts[0]

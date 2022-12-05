@@ -36,10 +36,11 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
-    # "sphinx.ext.autosummary",
-    "sphinx_rtd_theme",
-    "sphinxcontrib.autodoc_pydantic",
+    # "sphinxcontrib.autodoc_pydantic",
+    "autoapi.extension"
 ]
+
+autoapi_dirs = ["../../src"]
 # autosummary_generate = True
 
 intersphinx_mapping = {
@@ -55,14 +56,13 @@ autodoc_typehints_format = "fully-qualified"
 
 autodoc_default_options = {
     'member-order': 'groupwise',
-    'special-members': '__init__',
     'members': True,
     'undoc-members': True,
     'show-inheritance': True,
     'inherited-members': "BaseModel"
 }
 autodoc_typehints = 'signature'
-autoclass_content = 'class'
+autoclass_content = 'both'
 
 
 # autoapi_dirs = ["../../src"]

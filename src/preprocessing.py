@@ -13,15 +13,22 @@ log = getLogger(__name__)
 class ContextPreprocessor(BaseModel):
     """Base class for all kinds of context preprocessing strategies"""
 
-    spelling_normalization: dict[str, str] | None = Field(...)
-    """Dictionary of substring replacements to apply on the contexts"""
+    # """Dictionary of substring replacements to apply on the contexts"""
 
-    def __init__(self, **data: Any) -> None:
+    def __init__(self, spelling_normalization: dict[str, str]) -> None:
+        """_summary_
+
+        Parameters
+        ----------
+        spelling_normalization : dict[str, str]
+            _description_
+        """        
+        
         """Creates a new context preprocessor and postprocesses 
         the spelling normalization table (replaces underscores with spaces)
         """
 
-        super().__init__(**data)
+        super().__init__(**{"spelling_normalization": spelling_normalization})
 
         if self.spelling_normalization is not None:
             self.spelling_normalization = {
