@@ -281,10 +281,8 @@ class DeepMistake(WICModel):
 
                 path.unlink()
 
-                with open(
-                    file=output_dir / f"{use_pairs[0][0].target}.scores",
-                    encoding="utf8",
-                ) as f:
+                scores_path = output_dir / f"{use_pairs[0][0].target}.scores"
+                with open(file=scores_path, encoding="utf8") as f:
                     dumped_scores: list[Score] = json.load(f)
                     for x in dumped_scores:
                         id_ = x["id"]
@@ -302,6 +300,7 @@ class DeepMistake(WICModel):
                                 use_pair=data[use_pair][1], similarity=similarity
                             )
 
+                scores_path.unlink()
                 os.chdir(hydra_dir)
 
 
