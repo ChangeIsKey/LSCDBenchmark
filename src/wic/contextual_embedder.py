@@ -191,6 +191,7 @@ class ContextualEmbedder(WICModel):
     layer_aggregator: LayerAggregator = Field(alias="layer_aggregation")
     subword_aggregator: SubwordAggregator = Field(alias="subword_aggregation")
 
+    _embeddings: dict[Use, torch.Tensor] = PrivateAttr(default_factory=dict)
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
@@ -281,7 +282,7 @@ class ContextualEmbedder(WICModel):
         return [self.encode(use, type=type) for use in uses]
 
     def encode(self, use: Use, type: Type[T] = np.ndarray) -> T:
-        embedding = None if self.cache is None else self.cache.retrieve(use)
+        embedding = self._embeddings.get(use, None if self.cache is None else self.cache.retrieve(use))
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
             log.info(f"Target character indices: {use.indices}")
@@ -332,6 +333,7 @@ class ContextualEmbedder(WICModel):
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
 
+            self._embeddings[use] = embedding
             if self.cache is not None:
                 self.cache.add_use(use=use, embedding=embedding)
 
