@@ -4,7 +4,6 @@ defaults:
 _target_: src.evaluation.Evaluation
 task: binary_wic
 metric: 
-  _target_: src.wrappers.spearmanr
+  _target_: sklearn.metrics.average_precision_score
   _partial_: true
-  nan_policy: omit
 write: true

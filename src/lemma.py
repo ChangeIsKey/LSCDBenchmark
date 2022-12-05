@@ -122,9 +122,8 @@ class Lemma(BaseModel):
         """
         if self._annotated_pairs_df is None:
             path = self.path / "judgments.csv"
-            self._annotated_pairs_df = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE)
+            self._annotated_pairs_df = pd.read_csv(path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE, usecols=["identifier1", "identifier2"])
             self._annotated_pairs_df = self.annotated_pairs_schema.validate(self._annotated_pairs_df)
-            self._annotated_pairs_df = self._annotated_pairs_df.loc[["identifier1", "identifier2"]]
         return self._annotated_pairs_df
 
     @property

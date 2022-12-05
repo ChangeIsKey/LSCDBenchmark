@@ -17,9 +17,13 @@ class APD(GradedLSCDModel):
         return np.mean(similarities).item()
 
     def predict_all(self, lemmas: list[Lemma]) -> list[float]:
-        use_pairs_nested = [lemma.use_pairs(pairing=self.pairing, sampling=self.sampling) for lemma in tqdm(lemmas, desc="Building use pairs", leave=False)]
+        use_pairs_nested = [
+            lemma.use_pairs(pairing=self.pairing, sampling=self.sampling) 
+            for lemma in tqdm(lemmas, desc="Building use pairs", leave=False)
+        ]
         use_pairs = [use_pair for sublist in use_pairs_nested for use_pair in sublist]
-        self.wic.predict_all(use_pairs=use_pairs)
+        id_pairs = [(use_0.identifier, use_1.identifier) for use_0, use_1 in use_pairs]
+        self.wic.predictions = dict(zip(id_pairs, self.wic.predict_all(use_pairs=use_pairs)))
         return [self.predict(lemma) for lemma in tqdm(lemmas, desc="Processing lemmas")]
 
 

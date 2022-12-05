@@ -30,5 +30,4 @@ class WICModel(BaseModel, ABC):
         if self.scaler is not None:
             predictions = np.array(predictions).reshape(-1, 1)
             predictions = self.scaler.fit_transform(predictions).flatten().tolist()
-        self.predictions = dict(zip([(use_0.identifier, use_1.identifier) for use_0, use_1 in use_pairs], predictions))
         return predictions

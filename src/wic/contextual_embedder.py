@@ -282,7 +282,7 @@ class ContextualEmbedder(WICModel):
         return [self.encode(use, type=type) for use in uses]
 
     def encode(self, use: Use, type: Type[T] = np.ndarray) -> T:
-        embedding = self._embeddings.get(use, None if self.cache is None else self.cache.retrieve(use))
+        embedding = None if self.cache is None else self.cache.retrieve(use)
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
             log.info(f"Target character indices: {use.indices}")

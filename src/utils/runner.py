@@ -48,15 +48,16 @@ def run(
         if isinstance(model, WICModel):
             assert dataset.sampling is not None
             assert dataset.pairing is not None
+
+            use_pairs = []
+            id_pairs = []
             for lemma in lemma_pbar:
-                use_pairs = []
                 for s, p in list(zip(dataset.sampling, dataset.pairing)):
-                    use_pairs += lemma.use_pairs(pairing=p, sampling=s)
-                id_pairs = [
-                    (use_0.identifier, use_1.identifier) for use_0, use_1 in use_pairs
-                ]
-                predictions.update(dict(zip(id_pairs, model.predict_all(use_pairs))))
-                # TODO: call thresholding for WIC models
+                    local_use_pairs = lemma.use_pairs(pairing=p, sampling=s)
+                    use_pairs.extend(local_use_pairs)
+                    id_pairs.extend([(use_0.identifier, use_1.identifier) for use_0, use_1 in local_use_pairs])
+            predictions.update(dict(zip(id_pairs, model.predict_all(use_pairs))))
+
         elif isinstance(model, GradedLSCDModel):
             predictions.update(dict(zip([lemma.name for lemma in lemmas], model.predict_all(lemmas))))
         elif isinstance(model, BinaryThresholdModel):
