@@ -111,3 +111,6 @@ class Permutation(GradedLSCDModel):
             len([obs for obs in observations if obs > first_observed]) / self.n_perms
         )
         return p_value
+
+    def predict_all(self, lemmas: list[Lemma]) -> list[float]:
+        return [self.predict(lemma) for lemma in lemmas]

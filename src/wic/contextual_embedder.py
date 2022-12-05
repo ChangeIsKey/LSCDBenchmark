@@ -3,7 +3,8 @@ import os
 import uuid
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Literal, Type, TypeAlias, TypeVar
+from tqdm import tqdm
+from typing import Any, Callable, Iterable, Literal, Type, TypeAlias, TypeVar
 
 import numpy as np
 import numpy.typing as npt
@@ -11,8 +12,13 @@ import pandas as pd
 import torch
 from pandas import DataFrame
 from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist, Field
-from transformers import (AutoModel, AutoTokenizer, BatchEncoding,
-                          PreTrainedModel, PreTrainedTokenizerBase)
+from transformers import (
+    AutoModel,
+    AutoTokenizer,
+    BatchEncoding,
+    PreTrainedModel,
+    PreTrainedTokenizerBase,
+)
 from transformers import logging as trans_logging
 
 from src.use import Use, UseID
@@ -24,6 +30,7 @@ trans_logging.set_verbosity_error()
 log = logging.getLogger(__name__)
 
 T = TypeVar("T", torch.Tensor, np.ndarray)
+
 
 class LayerAggregator(str, Enum):
     AVERAGE = "average"
@@ -142,6 +149,7 @@ class Cache(BaseModel):
         for file in self._index_dir.iterdir():
             if file.name != "index.csv" and file.stem not in valid_ids:
                 file.unlink()
+        self._index.to_csv(path_or_buf=self._index_path, index=False)
 
     def persist(self, target: str) -> None:
         while True:
@@ -183,7 +191,6 @@ class ContextualEmbedder(WICModel):
     layer_aggregator: LayerAggregator = Field(alias="layer_aggregation")
     subword_aggregator: SubwordAggregator = Field(alias="subword_aggregation")
 
-    _embeddings: dict[UseID, np.ndarray] = PrivateAttr(default_factory=dict)
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
@@ -242,35 +249,39 @@ class ContextualEmbedder(WICModel):
         rindex = rindex_target + tokens_after - 1
         return lindex, rindex
 
-    def predict(self, use_pairs: list[tuple[Use, Use]], type: Type[T] = np.ndarray) -> list[float]:
+    def predict(
+        self, use_pairs: Iterable[tuple[Use, Use]], type: Type[T] = np.ndarray
+    ) -> list[float]:
+        predictions = []
         with self:
-            similarities = []
-            for use_1, use_2 in use_pairs:
-                if (use_1.identifier, use_2.identifier) not in self.predictions:
-                    enc_1 = self.encode(use_1, type=type)
-                    enc_2 = self.encode(use_2, type=type)
-                    sim = self.similarity_metric(enc_1, enc_2)
-                    self.predictions[use_1.identifier, use_2.identifier] = sim
-                else:
-                    similarities.append(self.predictions[use_1.identifier, use_2.identifier])
+            for use_pair in use_pairs:
+                id_pair = (use_pair[0].identifier, use_pair[1].identifier)
+                if id_pair in self.predictions:
+                    # this will be true when this use pair has been previously
+                    # processed in predict_all
+                    predictions.append(self.predictions[id_pair])
+                    continue
+                enc_1 = self.encode(use_pair[0], type=type)
+                enc_2 = self.encode(use_pair[1], type=type)
+                predictions.append(self.similarity_metric(enc_1, enc_2))
 
-        return similarities
-    
+        return predictions
+
     def tokenize(self, use: Use) -> BatchEncoding:
         return self.tokenizer.encode_plus(
             text=use.context, return_tensors="pt", add_special_tokens=True
         ).to(self.device)
 
     def aggregate(self, tensor: torch.Tensor, layers: list[int]) -> torch.Tensor:
-        tensor = self.subword_aggregator(tensor) # (1, layers, embedding)
-        tensor = self.layer_aggregator(tensor, layers) # (1, 1, embedding)
+        tensor = self.subword_aggregator(tensor)  # (1, layers, embedding)
+        tensor = self.layer_aggregator(tensor, layers)  # (1, 1, embedding)
         return tensor.squeeze()
 
-    def encode_all(self, uses: list[Use]) -> list[T]:
-        return [self.encode(use, type=np.ndarray) for use in uses] # type: ignore
-    
+    def encode_all(self, uses: list[Use], type: Type[T]) -> list[T]:
+        return [self.encode(use, type=type) for use in uses]
+
     def encode(self, use: Use, type: Type[T] = np.ndarray) -> T:
-        embedding = self._embeddings.get(use.identifier, None if self.cache is None else self.cache.retrieve(use))
+        embedding = None if self.cache is None else self.cache.retrieve(use)
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
             log.info(f"Target character indices: {use.indices}")
@@ -314,20 +325,20 @@ class ContextualEmbedder(WICModel):
             embedding = (
                 torch.stack(outputs[2], dim=0)  # (layer, batch, subword, embedding)
                 .squeeze(dim=1)  # (layer, subword, embedding)
-                .permute(1, 0, 2)  # (subword, layer, embedding)
-                [torch.tensor(subwords_bool_mask), :, :]
+                .permute(1, 0, 2)[  # (subword, layer, embedding)
+                    torch.tensor(subwords_bool_mask), :, :
+                ]
             )
 
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
 
             if self.cache is not None:
                 self.cache.add_use(use=use, embedding=embedding)
-            self._embeddings[use.identifier] = embedding.cpu().numpy()
 
         embedding = self.aggregate(embedding, layers=self.layers)
         if self.normalization is not None:
             embedding = self.normalization(embedding)
-            
+
         if type == np.ndarray:
             return embedding.cpu().numpy()
         else:

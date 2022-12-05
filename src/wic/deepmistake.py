@@ -242,9 +242,9 @@ class DeepMistake(WICModel):
             }
 
             if self.cache is not None:
-                scores.update(self.cache.retrieve(use_pairs))
-                for pair, similarity in scores.items():
-                    if similarity is None:
+                self.predictions.update(self.cache.retrieve(use_pairs))
+                for pair, similarity in self.predictions.items():
+                    if similarity is None and pair in use_pairs:
                         non_cached_use_pairs.append(data[pair][1])
 
             if len(non_cached_use_pairs) > 0:
@@ -309,5 +309,5 @@ class DeepMistake(WICModel):
                 if self.cache is not None:
                     self.cache.persist()
                 return self.predict(use_pairs)
-            self.predictions = scores
+            self.predictions.update(scores)
             return results

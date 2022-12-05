@@ -1,3 +1,4 @@
 _target_: torch.nn.functional.normalize
 _partial_: true
 p: 2.0
+dim: 0

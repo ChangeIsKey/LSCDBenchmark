@@ -1,7 +1,9 @@
+import csv
 from typing import Any, TypeAlias
 from hydra import utils
 from pathlib import Path
 import os
+from pandas import DataFrame
 import yaml
 from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
@@ -42,7 +44,7 @@ def run(
         predictions: Any = {}
 
         lemmas = dataset.filter_lemmas(dataset.lemmas)
-        lemma_pbar = tqdm(lemmas, desc="Processing lemmas")
+        lemma_pbar = lemmas
         if isinstance(model, WICModel):
             assert dataset.sampling is not None
             assert dataset.pairing is not None
@@ -53,11 +55,10 @@ def run(
                 id_pairs = [
                     (use_0.identifier, use_1.identifier) for use_0, use_1 in use_pairs
                 ]
-                predictions.update(dict(zip(id_pairs, model.predict(use_pairs))))
+                predictions.update(dict(zip(id_pairs, model.predict_all(use_pairs))))
                 # TODO: call thresholding for WIC models
         elif isinstance(model, GradedLSCDModel):
-            for lemma in lemma_pbar:
-                predictions.update({lemma.name: model.predict(lemma)})
+            predictions.update(dict(zip([lemma.name for lemma in lemmas], model.predict_all(lemmas))))
         elif isinstance(model, BinaryThresholdModel):
             graded_predictions = []
             lemma_names = [lemma.name for lemma in dataset.lemmas]
@@ -72,7 +73,18 @@ def run(
 
         os.chdir(cwd)
 
+        predictions_df = DataFrame({
+            "target": list(predictions.keys()),
+            "prediction": list(predictions.values()),
+        })
+        predictions_df.to_csv(path_or_buf="predictions.csv", sep="\t", quoting=csv.QUOTE_NONE) 
+        
         if evaluation is not None:
             labels = dataset.get_labels(evaluation_task=evaluation.task)
+            labels_df = DataFrame({
+                "target": list(labels.keys()), 
+                "label": list(labels.values())
+            })
+            labels_df.to_csv("labels.csv")
             score = evaluation(labels=labels, predictions=predictions)
     return score

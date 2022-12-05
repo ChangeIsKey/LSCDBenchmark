@@ -1,3 +1,7 @@
+defaults:
+  - scaler: ???
+  - normalization: ???
+
 _target_: src.wic.ContextualEmbedder
 layers: [1, 12]
 layer_aggregation: average

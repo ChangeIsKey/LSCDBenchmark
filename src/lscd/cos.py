@@ -26,3 +26,6 @@ class Cos(GradedLSCDModel):
         later_avg = later_vectors.mean(axis=0)
         cos = distance.cosine(earlier_avg, later_avg)
         return float(cos)
+    
+    def predict_all(self, lemmas: list[Lemma]) -> list[float]:
+        return [self.predict(lemma) for lemma in lemmas]
