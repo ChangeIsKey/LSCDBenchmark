@@ -216,6 +216,11 @@ class DeepMistake(WICModel):
             data_dir = self.ckpt_dir / "data"
             output_dir = self.ckpt_dir / "scores"
 
+            if output_dir.exists():
+                shutil.rmtree(output_dir)
+            if data_dir.exists():
+                shutil.rmtree(data_dir)
+
             output_dir.mkdir(parents=True, exist_ok=True)
             data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -256,7 +261,7 @@ class DeepMistake(WICModel):
                     for up in non_cached_use_pairs
                 ]
 
-                path = data_dir / f"{use_pairs[0][0].target}.data"
+                path = data_dir / "use_pairs.data"
                 with open(path, mode="w", encoding="utf8") as f:
                     json.dump(input_, f)
 
@@ -266,7 +271,7 @@ class DeepMistake(WICModel):
                 script = self.repo_dir / "run_model.py"
 
                 # run run_model.py and capture output (don't print it)
-                subprocess.check_output(
+                os.system(
                     f"python -u {script} \
                     --max_seq_len=500 \
                     --do_eval \
@@ -274,14 +279,9 @@ class DeepMistake(WICModel):
                     --eval_input_dir {data_dir} \
                     --eval_output_dir {output_dir} \
                     --output_dir {output_dir}", 
-                    shell=True, 
-                    # if the script doesn't run, comment out the next line
-                    # stderr=subprocess.PIPE
                 )
 
-                path.unlink()
-
-                scores_path = output_dir / f"{use_pairs[0][0].target}.scores"
+                scores_path = next(output_dir.glob("*.scores"))
                 with open(file=scores_path, encoding="utf8") as f:
                     dumped_scores: list[Score] = json.load(f)
                     for x in dumped_scores:
@@ -300,7 +300,6 @@ class DeepMistake(WICModel):
                                 use_pair=data[use_pair][1], similarity=similarity
                             )
 
-                scores_path.unlink()
                 os.chdir(hydra_dir)
 
 
