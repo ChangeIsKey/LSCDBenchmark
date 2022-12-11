@@ -43,7 +43,7 @@ class StandardSplit(BaseModel):
 class Dataset(BaseModel):
     groupings: tuple[str, str]
     type: Literal["dev", "test"]
-    split: Literal["dev1", "dev2", "test", "full"]
+    split: Literal["dev", "dev1", "dev2", "test", "full"]
     exclude_annotators: list[str]
     path: Path
     name: str
