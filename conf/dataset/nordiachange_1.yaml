@@ -1,0 +1,19 @@
+_target_: src.dataset.Dataset
+cleaning: null
+defaults:
+- _self_
+- preprocessing: toklem
+exclude_annotators: []
+groupings:
+- '1'
+- '2'
+pairing:
+- COMPARE
+path: nor_dia_change/subset1
+sampling:
+- annotated
+spelling_normalization: null
+type: dev
+split: undefined
+test_on: null
+url: https://github.com/ltgoslo/nor_dia_change.git

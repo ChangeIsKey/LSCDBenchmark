@@ -1,3 +1,4 @@
+from enum import Enum
 import csv
 import json
 import os
@@ -31,48 +32,23 @@ from src.preprocessing import ContextPreprocessor, Raw
 from src.lemma import Lemma, Pairing, Sampling
 
 
-class SplitSize(BaseModel):
-    dev: float
-    test: float
-
-
 class StandardSplit(BaseModel):
     dev: list[str]
+    dev1: list[str]
+    dev2: list[str]
     test: list[str]
-
-
-class Split(BaseModel):
-    how: Literal["standard"]
-    use: Literal["dev", "test"]
-
-
-class RandomSplit(Split):
-    how: Literal["random"]  # type: ignore
-    use: Literal["dev", "test"]
-    sizes: SplitSize
-
-
-class NoSplit(BaseModel):
-    how: Literal["no_split"]
-
-
-class Version(BaseModel):
-    path: Path
-    url: HttpUrl | None = Field(default=None)
-    standard_split: StandardSplit | None = Field(default=None)
+    full: list[str]
 
 
 class Dataset(BaseModel):
-    name: str 
-    """
-    The name of the specified dataset.
-    .. hint:: Doesn't need to correlate with its folder name
-    """
     groupings: tuple[str, str]
-    version: str
-    split: Split | RandomSplit | NoSplit
+    type: Literal["dev", "test"]
+    split: Literal["dev1", "dev2", "test", "full"]
     exclude_annotators: list[str]
-    versions: dict[str, Version]
+    path: Path
+    name: str
+    url: HttpUrl | None = Field(default=None)
+    standard_split: StandardSplit | None = Field(default=None)
     test_on: set[str] | int | None = Field(...)
     pairing: list[Pairing] | None = Field(...)
     sampling: list[Sampling] | None = Field(...)
@@ -85,27 +61,45 @@ class Dataset(BaseModel):
     _agreements: DataFrame = PrivateAttr(default=None)
     _clusters: DataFrame = PrivateAttr(default=None)
     _lemmas: list[Lemma] = PrivateAttr(default=None)
-    _path: Path = PrivateAttr(default=None)
 
     def __init__(self, **data):
         super().__init__(**data)
         if self.preprocessing is None:
             self.preprocessing = Raw(spelling_normalization=None)
-        if not self.path.exists():
-            self.__download(
-                path=self.data_dir / self.versions[self.version].path.parts[0]
-            )
-        if self.versions[self.version].standard_split is None:
-            self.versions[
-                self.version
-            ].standard_split = self.get_standard_split()
+
+        if not self.absolute_path.exists():
+            self.__download()
+
+        if self.standard_split is None:
+            self.standard_split = self.get_standard_split()
             path = utils.path("conf") / "dataset" / f"{self.name}.yaml"
             with path.open(mode="r", encoding="utf8") as f:
                 config = yaml.safe_load(f)
-            with path.open(mode="w", encoding="utf8") as f:
-                config["versions"][self.version]["standard_split"] = self.versions[self.version].standard_split.dict()
-                yaml.safe_dump(config, f, encoding="utf8", allow_unicode=True, default_flow_style=False)
+                config["standard_split"] = self.standard_split.dict()
+            self.rewrite_config(new_config=config, path=path)
+        
+        all_lemmas = [folder.name for folder in (self.absolute_path / "data").iterdir()]
+        if self.standard_split.full != all_lemmas:
+            # the config may need manual modification
+            self.standard_split.full = all_lemmas
+            path = utils.path("conf") / "dataset" / f"{self.name}.yaml"
+            with path.open(mode="r", encoding="utf8") as f:
+                config = yaml.safe_load(f)
+                config["standard_split"]["full"] = self.standard_split.full
+            self.rewrite_config(new_config=config, path=path)
 
+        
+    def rewrite_config(self, new_config: dict[str, Any], path: Path) -> None:
+        with path.open(mode="w", encoding="utf8") as f:
+            yaml.safe_dump(new_config, f, encoding="utf8", allow_unicode=True, default_flow_style=False)
+
+    @property
+    def relative_path(self) -> Path:
+        return self.path
+
+    @property
+    def absolute_path(self) -> Path:
+        return self.data_dir / self.path
 
     @property
     def data_dir(self) -> Path:
@@ -114,21 +108,19 @@ class Dataset(BaseModel):
             root = "wug"
         return utils.path(root)
 
-    @property
-    def path(self) -> Path:
-        if self._path is None:
-            self._path = self.data_dir / self.versions[self.version].path
-        return self._path
+    def __download_from_git(self) -> None:
+        assert self.url is not None
+        Repo.clone_from(url=self.url, to_path=self.data_dir / self.relative_path.parts[0])
 
-    def __download_from_git(self, url: HttpUrl, path: Path) -> None:
-        Repo.clone_from(url, to_path=path)
+    def __download_zip(self) -> None:
+        assert self.url is not None
 
-    def __download_zip(self, url: HttpUrl, path: Path) -> None:
-        zipped = utils.path(f"{self.name}-{self.version}.zip")
-        r = requests.get(url, stream=True)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        zipped = self.absolute_path.with_suffix(".zip")
+        r = requests.get(self.url, stream=True)
         with open(file=zipped, mode="wb") as f:
             pbar = tqdm(
-                desc=f"Downloading dataset '{self.name}' (version {self.version})",
+                desc=f"Downloading dataset '{self.name}'",
                 unit="B",
                 unit_scale=True,
                 unit_divisor=1024,
@@ -141,29 +133,28 @@ class Dataset(BaseModel):
                     pbar.update(len(chunk))
                     f.write(chunk)
             pbar.close()
-        self.__unzip(zip_file=zipped, output_dir=path)
+        self.__unzip(zip_file=zipped)
 
-    def __download(self, path: Path) -> None:
-        version = self.versions[self.version]
-        assert version.url is not None
-
-        if version.url.endswith(".git"):
-            self.__download_from_git(version.url, path)
+    def __download(self) -> None:
+        assert self.url is not None, f"Could not find a download URL for dataset `{self.name}`"
+        if self.url.endswith(".git"):
+            self.__download_from_git()
         else:
-            self.__download_zip(version.url, path)
+            self.__download_zip()
 
-    def __unzip(self, zip_file: Path, output_dir: Path) -> None:
+    def __unzip(self, zip_file: Path) -> None:
         trans_table = {"ó": "ó", "á": "á", "é": "é", "ú": "ú"}
-        output_dir.mkdir(parents=True, exist_ok=True)
+        self.path.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(file=zip_file) as z:
             namelist = z.namelist()
-            root = output_dir
-            root.mkdir(parents=True, exist_ok=True)
+            root = self.data_dir
+            self.absolute_path.mkdir(parents=True, exist_ok=True)
 
             for filename in tqdm(
                 namelist,
-                desc=f"Unzipping dataset '{self.name}' (version {self.version})",
+                desc=f"Unzipping dataset '{self.name}'",
+                leave=False
             ):
 
                 filename_fixed = filename
@@ -173,13 +164,14 @@ class Dataset(BaseModel):
                 path = Path(filename_fixed)
                 f_parts = list(path.parts)
 
-                f_parts[f_parts.index(root.name)] = self.version
+                f_parts[0] = self.name
                 target_path = root.joinpath(*f_parts)
 
                 if not filename.endswith("/"):
                     target_path.parent.mkdir(parents=True, exist_ok=True)
                     with target_path.open(mode="wb") as file_obj:
                         shutil.copyfileobj(z.open(filename, mode="r"), file_obj)
+
         zip_file.unlink()
 
     @property
@@ -362,38 +354,26 @@ class Dataset(BaseModel):
         )
 
     def get_standard_split(self) -> StandardSplit:
-        all_lemmas = [folder.name for folder in (self.path / "data").iterdir()]
-        dev = Series(all_lemmas).sample(frac=0.5, replace=False).tolist()
-        test = set(all_lemmas).difference(dev)
-        return StandardSplit(dev=dev, test=list(test))
+        all_lemmas = [folder.name for folder in (self.absolute_path / "data").iterdir()]
+        match self.type:
+            case "dev":
+                dev1 = Series(all_lemmas).sample(frac=0.5, replace=False).tolist()
+                dev2 = list(set(all_lemmas).difference(dev1))
+                return StandardSplit(dev=all_lemmas, dev1=dev1, dev2=dev2, test=[], full=all_lemmas)
+            case "test":
+                return StandardSplit(dev=[], dev1=[], dev2=[], test=all_lemmas, full=all_lemmas)
 
-    def dev_test_split(self) -> set[str]:
-        all_lemmas = sorted([folder.name for folder in (self.path / "data").iterdir()])
-        match self.split.how:
-            case "no_split":
-                assert isinstance(self.split, NoSplit)
-                return set(all_lemmas)
-            case "random":
-                assert isinstance(self.split, RandomSplit)
-                dev = (
-                    Series(all_lemmas)
-                    .sample(frac=self.split.sizes.dev, replace=False)
-                    .tolist()
-                )
-                match self.split.use:
-                    case "dev":
-                        return set(dev)
-                    case "test":
-                        return set(all_lemmas).difference(dev)
-            case "standard":
-                assert isinstance(self.split, Split)
-                match self.split.use:
-                    case "dev":
-                        return set(self.versions[self.version].standard_split.dev)
-                    case "test":
-                        return set(self.versions[self.version].standard_split.test)
-            case _:
-                raise ValueError
+    def get_split(self) -> list[str]:
+        assert self.standard_split is not None
+        match self.split:
+            case "full":
+                return self.standard_split.full
+            case "dev1":
+                return self.standard_split.dev1
+            case "dev2":
+                return self.standard_split.dev2
+            case "test":
+                return self.standard_split.test
 
     def filter_lemmas(self, lemmas: list[Lemma]) -> list[Lemma]:
         if utils.is_str_set(self.test_on):
@@ -401,12 +381,12 @@ class Dataset(BaseModel):
         elif utils.is_int(self.test_on):
             keep = set([lemma.name for lemma in lemmas[: self.test_on]])
         else:
-            keep = self.dev_test_split()
+            keep = set(self.get_split())
             if self.cleaning is not None and len(self.cleaning.stats) > 0:
                 # remove "data=full" row
                 agreements = self.stats_agreement_df.iloc[1:, :].copy()
                 agreements = self.cleaning(agreements)
-                keep = set(keep).intersection(agreements.data.unique().tolist())
+                keep = keep.intersection(agreements.data.unique().tolist())
 
         return [lemma for lemma in lemmas if lemma.name in keep]
 
@@ -427,6 +407,7 @@ class Dataset(BaseModel):
         
         if self._lemmas is None:
             to_load = [folder for folder in (self.path / "data").iterdir()]
+            assert self.preprocessing is not None, TypeError("Preprocessing should never be None")
             self._lemmas = [
                 Lemma(
                     path=target,

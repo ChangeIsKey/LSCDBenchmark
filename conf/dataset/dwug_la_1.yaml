@@ -1,0 +1,19 @@
+_target_: src.dataset.Dataset
+cleaning: null
+defaults:
+- _self_
+- preprocessing: toklem
+exclude_annotators: []
+groupings:
+- '1'
+- '2'
+pairing:
+- COMPARE
+sampling:
+- annotated
+spelling_normalization: null
+type: test
+split: undefined
+test_on: null
+path: dwug_la_1
+url: https://zenodo.org/record/5255228/files/dwug_la.zip

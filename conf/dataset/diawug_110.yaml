@@ -1,0 +1,19 @@
+_target_: src.dataset.Dataset
+cleaning: null
+defaults:
+- _self_
+- preprocessing: toklem
+- spelling_normalization: german
+exclude_annotators: []
+groupings:
+- '1'
+- '2'
+pairing:
+- COMPARE
+sampling:
+- annotated
+type: test
+split: undefined
+test_on: null
+path: diawug_110
+url: https://zenodo.org/record/5791193/files/diawug.zip

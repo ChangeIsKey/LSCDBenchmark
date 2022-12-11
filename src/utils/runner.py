@@ -1,12 +1,10 @@
 import csv
 from typing import Any, TypeAlias
 from hydra import utils
-from pathlib import Path
+from hydra.core.hydra_config import HydraConfig
 import os
 from pandas import DataFrame
-import yaml
 from omegaconf import DictConfig, OmegaConf
-from tqdm import tqdm
 from src.dataset import Dataset
 from src.evaluation import Evaluation
 from src.wic import WICModel
@@ -23,13 +21,26 @@ def instantiate(config: DictConfig) -> tuple[Dataset | None, Model | None, Evalu
     dataset = None
     model = None
     evaluation = None
+    
+    hydra_cfg = HydraConfig.get()
+    choices = OmegaConf.to_container(hydra_cfg.runtime.choices)
 
     if config.get("dataset") is not None:
-        dataset = utils.instantiate(config.dataset, _convert_="all")
+        dataset = utils.instantiate(
+            config.dataset, 
+            _convert_="all", 
+            name=choices["dataset"].split(".")[0] # type: ignore
+        ) 
     if config.get("task") is not None and config.task.get("model") is not None:
-        model = utils.instantiate(config.task.model, _convert_="all")
+        model = utils.instantiate(
+            config.task.model, 
+            _convert_="all"
+        )
     if config.get("evaluation") is not None:
-        evaluation = utils.instantiate(config.evaluation, _convert_="all")
+        evaluation = utils.instantiate(
+            config.evaluation, 
+            _convert_="all"
+        )
 
     return dataset, model, evaluation
 

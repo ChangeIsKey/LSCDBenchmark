@@ -1,0 +1,65 @@
+_target_: src.dataset.Dataset
+cleaning: null
+defaults:
+- _self_
+- preprocessing: toklem
+exclude_annotators: []
+groupings:
+- '1'
+- '2'
+pairing:
+- COMPARE
+path: dwug_es_101
+sampling:
+- annotated
+spelling_normalization: null
+split: undefined
+standard_split:
+  dev: []
+  dev1: []
+  dev2: []
+  full:
+  - aguantar
+  - albergar
+  - arena
+  - contingente
+  - corona
+  - corredor
+  - descendiente
+  - despacho
+  - escritor
+  - intolerable
+  - móvil
+  - músculo
+  - pelear
+  - periodista
+  - precursor
+  - quemar
+  - reforma
+  - servidor
+  - sexo
+  - verdaderamente
+  test:
+  - aguantar
+  - albergar
+  - arena
+  - contingente
+  - corona
+  - corredor
+  - descendiente
+  - despacho
+  - escritor
+  - intolerable
+  - móvil
+  - músculo
+  - pelear
+  - periodista
+  - precursor
+  - quemar
+  - reforma
+  - servidor
+  - sexo
+  - verdaderamente
+test_on: null
+type: test
+url: https://zenodo.org/record/6433203/files/dwug_es.zip
