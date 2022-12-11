@@ -278,7 +278,7 @@ class Lemma(BaseModel):
     @property
     def predefined_use_pairs_df(self) -> DataFrame:
         if self._predefined_use_pairs_df is None:
-            self._predefined_use_pairs_df = pd.read_csv(self.path / "predefined_use_pairs.csv", encoding="utf8", delimiter="\t", quoting=csv.QUOTE_NONE)
+            self._predefined_use_pairs_df = pd.read_csv(self.path / "use_pairs.csv", encoding="utf8", delimiter="\t", quoting=csv.QUOTE_NONE)
         return self._predefined_use_pairs_df
     
     @property
