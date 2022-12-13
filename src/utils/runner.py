@@ -1,10 +1,11 @@
 import csv
 from typing import Any, TypeAlias
+from tqdm import tqdm
 from hydra import utils
 from hydra.core.hydra_config import HydraConfig
 import os
 from pandas import DataFrame
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, open_dict
 from src.dataset import Dataset
 from src.evaluation import Evaluation
 from src.wic import WICModel
@@ -26,10 +27,13 @@ def instantiate(config: DictConfig) -> tuple[Dataset | None, Model | None, Evalu
     choices = OmegaConf.to_container(hydra_cfg.runtime.choices)
 
     if config.get("dataset") is not None:
+        OmegaConf.set_struct(config, True)
+        with open_dict(config):
+            config.dataset.name = choices["dataset"].split(".")[0] # type: ignore
+
         dataset = utils.instantiate(
             config.dataset, 
             _convert_="all", 
-            name=choices["dataset"].split(".")[0] # type: ignore
         ) 
     if config.get("task") is not None and config.task.get("model") is not None:
         model = utils.instantiate(
@@ -51,7 +55,6 @@ def run(
 
     score = None
     if model is not None and dataset is not None:
-        cwd = os.getcwd()
         predictions: Any = {}
 
         lemmas = dataset.filter_lemmas(dataset.lemmas)
@@ -60,6 +63,7 @@ def run(
             assert dataset.sampling is not None
             assert dataset.pairing is not None
 
+            lemma_pbar = tqdm(lemmas, leave=False, desc="Building lemma use pairs")
             use_pairs = []
             id_pairs = []
             for lemma in lemma_pbar:
@@ -83,7 +87,6 @@ def run(
                 ids = [use.identifier for use in uses]
                 predictions.update(dict(zip(ids, model.predict(uses))))
 
-        os.chdir(cwd)
 
         predictions_df = DataFrame({
             "target": list(predictions.keys()),

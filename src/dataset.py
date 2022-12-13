@@ -21,7 +21,7 @@ from pandera import (
     Column,
     DataFrameSchema,
 )
-from pydantic import BaseModel, PrivateAttr, HttpUrl, Field
+from pydantic import BaseModel, PrivateAttr, HttpUrl, Field, validator
 from tqdm import tqdm
 from src.use import UseID
 
@@ -53,7 +53,7 @@ class Dataset(BaseModel):
     pairing: list[Pairing] | None = Field(...)
     sampling: list[Sampling] | None = Field(...)
     cleaning: Cleaning | None = Field(...)
-    preprocessing: ContextPreprocessor | None = Field(...)
+    preprocessing: ContextPreprocessor | None = Field(default=None)
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)
@@ -64,8 +64,6 @@ class Dataset(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        if self.preprocessing is None:
-            self.preprocessing = Raw(spelling_normalization=None)
 
         if not self.absolute_path.exists():
             self.__download()
@@ -77,18 +75,11 @@ class Dataset(BaseModel):
                 config = yaml.safe_load(f)
                 config["standard_split"] = self.standard_split.dict()
             self.rewrite_config(new_config=config, path=path)
-        
-        all_lemmas = [folder.name for folder in (self.absolute_path / "data").iterdir()]
-        if self.standard_split.full != all_lemmas:
-            # the config may need manual modification
-            self.standard_split.full = all_lemmas
-            path = utils.path("conf") / "dataset" / f"{self.name}.yaml"
-            with path.open(mode="r", encoding="utf8") as f:
-                config = yaml.safe_load(f)
-                config["standard_split"]["full"] = self.standard_split.full
-            self.rewrite_config(new_config=config, path=path)
+          
+    @validator("preprocessing", always=True, pre=True)
+    def set_preprocessing(cls, v) -> ContextPreprocessor:
+        return v or Raw(spelling_normalization=None)
 
-        
     def rewrite_config(self, new_config: dict[str, Any], path: Path) -> None:
         with path.open(mode="w", encoding="utf8") as f:
             yaml.safe_dump(new_config, f, encoding="utf8", allow_unicode=True, default_flow_style=False)
@@ -144,7 +135,7 @@ class Dataset(BaseModel):
 
     def __unzip(self, zip_file: Path) -> None:
         trans_table = {"ó": "ó", "á": "á", "é": "é", "ú": "ú"}
-        self.path.mkdir(parents=True, exist_ok=True)
+        self.absolute_path.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(file=zip_file) as z:
             namelist = z.namelist()
@@ -178,11 +169,11 @@ class Dataset(BaseModel):
     def stats_groupings_df(self) -> DataFrame:
         if self._stats_groupings is None:
             stats_groupings = "stats_groupings.csv"
-            path = self.path / "stats" / "semeval" / stats_groupings
+            path = self.absolute_path / "stats" / "semeval" / stats_groupings
             if not path.exists():
-                path = self.path / "stats" / "opt" / stats_groupings
+                path = self.absolute_path / "stats" / "opt" / stats_groupings
             if not path.exists():
-                path = self.path / "stats" / stats_groupings
+                path = self.absolute_path / "stats" / stats_groupings
             self._stats_groupings = pd.read_csv(
                 path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
             )
@@ -296,7 +287,7 @@ class Dataset(BaseModel):
     @property
     def stats_agreement_df(self) -> DataFrame:
         if self._agreements is None:
-            path = self.path / "stats" / "stats_agreement.csv"
+            path = self.absolute_path / "stats" / "stats_agreement.csv"
             self._agreements = pd.read_csv(
                 path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
             )
@@ -313,7 +304,7 @@ class Dataset(BaseModel):
         if self._judgments is None:
             tables = []
             for lemma in self.lemmas:
-                path = self.path / "data" / lemma.name / "judgments.csv"
+                path = self.absolute_path / "data" / lemma.name / "judgments.csv"
                 judgments = pd.read_csv(
                     path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
                 )
@@ -338,7 +329,7 @@ class Dataset(BaseModel):
         if self._clusters is None:
             tables = []
             for lemma in self.lemmas:
-                path = self.path / "clusters" / "opt" / f"{lemma.name}.csv"
+                path = self.absolute_path / "clusters" / "opt" / f"{lemma.name}.csv"
                 clusters = pd.read_csv(
                     path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
                 )
@@ -406,7 +397,7 @@ class Dataset(BaseModel):
         """
         
         if self._lemmas is None:
-            to_load = [folder for folder in (self.path / "data").iterdir()]
+            to_load = [folder for folder in (self.absolute_path / "data").iterdir()]
             assert self.preprocessing is not None, TypeError("Preprocessing should never be None")
             self._lemmas = [
                 Lemma(

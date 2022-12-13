@@ -71,9 +71,9 @@ class SubwordAggregator(str, Enum):
                 min_, _ = tensor.min(dim=0, keepdim=True)
                 return min_
             case self.FIRST:
-                return tensor[0]
+                return tensor[0].unsqueeze(0)
             case self.LAST:
-                return tensor[-1]
+                return tensor[-1].unsqueeze(0)
             case _:
                 raise ValueError
 

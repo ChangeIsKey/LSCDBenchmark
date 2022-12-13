@@ -1,15 +1,14 @@
 defaults:
   - scaler: ???
   - normalization: ???
+  - dist_fn@similarity_metric: ???
 
 _target_: src.wic.ContextualEmbedder
 layers: [1, 12]
 layer_aggregation: average
 subword_aggregation: average
 truncation_tokens_before_target: 0.5
-similarity_metric:
-  _target_: scipy.spatial.distance.cosine
-  _partial_: true
+
 
 gpu: null
 ckpt: ???
@@ -19,7 +18,6 @@ cache:
   metadata:
     dataset:
       name: ${dataset.name}
-      version: ${dataset.version}
       preprocessing: ${dataset.preprocessing.name}
       spelling_normalization: ${dataset.spelling_normalization}
     contextual_embedder:

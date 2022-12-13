@@ -1,0 +1,2 @@
+_target_: scipy.spatial.distance.cosine
+_partial_: true

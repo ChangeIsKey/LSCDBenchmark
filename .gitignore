@@ -1,4 +1,4 @@
-wug/
+wug/**
 .idea/
 .mypy_cache/
 src/__pycache__/
