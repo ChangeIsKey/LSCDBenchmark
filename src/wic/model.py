@@ -19,6 +19,11 @@ from src.use import (
     UseID,
 )
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 class WICModel(BaseModel, ABC):
     scaler: Any = Field(default=None)  # should be a scikit-learn scaler
@@ -35,13 +40,7 @@ class WICModel(BaseModel, ABC):
             predictions = self.scaler.fit_transform(predictions).flatten().tolist()
 
             with Path("scaler_parameters.json").open(mode="w", encoding="utf8") as f:
-                possible_attrs = [ 
-                    "mean_", "var_", "scale_", "min_", 
-                    "data_min_", "data_max_", "data_range_",
-                    "max_abs_", "center_"
-                ]
-                parameters = {attr: getattr(self.scaler, attr).tolist() for attr in possible_attrs if hasattr(self.scaler, attr)}
-                as_json = json.dumps(parameters)
+                as_json = json.dumps(self.scaler.__dict__, cls=NumpyEncoder, indent=4)
                 f.write(as_json)
             
         return predictions
