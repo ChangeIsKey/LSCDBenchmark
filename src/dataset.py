@@ -365,6 +365,8 @@ class Dataset(BaseModel):
                 return self.standard_split.dev2
             case "test":
                 return self.standard_split.test
+            case "dev":
+                return self.standard_split.dev
 
     def filter_lemmas(self, lemmas: list[Lemma]) -> list[Lemma]:
         if utils.is_str_set(self.test_on):
