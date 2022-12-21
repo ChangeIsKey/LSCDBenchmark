@@ -3,7 +3,9 @@ defaults:
   - dataset: ???
   - task: ???
   - evaluation: ???
-  - override hydra/job_logging: custom
+  - /hydra/callbacks:
+    - result_collector
+  - /hydra/job_logging: custom
 
 hydra:
   job:
