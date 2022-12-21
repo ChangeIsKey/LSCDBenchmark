@@ -7,6 +7,7 @@ from src.utils import utils
 import pandas as pd
 import numpy as np
 import yaml
+import json
 from abc import ABC, abstractproperty
 from hydra.core.utils import JobReturn, JobStatus
 import logging
@@ -26,10 +27,11 @@ class LogJobReturnCallback(Callback):
         else:
             self.log.error("Status unknown. This should never happen.")
 
+
 class Experiment(ABC):
     def __init__(self, path: Path) -> None:
         self.path = path
-    
+
     @abstractproperty
     def timestamp(self) -> datetime.datetime:
         raise NotImplementedError
@@ -37,56 +39,52 @@ class Experiment(ABC):
     @staticmethod
     def parse_timestamp(date: str, time: str) -> datetime.datetime:
         return datetime.datetime.strptime(f"{date} {time}", "%Y-%m-%d %H-%M-%S")
-        
+
     def get_score(self) -> float | None:
-        path = self.path / "score.txt"
+        path = self.path / "result.json"
         score = None
         if path.exists():
-            score = np.loadtxt(path).item()
+            with path.open(mode="r", encoding="utf8") as f:
+                result = json.load(f)
+                score = result["score"]
         return score
 
     def get_config(self) -> dict[str, Any]:
         stream = (self.path / ".hydra" / "config.yaml").read_text(encoding="utf8")
         return yaml.safe_load(stream)
-    
+
     def get_n_targets(self) -> int | None:
-        path = self.path / "predictions.tsv"
+        path = self.path / "predictions.csv"
         predictions = pd.DataFrame()
         if path.exists():
             predictions = pd.read_csv(
-                filepath_or_buffer=path, 
-                sep="\t", 
+                filepath_or_buffer=path,
+                sep="\t",
                 engine="pyarrow",
             )
-            return len(predictions["target"].tolist())  # TODO: rename to instance
+            return len(predictions)
         return None
-        
-        
-    def process(self) -> pd.DataFrame:
+
+    def process(self) -> dict:
         score = self.get_score()
         config = self.get_config()
         n_targets = self.get_n_targets()
 
-        return pd.concat(
-            [
-                pd.json_normalize(config),
-                pd.DataFrame([{
-                    "time": self.timestamp, 
-                    "score": score,
-                    "n_targets": n_targets,
-                }]),
-            ],
-            axis=1,
-        )
+        return {
+            "time": str(self.timestamp),
+            "score": score,
+            "n_targets": n_targets,
+            **pd.json_normalize(config).iloc[0].to_dict(),
+        }
 
-    
+
 class RunExperiment(Experiment):
     @property
     def timestamp(self) -> datetime.datetime:
         date = self.path.parent.name
         time = self.path.name
         return self.parse_timestamp(date, time)
-        
+
 
 class MultirunExperiment(Experiment):
     @property
@@ -94,48 +92,46 @@ class MultirunExperiment(Experiment):
         date = self.path.parent.parent.name
         time = self.path.parent.name
         return self.parse_timestamp(date, time)
-    
+
 
 class ResultCollector(Callback):
     OUTPUTS_PATH = utils.path("outputs")
     MULTIRUN_PATH = utils.path("multirun")
 
     def __init__(self) -> None:
-        self.path = utils.path("results.csv")
-        self.results = self.load_results()
-        
-    def load_results(self) -> pd.DataFrame:
-        results = pd.DataFrame()
-        if self.path.exists():
-            results = pd.read_csv(
-                filepath_or_buffer=self.path,
-                sep="\t",
-                engine="pyarrow"
-            )
-        return results
-    
+        self.path = utils.path("results") / "results"
+        self.results: list[dict[str, Any]] = []
+
     def write_results(self) -> None:
-        self.results.to_csv(
-            path_or_buf=self.path,
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        df = pd.DataFrame(self.results)
+        df.to_csv(
+            path_or_buf=self.path.with_suffix(".csv"),
             sep="\t",
-            index=False
+            index=False,
         )
-        
+        df.to_json(
+            path_or_buf=self.path.with_suffix(".json"), 
+            force_ascii=False, 
+            indent=4, 
+            orient="records",
+            date_format=None
+        )
+
     def on_run_end(self, config: DictConfig, **kwargs: Any) -> None:
-        if self.OUTPUTS_PATH.exists():
-            for date in self.OUTPUTS_PATH.iterdir():
-                for path in date.iterdir():
-                    experiment = RunExperiment(path=path)
-                    self.results = pd.concat([self.results, experiment.process()])
+        
+        for date in self.OUTPUTS_PATH.iterdir():
+            for path in date.iterdir():
+                experiment = RunExperiment(path=path)
+                self.results.append(experiment.process())
 
         self.write_results()
 
     def on_multirun_end(self, config: DictConfig, **kwargs: Any) -> None:
-        if self.MULTIRUN_PATH.exists():
-            for date in self.OUTPUTS_PATH.iterdir():
-                for time in date.iterdir():
-                    for path in time.iterdir():
-                        experiment = MultirunExperiment(path=path)
-                        self.results = pd.concat([self.results, experiment.process()])
+        for date in self.OUTPUTS_PATH.iterdir():
+            for time in date.iterdir():
+                for path in time.iterdir():
+                    experiment = MultirunExperiment(path=path)
+                    self.results.append(experiment.process())
 
         self.write_results()

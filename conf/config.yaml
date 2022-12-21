@@ -4,8 +4,8 @@ defaults:
   - task: ???
   - evaluation: ???
   - /hydra/callbacks:
-    - result_collector
     - job_return_status
+    - result_collector
   - override hydra/job_logging: custom
 
 hydra:

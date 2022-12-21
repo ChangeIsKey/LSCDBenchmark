@@ -1,9 +1,11 @@
 import csv
+from pathlib import Path
 from typing import Any, TypeAlias
 from tqdm import tqdm
 from hydra import utils
 from hydra.core.hydra_config import HydraConfig
 import os
+import yaml
 import pandas as pd
 from pandas import DataFrame, Series
 from omegaconf import DictConfig, OmegaConf, open_dict
@@ -26,11 +28,14 @@ def instantiate(config: DictConfig) -> tuple[Dataset | None, Model | None, Evalu
     
     hydra_cfg = HydraConfig.get()
     choices = OmegaConf.to_container(hydra_cfg.runtime.choices)
+    output_dir = Path(hydra_cfg.runtime.output_dir)
 
     if config.get("dataset") is not None:
         OmegaConf.set_struct(config, True)
         with open_dict(config):
             config.dataset.name = choices["dataset"].split(".")[0] # type: ignore
+            with open(file=output_dir / ".hydra" / "config.yaml", mode="w", encoding="utf8") as f:
+                yaml.safe_dump(OmegaConf.to_object(config), f, allow_unicode=True, default_flow_style=False)
 
         dataset = utils.instantiate(
             config.dataset, 
