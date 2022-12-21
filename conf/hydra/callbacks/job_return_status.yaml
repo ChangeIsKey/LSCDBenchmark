@@ -1,0 +1,5 @@
+# @package _global_
+hydra:
+  callbacks:
+    result_collector:
+      _target_: src.callback.LogJobReturnCallback
