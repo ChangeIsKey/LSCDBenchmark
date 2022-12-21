@@ -128,7 +128,7 @@ class ResultCollector(Callback):
         self.write_results()
 
     def on_multirun_end(self, config: DictConfig, **kwargs: Any) -> None:
-        for date in self.OUTPUTS_PATH.iterdir():
+        for date in self.MULTIRUN_PATH.iterdir():
             for time in date.iterdir():
                 for path in time.iterdir():
                     experiment = MultirunExperiment(path=path)
