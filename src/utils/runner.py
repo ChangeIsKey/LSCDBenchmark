@@ -4,7 +4,8 @@ from tqdm import tqdm
 from hydra import utils
 from hydra.core.hydra_config import HydraConfig
 import os
-from pandas import DataFrame
+import pandas as pd
+from pandas import DataFrame, Series
 from omegaconf import DictConfig, OmegaConf, open_dict
 from src.dataset import Dataset
 from src.evaluation import Evaluation
@@ -50,7 +51,9 @@ def instantiate(config: DictConfig) -> tuple[Dataset | None, Model | None, Evalu
 
 
 def run(
-    dataset: Dataset | None, model: Model | None, evaluation: Evaluation | None, write: bool = True
+    dataset: Dataset | None, 
+    model: Model | None, 
+    evaluation: Evaluation | None
 ) -> float | None:
 
     score = None
@@ -89,17 +92,19 @@ def run(
 
 
         predictions_df = DataFrame({
-            "target": list(predictions.keys()),
+            "instance": list(predictions.keys()),
             "prediction": list(predictions.values()),
         })
+
+        first_key = list(predictions.keys())[0]
+        if isinstance(first_key, (tuple, list, set)):
+            new_cols = predictions_df.instance.apply(Series)
+            new_cols.columns = [f"instance_{i}" for i in range(len(new_cols.columns))]  # type: ignore
+            predictions_df.drop(columns=["instance"], inplace=True) 
+            predictions_df = pd.concat([new_cols, predictions_df], axis=1)
         predictions_df.to_csv(path_or_buf="predictions.csv", sep="\t", quoting=csv.QUOTE_NONE) 
         
         if evaluation is not None:
             labels = dataset.get_labels(evaluation_task=evaluation.task)
-            labels_df = DataFrame({
-                "target": list(labels.keys()), 
-                "label": list(labels.values())
-            })
-            labels_df.to_csv("labels.csv")
             score = evaluation(labels=labels, predictions=predictions)
     return score

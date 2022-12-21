@@ -11,7 +11,8 @@ from typing import (
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from pydantic import BaseModel, Field, PrivateAttr 
+from pydantic import BaseModel, Field, PrivateAttr
+import json
 
 from src.utils import utils
 from src.use import UseID
@@ -30,48 +31,51 @@ class DatasetMetadata(TypedDict):
 
 
 class Evaluation(BaseModel, ABC):
-    task: EvaluationTask 
-    metric: Callable[[list[float | int], list[float | int]], Any] 
-    write: bool
+    task: EvaluationTask
+    metric: Callable[[list[float | int], list[float | int]], Any]
     plotter: Plotter | None = Field(...)
 
-
     def __call__(self, predictions: dict[K, V], labels: dict[K, V]) -> int | float:
-        if self.write and self.plotter is not None:
+        if self.plotter is not None:
             self.plotter(predictions=predictions, labels=labels)
 
         results = self.combine_inputs(labels=labels, predictions=predictions)
-        if self.write:
-            results.to_csv("predictions.csv", sep="\t")
+        results.to_csv("predictions.csv", sep="\t")
         results = results.dropna(how="any")
 
         y_true = results.label.tolist()
         y_pred = results.prediction.tolist()
-        score = self.metric(y_true, y_pred)
 
-        if self.write:
-            with open(file="score.txt", mode="w", encoding="utf8") as f:
-                f.write(str(score))
+        result = {"score": self.metric(y_true, y_pred), "metric": self.metric.func.__name__}
 
-        return score
+        with open(file="result.json", mode="w", encoding="utf8") as f:
+            f.write(json.dumps(result, indent=4))
+        return result["score"]
 
     @staticmethod
     def combine_inputs(labels: dict[K, V], predictions: dict[K, V]) -> DataFrame:
         labels_df = DataFrame(
-            {"target": list(labels.keys()), "label": list(labels.values())}
+            {"instance": list(labels.keys()), "label": list(labels.values())}
         )
         predictions_df = DataFrame(
             {
-                "target": list(predictions.keys()),
+                "instance": list(predictions.keys()),
                 "prediction": list(predictions.values()),
             }
         )
         merged = pd.merge(
             left=labels_df,
             right=predictions_df,
-            how="outer",
-            on="target",
+            how="inner",
+            on="instance",
             validate="one_to_one",
         )
+
+        first_key = list(labels.keys())[0]
+        if isinstance(first_key, (tuple, list, set)):
+            new_cols = merged.instance.apply(pd.Series)
+            new_cols.columns = [f"instance_{i}" for i in range(len(new_cols.columns))]  # type: ignore
+            merged.drop(columns=["instance"], inplace=True) 
+            merged = pd.concat([new_cols, merged], axis=1)
 
         return merged

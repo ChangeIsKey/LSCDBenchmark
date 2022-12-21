@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable
 import json
 
+import pandas as pd
 import numpy as np
 import more_itertools as mit
 from pandas import DataFrame
@@ -21,9 +22,9 @@ from src.use import (
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
+        if isinstance(obj, (np.ndarray, np.integer, np.floating)):
+            return obj.item()
+        return super().default(obj)
 
 class WICModel(BaseModel, ABC):
     scaler: Any = Field(default=None)  # should be a scikit-learn scaler
