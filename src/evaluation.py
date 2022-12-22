@@ -1,21 +1,11 @@
-from abc import ABC, abstractmethod
-from typing import (
-    Any,
-    Callable,
-    Literal,
-    TypeAlias,
-    TypeVar,
-    TypedDict,
-)
+import json
+from abc import ABC
+from typing import Any, Callable, Literal, TypeAlias, TypedDict, TypeVar
 
-import numpy as np
 import pandas as pd
 from pandas import DataFrame
-from pydantic import BaseModel, Field, PrivateAttr
-import json
+from pydantic import BaseModel, Field
 
-from src.utils import utils
-from src.use import UseID
 from src.plots import Plotter
 
 EvaluationTask: TypeAlias = Literal[
@@ -77,5 +67,8 @@ class Evaluation(BaseModel, ABC):
             new_cols.columns = [f"instance_{i}" for i in range(len(new_cols.columns))]  # type: ignore
             merged.drop(columns=["instance"], inplace=True) 
             merged = pd.concat([new_cols, merged], axis=1)
+            merged = merged[list(new_cols.columns) + ["prediction", "label"]]
+        else:
+            merged = merged[["instance", "prediction", "label"]]
 
         return merged
