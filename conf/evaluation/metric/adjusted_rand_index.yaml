@@ -1,0 +1,2 @@
+_target_: sklearn.metrics.adjusted_rand_score
+_partial_: true

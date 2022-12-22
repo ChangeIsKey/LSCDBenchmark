@@ -1,9 +1,6 @@
 defaults:
   - plotter: histogram
+  - metric: average_precision
 
 _target_: src.evaluation.Evaluation
 task: binary_wic
-metric: 
-  _target_: sklearn.metrics.average_precision_score
-  _partial_: true
-write: true

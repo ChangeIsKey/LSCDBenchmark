@@ -1,9 +1,8 @@
 defaults:
   - plotter: histogram
+  - metric: adjust_rand_index
 
 _target_: src.evaluation.Evaluation
 task: wsi
 metric:
-  _target_: sklearn.metrics.adjusted_rand_score
-  _partial_: true
 write: true

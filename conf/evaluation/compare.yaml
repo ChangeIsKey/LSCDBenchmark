@@ -1,10 +1,6 @@
 defaults:
   - plotter: histogram
+  - metric: spearman
 
 _target_: src.evaluation.Evaluation
 task: compare
-metric:
-  _target_: scipy.stats.spearmanr
-  _partial_: true
-  nan_policy: omit
-write: true
