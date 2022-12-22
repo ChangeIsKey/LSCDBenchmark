@@ -47,6 +47,7 @@ def instantiate(config: DictConfig) -> tuple[Dataset | None, Model | None, Evalu
             _convert_="all"
         )
     if config.get("evaluation") is not None:
+        # after instantiation, could it still be None?
         evaluation = utils.instantiate(
             config.evaluation, 
             _convert_="all"
@@ -69,11 +70,13 @@ def run(
         lemma_pbar = lemmas
         if isinstance(model, WICModel):
             assert dataset.wic_use_pairs is not None, "Please specify a set of options for use pairs in `dataset.wic_use_pairs`"
+            group = dataset.wic_use_pairs.group
+            sample = dataset.wic_use_pairs.sample
 
             lemma_pbar = tqdm(lemmas, leave=False, desc="Building lemma use pairs")
             use_pairs = []
             for lemma in lemma_pbar:
-                use_pairs.extend(lemma.use_pairs(options=dataset.wic_use_pairs))
+                use_pairs.extend(lemma.use_pairs(group=group, sample=sample))
             id_pairs = [(use_0.identifier, use_1.identifier) for use_0, use_1 in use_pairs]
             predictions.update(dict(zip(id_pairs, model.predict_all(use_pairs))))
 
