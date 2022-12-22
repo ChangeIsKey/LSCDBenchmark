@@ -7,7 +7,7 @@ groupings:
   - "1"
   - "2"
 wic_use_pairs:
-  subset: ALL
+  group: ALL
   sample: annotated
 path: RuSemShift/rusemshift_1/DWUG
 spelling_normalization: null

@@ -7,7 +7,7 @@ groupings:
   - "1"
   - "2"
 wic_use_pairs:
-  subset: ALL
+  group: ALL
   sample: annotated
 path: rushifteval_public/durel/rushifteval2
 spelling_normalization: null

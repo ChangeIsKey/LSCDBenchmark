@@ -8,7 +8,7 @@ groupings:
   - "1"
   - "2"
 wic_use_pairs:
-  subset: ALL
+  group: ALL
   sample: annotated
 spelling_normalization: null
 type: test

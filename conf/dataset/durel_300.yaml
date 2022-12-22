@@ -9,7 +9,7 @@ groupings:
   - "1"
   - "2"
 wic_use_pairs:
-  subset: ALL
+  group: ALL
   sample: annotated
 path: durel_300
 split: undefined

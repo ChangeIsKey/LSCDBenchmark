@@ -9,7 +9,7 @@ groupings:
   - "1"
   - "2"
 wic_use_pairs:
-  subset: ALL
+  group: ALL
   sample: annotated
 path: discowug_110
 split: undefined

@@ -31,10 +31,12 @@ class RandomSampling(BaseModel):
     n: int
     replace: bool
 
+Group = Literal["COMPARE", "EARLIER", "LATER", "ALL"]
+Sample = Literal["all", "annotated", "predefined"] | RandomSampling
 
 class UsePairOptions(BaseModel):
-    subset: Literal["COMPARE", "EARLIER", "LATER", "ALL"]
-    sample: Literal["all", "annotated", "predefined"] | RandomSampling
+    group: Group
+    sample: Sample
 
 class Lemma(BaseModel):
     """Class representing one lemma in a DWUG-like dataset
@@ -211,7 +213,7 @@ class Lemma(BaseModel):
         ids = self.uses_df[self.uses_df.grouping == self.groupings[1]]
         return ids.identifier.tolist(), ids.identifier.tolist()
 
-    def split_uses(self, pairing: Pairing) -> tuple[list[UseID], list[UseID]]:
+    def split_uses(self, group: Group) -> tuple[list[UseID], list[UseID]]:
         """Splits the uses of a lemma into two separate lists of use identifiers, according to `pairing`
 
         Parameters
@@ -224,7 +226,7 @@ class Lemma(BaseModel):
         tuple[list[UseID], list[UseID]]
             _description_
         """
-        match pairing:
+        match group:
             case "COMPARE":
                 return self._split_compare_uses()
             case "EARLIER":
@@ -245,8 +247,8 @@ class Lemma(BaseModel):
         return [Use.from_series(row) for _, row in self.uses_df.iterrows()]
 
     @validate_arguments
-    def use_pairs(self, options: UsePairOptions) -> list[tuple[Use, Use]]:
-        match (options.sample, options.subset):
+    def use_pairs(self, group: Group, sample: Sample) -> list[tuple[Use, Use]]:
+        match (sample, group):
             case ("annotated", p):
                 ids1, ids2 = self._split_augmented_uses(p, self.augmented_annotated_pairs_df)
                 use_pairs = list(zip(ids1, ids2))
@@ -298,8 +300,8 @@ class Lemma(BaseModel):
             self._augmented_predefined_use_pairs_df.drop(columns=drop_cols)
         return self._augmented_predefined_use_pairs_df
         
-    def _split_augmented_uses(self, pairing: Pairing, augmented_uses: DataFrame) -> tuple[list[UseID], list[UseID]]:
-        if pairing == "ALL":
+    def _split_augmented_uses(self, group: Group, augmented_uses: DataFrame) -> tuple[list[UseID], list[UseID]]:
+        if group == "ALL":
             compare_0, compare_1 = self._split_augmented_uses("COMPARE", augmented_uses)
             earlier_0, earlier_1 = self._split_augmented_uses("EARLIER", augmented_uses)
             later_0, later_1 = self._split_augmented_uses("LATER", augmented_uses)
@@ -308,7 +310,7 @@ class Lemma(BaseModel):
                 compare_1 + earlier_1 + later_1
             )
 
-        match pairing:
+        match group:
             case "COMPARE":
                 group_0, group_1 = self.groupings
             case "EARLIER":

@@ -8,6 +8,7 @@ src/lscd/__pycache__/
 envs/
 docs/build/
 outputs/
+experiments/
 multirun/*
 *__pycache__*
 .env
