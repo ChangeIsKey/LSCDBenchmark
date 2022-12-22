@@ -68,17 +68,13 @@ def run(
         lemmas = dataset.filter_lemmas(dataset.lemmas)
         lemma_pbar = lemmas
         if isinstance(model, WICModel):
-            assert dataset.sampling is not None
-            assert dataset.pairing is not None
+            assert dataset.wic_use_pairs is not None, "Please specify a set of options for use pairs in `dataset.wic_use_pairs`"
 
             lemma_pbar = tqdm(lemmas, leave=False, desc="Building lemma use pairs")
             use_pairs = []
-            id_pairs = []
             for lemma in lemma_pbar:
-                for s, p in list(zip(dataset.sampling, dataset.pairing)):
-                    local_use_pairs = lemma.use_pairs(pairing=p, sampling=s)
-                    use_pairs.extend(local_use_pairs)
-                    id_pairs.extend([(use_0.identifier, use_1.identifier) for use_0, use_1 in local_use_pairs])
+                use_pairs.extend(lemma.use_pairs(options=dataset.wic_use_pairs))
+            id_pairs = [(use_0.identifier, use_1.identifier) for use_0, use_1 in use_pairs]
             predictions.update(dict(zip(id_pairs, model.predict_all(use_pairs))))
 
         elif isinstance(model, GradedLSCDModel):

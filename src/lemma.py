@@ -27,13 +27,14 @@ from src.use import (
     UseID,
 )
 
-class SampledSampling(BaseModel):
+class RandomSampling(BaseModel):
     n: int
     replace: bool
 
 
-Pairing = Literal["COMPARE", "EARLIER", "LATER", "ALL"]
-Sampling = Literal["all", "annotated", "predefined"] | SampledSampling
+class UsePairOptions(BaseModel):
+    subset: Literal["COMPARE", "EARLIER", "LATER", "ALL"]
+    sample: Literal["all", "annotated", "predefined"] | RandomSampling
 
 class Lemma(BaseModel):
     """Class representing one lemma in a DWUG-like dataset
@@ -244,13 +245,8 @@ class Lemma(BaseModel):
         return [Use.from_series(row) for _, row in self.uses_df.iterrows()]
 
     @validate_arguments
-    def use_pairs(
-        self,
-        pairing: Pairing,
-        sampling: Sampling,
-    ) -> list[tuple[Use, Use]]:
-
-        match (sampling, pairing):
+    def use_pairs(self, options: UsePairOptions) -> list[tuple[Use, Use]]:
+        match (options.sample, options.subset):
             case ("annotated", p):
                 ids1, ids2 = self._split_augmented_uses(p, self.augmented_annotated_pairs_df)
                 use_pairs = list(zip(ids1, ids2))
@@ -261,7 +257,7 @@ class Lemma(BaseModel):
                 ids1, ids2 = self.split_uses(p)
                 use_pairs = list(product(ids1, ids2))
             case (sampled, p):
-                assert isinstance(sampled, SampledSampling)
+                assert isinstance(sampled, RandomSampling)
                 ids1, ids2 = self.split_uses(p)
                 ids1 = [np.random.choice(ids1, replace=sampled.replace) for _ in range(sampled.n)]
                 ids2 = [np.random.choice(ids2, replace=sampled.replace) for _ in range(sampled.n)]

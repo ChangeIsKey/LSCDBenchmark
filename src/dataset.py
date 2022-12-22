@@ -29,7 +29,7 @@ import src.utils.utils as utils
 from src.cleaning import Cleaning
 from src.evaluation import EvaluationTask
 from src.preprocessing import ContextPreprocessor, Raw
-from src.lemma import Lemma, Pairing, Sampling
+from src.lemma import Lemma, UsePairOptions
 
 
 class StandardSplit(BaseModel):
@@ -50,10 +50,9 @@ class Dataset(BaseModel):
     url: HttpUrl | None = Field(default=None)
     standard_split: StandardSplit | None = Field(default=None)
     test_on: set[str] | int | None = Field(...)
-    pairing: list[Pairing] | None = Field(...)
-    sampling: list[Sampling] | None = Field(...)
     cleaning: Cleaning | None = Field(...)
     preprocessing: ContextPreprocessor | None = Field(default=None)
+    wic_use_pairs: UsePairOptions | None = Field(default=None)
 
     _stats_groupings: DataFrame = PrivateAttr(default=None)
     _uses: DataFrame = PrivateAttr(default=None)

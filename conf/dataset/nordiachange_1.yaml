@@ -1,17 +1,16 @@
 _target_: src.dataset.Dataset
 cleaning: null
 defaults:
-- _self_
-- preprocessing: toklem
+  - _self_
+  - preprocessing: toklem
 exclude_annotators: []
 groupings:
-- '1'
-- '2'
-pairing:
-- COMPARE
+  - "1"
+  - "2"
+wic_use_pairs:
+  subset: ALL
+  sample: annotated
 path: nor_dia_change/subset1
-sampling:
-- annotated
 spelling_normalization: null
 type: dev
 split: undefined

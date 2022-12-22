@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 from tqdm import tqdm
 from src.utils import utils
 
-from src.lemma import Lemma
 from src.use import (
     Use,
     UseID,

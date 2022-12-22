@@ -8,12 +8,12 @@ exclude_annotators: []
 groupings:
 - '1'
 - '2'
-pairing:
-- COMPARE
-sampling:
-- annotated
 type: test
 split: undefined
 test_on: null
 path: diawug_110
 url: https://zenodo.org/record/5791193/files/diawug.zip
+
+wic_use_pairs:
+  subset: ALL
+  sample: annotated
