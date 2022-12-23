@@ -16,9 +16,9 @@ python main.py -m \
     task.model.ckpt=deepset/gbert-large,xlm-roberta-large \
     task.model.gpu=0 \
     task/wic/dist_fn@task.model.similarity_metric=dot \
-    task.model.subword_aggregation=average \
+    task.model.subword_aggregation=first \
     task.model.layers=[23] \
-    task.model.layer_aggregation=average \
+    task.model.layer_aggregation=sum \
     task/wic/normalization@task.model.normalization=none \
     task/wic/scaler@task.model.scaler=none
 
