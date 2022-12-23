@@ -22,4 +22,5 @@ cache:
       spelling_normalization: ${dataset.spelling_normalization}
     contextual_embedder:
       pre_target_tokens: ${....truncation_tokens_before_target}
+      ckpt: ${....ckpt}
 

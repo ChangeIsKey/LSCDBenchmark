@@ -264,7 +264,7 @@ class ContextualEmbedder(WICModel):
                     continue
                 enc_1 = self.encode(use_pair[0], type=type)
                 enc_2 = self.encode(use_pair[1], type=type)
-                predictions.append(self.similarity_metric(enc_1, enc_2))
+                predictions.append(-self.similarity_metric(enc_1, enc_2))
 
         return predictions
 

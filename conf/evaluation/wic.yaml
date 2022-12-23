@@ -1,6 +1,6 @@
 defaults:
   - plotter: histogram
-  - metric: spearman
+  - metric: ???
 
 _target_: src.evaluation.Evaluation
 task: wic
