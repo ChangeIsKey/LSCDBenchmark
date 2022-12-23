@@ -2,8 +2,8 @@ _target_: src.dataset.Dataset
 cleaning: null
 defaults:
   - _self_
-  - preprocessing: toklem
-  - spelling_normalization: swedish
+  - preprocessing: ???
+  - spelling_normalization: ???
 exclude_annotators: []
 groupings:
   - "1"

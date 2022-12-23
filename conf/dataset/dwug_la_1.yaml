@@ -2,7 +2,8 @@ _target_: src.dataset.Dataset
 cleaning: null
 defaults:
   - _self_
-  - preprocessing: toklem
+  - preprocessing: ???
+  - spelling_normalization: none
 exclude_annotators: []
 groupings:
   - "1"
@@ -10,7 +11,6 @@ groupings:
 wic_use_pairs:
   group: ALL
   sample: annotated
-spelling_normalization: null
 type: test
 split: undefined
 test_on: null
