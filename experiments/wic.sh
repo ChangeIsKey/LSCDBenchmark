@@ -9,6 +9,7 @@ python main.py -m \
     dataset=dwug_de_210 \
     dataset.exclude_annotators=[],[annotator0],[annotator1],[annotator2],[annotator3],[annotator4],[annotator5],[annotator6],[annotator7] \
     dataset/preprocessing=toklem,raw,tokenization,normalization,lemmatization \
+    dataset/spelling_normalization=german,none \
     dataset.split=dev,dev1,dev2 \
     task=wic \
     evaluation=wic \
@@ -29,6 +30,7 @@ python main.py -m \
     dataset=dwug_de_210 \
     dataset.exclude_annotators=[],[annotator0],[annotator1],[annotator2],[annotator3],[annotator4],[annotator5],[annotator6],[annotator7] \
     dataset/preprocessing=toklem,raw,tokenization,normalization,lemmatization \
+    dataset/spelling_normalization=german,none \
     dataset.split=dev,dev1,dev2 \
     task=wic \
     evaluation=binary_wic \
@@ -47,6 +49,7 @@ python main.py -m \
     dataset=dwug_de_210 \
     dataset.exclude_annotators=[],[annotator0],[annotator1],[annotator2],[annotator3],[annotator4],[annotator5],[annotator6],[annotator7] \
     dataset/preprocessing=toklem,raw,tokenization,normalization,lemmatization \
+    dataset/spelling_normalization=german,none \
     dataset.split=dev,dev1,dev2 \
     task=wic \
     evaluation=wic \
@@ -60,6 +63,7 @@ python main.py -m \
     dataset=dwug_de_210 \
     dataset.exclude_annotators=[],[annotator0],[annotator1],[annotator2],[annotator3],[annotator4],[annotator5],[annotator6],[annotator7] \
     dataset/preprocessing=toklem,raw,tokenization,normalization,lemmatization \
+    dataset/spelling_normalization=german,none \
     dataset.split=dev,dev1,dev2 \
     task=wic \
     evaluation=binary_wic \
