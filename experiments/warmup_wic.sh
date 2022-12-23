@@ -3,6 +3,7 @@
 export HYDRA_FULL_ERROR=1
 export PROJECT=/projekte/cik/users/andres/LSCDBenchmark
 pushd "${PROJECT}"
+source .env
 source venv/bin/activate
 
 python main.py -m \
@@ -14,6 +15,7 @@ python main.py -m \
     task=wic \
     ~evaluation \
     task/wic@task.model=contextual_embedder \
+    task.model.encode_only=true \
     task.model.ckpt=deepset/gbert-large,xlm-roberta-large \
     task.model.gpu=0 \
     task/wic/dist_fn@task.model.similarity_metric=dot \

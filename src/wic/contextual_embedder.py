@@ -190,6 +190,7 @@ class ContextualEmbedder(WICModel):
     gpu: int | None = Field(...)
     layer_aggregator: LayerAggregator = Field(alias="layer_aggregation")
     subword_aggregator: SubwordAggregator = Field(alias="subword_aggregation")
+    encode_only: bool
 
     _embeddings: dict[Use, torch.Tensor] = PrivateAttr(default_factory=dict)
     _device: torch.device = PrivateAttr(default=None)
@@ -255,7 +256,7 @@ class ContextualEmbedder(WICModel):
     ) -> list[float]:
         predictions = []
         with self:
-            for use_pair in use_pairs:
+            for use_pair in tqdm(use_pairs, desc="Processing use pairs", leave=False):
                 id_pair = (use_pair[0].identifier, use_pair[1].identifier)
                 if id_pair in self.predictions:
                     # this will be true when this use pair has been previously
@@ -278,8 +279,9 @@ class ContextualEmbedder(WICModel):
         tensor = self.layer_aggregator(tensor, layers)  # (1, 1, embedding)
         return tensor.squeeze()
 
-    def encode_all(self, uses: list[Use], type: Type[T]) -> list[T]:
-        return [self.encode(use, type=type) for use in uses]
+    def encode_all(self, uses: list[Use], type: Type[T] = np.ndarray) -> list[T]:
+        with self:
+            return [self.encode(use, type=type) for use in tqdm(uses, desc="Encoding uses", leave=False)]
 
     def encode(self, use: Use, type: Type[T] = np.ndarray) -> T:
         embedding = None if self.cache is None else self.cache.retrieve(use)

@@ -12,6 +12,7 @@ from src.dataset import Dataset
 from src.evaluation import Evaluation
 from src.wic import WICModel
 from src.lscd import GradedLSCDModel, BinaryThresholdModel
+from src.wic.contextual_embedder import ContextualEmbedder
 from src.wsi import WSIModel
 
 
@@ -71,6 +72,16 @@ def run(
             assert dataset.wic_use_pairs is not None, "Please specify a set of options for use pairs in `dataset.wic_use_pairs`"
             group = dataset.wic_use_pairs.group
             sample = dataset.wic_use_pairs.sample
+
+            if isinstance(model, ContextualEmbedder):
+                if model.encode_only:
+                    uses = []
+                    lemma_pbar = tqdm(lemmas, leave=False, desc="Collecting uses")
+                    for lemma in lemma_pbar:
+                        uses.extend(lemma.get_uses())
+                    uses = list(set(uses))
+                    model.encode_all(uses)
+                    return None
 
             lemma_pbar = tqdm(lemmas, leave=False, desc="Building lemma use pairs")
             use_pairs = []

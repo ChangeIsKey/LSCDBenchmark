@@ -8,7 +8,7 @@ layers: [1, 12]
 layer_aggregation: average
 subword_aggregation: average
 truncation_tokens_before_target: 0.5
-
+encode_only: false
 
 gpu: null
 ckpt: ???
