@@ -3,6 +3,7 @@
 export HYDRA_FULL_ERROR=1
 export PROJECT=/projekte/cik/users/andres/LSCDBenchmark
 pushd "${PROJECT}"
+source venv/bin/activate
 
 python main.py -m \
     dataset=dwug_de_210 \
