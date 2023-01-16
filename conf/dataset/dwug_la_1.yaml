@@ -3,6 +3,7 @@ cleaning: null
 defaults:
   - _self_
   - preprocessing: ???
+  - split: ???
   - spelling_normalization: none
 exclude_annotators: []
 groupings:
@@ -12,7 +13,6 @@ wic_use_pairs:
   group: ALL
   sample: annotated
 type: test
-split: undefined
 test_on: null
 path: dwug_la_1
 url: https://zenodo.org/record/5255228/files/dwug_la.zip

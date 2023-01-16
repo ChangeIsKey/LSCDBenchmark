@@ -1,4 +1,2 @@
-_target_: torch.nn.functional.normalize
+_target_: src.wrappers.l1
 _partial_: true
-p: 1.0
-dim: 0

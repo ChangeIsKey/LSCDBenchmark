@@ -25,7 +25,7 @@ log = getLogger(__name__)
 
 class Model(BaseModel):
     name: str
-    url: HttpUrl
+    url: HttpUrl = Field(exclude=True)
 
 
 class Cache(BaseModel):
@@ -148,6 +148,11 @@ class DeepMistake(WICModel):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.cache is not None:
             self.cache.persist()
+
+    def as_df(self) -> DataFrame:
+        df = pd.json_normalize(data=json.loads(self.json(ensure_ascii=False)))
+        return df
+        
 
     def clone_repo(self) -> None:
         Repo.clone_from(url="https://github.com/ameta13/mcl-wic", to_path=self.repo_dir)

@@ -1,8 +1,10 @@
 from enum import Enum
 import csv
+import pickle
 import json
 import os
 import shutil
+import uuid
 import zipfile
 import yaml
 from pathlib import Path
@@ -23,13 +25,13 @@ from pandera import (
 )
 from pydantic import BaseModel, PrivateAttr, HttpUrl, Field, validator
 from tqdm import tqdm
-from src.use import UseID
+from src.use import Use, UseID
 
 import src.utils.utils as utils
 from src.cleaning import Cleaning
 from src.evaluation import EvaluationTask
 from src.preprocessing import ContextPreprocessor, Raw
-from src.lemma import Lemma, UsePairOptions
+from src.lemma import Group, Lemma, Sample, UsePairOptions
 
 
 class StandardSplit(BaseModel):
@@ -38,6 +40,13 @@ class StandardSplit(BaseModel):
     dev2: list[str]
     test: list[str]
     full: list[str]
+
+
+class UsePairCache(BaseModel):
+    dataset: str
+    split: str
+    group: str
+    sample: str
 
 
 class Dataset(BaseModel):
@@ -262,6 +271,56 @@ class Dataset(BaseModel):
     def wsi_labels(self) -> dict[str, int]:
         clusters = self.clusters_df.replace(-1, np.nan)
         return dict(zip(clusters.identifier, clusters.cluster))
+
+    def use_pairs(self, group: Group, sample: Sample) -> list[tuple[Use, Use]]:
+        index_path = utils.path(".use_pairs") / "index.parquet"
+        try:
+            index = pd.read_parquet(index_path)
+        except FileNotFoundError:
+            index = pd.DataFrame(columns=["dataset", "split", "id", "group", "sample"])
+
+        query = pd.DataFrame([{"dataset": self.name, "split": self.split, "group": group, "sample": sample}])
+        df = index.merge(query) 
+
+
+        if df.empty or self.test_on is not None:
+            use_pairs = [
+                use_pair 
+                for lemma in tqdm(self.filter_lemmas(self.lemmas), desc="Retrieving each lemma's use pairs", leave=False)
+                for use_pair in lemma.use_pairs(group=group, sample=sample)
+            ]
+            if self.test_on is None:
+                while True:
+                    identifier = str(uuid.uuid4())
+                    if identifier not in index.id.tolist():
+                        index_path.parent.mkdir(exist_ok=True, parents=True)
+                        index = pd.concat(
+                            [
+                                index,
+                                pd.DataFrame([{
+                                    "dataset": self.name,
+                                    "split": self.split,
+                                    "id": identifier,
+                                    "group": group,
+                                    "sample": sample
+                                }])
+                            ],
+                            ignore_index=True,
+                        )
+                        index.to_parquet(index_path, index=False)
+                        with open(file=index_path.parent / f"{identifier}.pkl", mode="wb") as f:
+                            pickle.dump(use_pairs, f)
+
+                        break
+        else:
+            id = df.id.iloc[0]
+            with open(file=index_path.parent / f"{id}.pkl", mode="rb") as f:
+                use_pairs = pickle.load(f)
+
+        return use_pairs
+
+
+        
 
     def get_labels(self, evaluation_task: EvaluationTask) -> dict[Any, Any]:
         # the get_*_labels methods return dictionaries from targets, identifiers or tuples of identifiers to labels

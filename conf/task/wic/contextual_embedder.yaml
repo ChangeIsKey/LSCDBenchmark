@@ -1,7 +1,7 @@
 defaults:
-  - scaler: ???
-  - normalization: ???
-  - dist_fn@similarity_metric: ???
+  - scaler: none
+  - normalization: none
+  - metric@similarity_metric: ???
 
 _target_: src.wic.ContextualEmbedder
 layers: [1, 12]
@@ -13,8 +13,25 @@ encode_only: false
 gpu: null
 ckpt: ???
 
-cache:
-  _target_: src.wic.contextual_embedder.Cache
+# prediction_cache:
+#   _target_: src.wic.contextual_embedder.PredictionCache
+#   metadata:
+#     dataset:
+#       name: ${dataset.name}
+#       preprocessing: ${dataset.preprocessing.name}
+#       spelling_normalization: ${dataset.spelling_normalization}
+#     contextual_embedder:
+#       pre_target_tokens: ${....truncation_tokens_before_target}
+#       ckpt: ${....ckpt}
+#       layers: ${....layers}
+#       layer_aggregation: ${....layer_aggregation}
+#       subword_aggregation: ${....subword_aggregation}
+#       normalization: ${....normalization}
+#       scaler: ${....scaler}
+#       similarity_metric: ${....similarity_metric}
+
+embedding_cache:
+  _target_: src.wic.contextual_embedder.EmbeddingCache
   metadata:
     dataset:
       name: ${dataset.name}
@@ -23,4 +40,3 @@ cache:
     contextual_embedder:
       pre_target_tokens: ${....truncation_tokens_before_target}
       ckpt: ${....ckpt}
-

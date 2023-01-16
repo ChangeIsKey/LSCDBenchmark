@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import uuid
@@ -11,7 +12,7 @@ import numpy.typing as npt
 import pandas as pd
 import torch
 from pandas import DataFrame
-from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist, Field
+from pydantic import BaseModel, PositiveInt, PrivateAttr, conlist, Field, conint
 from transformers import (
     AutoModel,
     AutoTokenizer,
@@ -81,7 +82,7 @@ class SubwordAggregator(str, Enum):
 TargetName: TypeAlias = str
 
 
-class Cache(BaseModel):
+class EmbeddingCache(BaseModel):
     metadata: dict[Any, Any]
     _cache: dict[TargetName, dict[UseID, torch.Tensor]] = PrivateAttr(
         default_factory=dict
@@ -93,13 +94,11 @@ class Cache(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self._index_dir = utils.path(os.getenv("CACHE_DIR") or ".bert")
-        self._index_path = self._index_dir / "index.csv"
+        self._index_dir = utils.path(os.getenv("BERT_CACHE") or ".bert")
+        self._index_path = self._index_dir / "index.parquet"
 
         try:
-            self._index = pd.read_csv(
-                filepath_or_buffer=self._index_path, engine="pyarrow"
-            )
+            self._index = pd.read_parquet(path=self._index_path, engine="pyarrow")
             self.clean()
         except FileNotFoundError:
             self._index = pd.json_normalize(self.metadata).assign(id=None, target=None)
@@ -120,7 +119,23 @@ class Cache(BaseModel):
         return self._cache[use.target].get(use.identifier)  # this can still be None
 
     def load(self, target: str) -> dict[UseID, torch.Tensor] | None:
-        df = pd.json_normalize(self.metadata).assign(target=target).merge(self._index)
+        query = pd.json_normalize(self.metadata).assign(target=target)
+        missing_cols_in_query = {
+            col: None
+            for col in self._index.columns
+            if col not in query.columns and col != "id"
+        }
+
+        query = query.assign(**missing_cols_in_query)
+
+        missing_cols_in_index = {
+            col: None
+            for col in query.columns
+            if col not in self._index.columns
+        }
+        index = self._index.assign(**missing_cols_in_index)
+        df = index.merge(right=query)
+
         assert len(df) < 2
 
         if df.empty:
@@ -147,15 +162,17 @@ class Cache(BaseModel):
         )
         valid_ids = self._ids()
         for file in self._index_dir.iterdir():
-            if file.name != "index.csv" and file.stem not in valid_ids:
+            if file.stem != "index" and file.stem not in valid_ids:
                 file.unlink()
-        self._index.to_csv(path_or_buf=self._index_path, index=False)
+        self._index.to_parquet(path=self._index_path, engine="pyarrow")
 
     def persist(self, target: str) -> None:
         while True:
             identifier = str(uuid.uuid4())
             if identifier not in self._ids():
                 self._index_dir.mkdir(exist_ok=True, parents=True)
+                self._targets_with_new_uses.remove(target)
+
                 self._index = pd.concat(
                     [
                         self._index,
@@ -165,14 +182,13 @@ class Cache(BaseModel):
                     ],
                     ignore_index=True,
                 )
-                self._index.to_csv(path_or_buf=self._index_path, index=False)
+                self._index.to_parquet(path=self._index_path, engine="pyarrow")
                 log.info("Logged record of new embedding file")
 
                 with open(file=self._index_dir / f"{identifier}.pkl", mode="wb") as f:
                     torch.save(self._cache[target], f)
                     log.info(f"Saved embeddings to disk as {identifier}.pkl")
 
-                self._targets_with_new_uses.remove(target)
 
                 break
 
@@ -180,32 +196,64 @@ class Cache(BaseModel):
         return target in self._targets_with_new_uses
 
 
+# class PredictionCache(BaseModel):
+#     metadata: dict[str, Any]
+#     _index: pd.DataFrame = PrivateAttr(default=None)
+    
+#     def __init__(self, **data: Any) -> None:
+#         super().__init__(**data)
+#         try:
+#             path = utils.path(".bert") / "predictions.csv"
+#             self._index = pd.read_csv(path)
+#         except FileNotFoundError:
+#             self._index = pd.json_normalize(self.metadata).assign(use_0=None, use_1=None)
+#             # self._index = self._index.iloc[0:0]
+#             print(self._index)
+    
+#     def retrieve(self, use_0: UseID, use_1: UseID):
+#         pass
+    
+#     def log(self, prediction: float, use_0: UseID, use_1: UseID) -> None:
+#         pass
+    
+
 class ContextualEmbedder(WICModel):
-    layers: conlist(item_type=PositiveInt, unique_items=True)  # type: ignore
     truncation_tokens_before_target: float
     similarity_metric: Callable[..., float]
     normalization: None | Callable[[torch.Tensor], torch.Tensor]
     ckpt: str
-    cache: Cache | None = Field(...)
-    gpu: int | None = Field(...)
+    layers: conlist(item_type=conint(ge=0), unique_items=True) # type: ignore
+    embedding_cache: EmbeddingCache | None = Field(...)
+    # prediction_cache: PredictionCache | None = Field(...)
+    gpu: int | None = Field(exclude=True)
     layer_aggregator: LayerAggregator = Field(alias="layer_aggregation")
     subword_aggregator: SubwordAggregator = Field(alias="subword_aggregation")
-    encode_only: bool
+    encode_only: bool = Field(exclude=True)
 
     _embeddings: dict[Use, torch.Tensor] = PrivateAttr(default_factory=dict)
     _device: torch.device = PrivateAttr(default=None)
     _tokenizer: PreTrainedTokenizerBase = PrivateAttr(default=None)
     _model: PreTrainedModel = PrivateAttr(default=None)
 
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        self.layers = list(self.layers)
+
     def __enter__(self):
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.cache is not None:
-            targets = self.cache.targets()
+        if self.embedding_cache is not None:
+            targets = self.embedding_cache.targets()
             for target in targets:
-                if self.cache.has_new_uses(target):
-                    self.cache.persist(target)
+                if self.embedding_cache.has_new_uses(target):
+                    self.embedding_cache.persist(target)
+
+    def as_df(self) -> DataFrame:
+        df = pd.json_normalize(data=json.loads(self.json(ensure_ascii=False)))
+        df = df.assign(**{f"layer_{i}": True for i in self.layers})
+        df.drop(columns=["layers"], inplace=True)
+        return df
 
     @property
     def device(self) -> torch.device:
@@ -252,7 +300,7 @@ class ContextualEmbedder(WICModel):
         return lindex, rindex
 
     def predict(
-        self, use_pairs: Iterable[tuple[Use, Use]], type: Type[T] = np.ndarray
+        self, use_pairs: Iterable[tuple[Use, Use]]
     ) -> list[float]:
         predictions = []
         with self:
@@ -263,8 +311,8 @@ class ContextualEmbedder(WICModel):
                     # processed in predict_all
                     predictions.append(self.predictions[id_pair])
                     continue
-                enc_1 = self.encode(use_pair[0], type=type)
-                enc_2 = self.encode(use_pair[1], type=type)
+                enc_1 = self.encode(use_pair[0], type=np.ndarray)
+                enc_2 = self.encode(use_pair[1], type=np.ndarray)
                 predictions.append(-self.similarity_metric(enc_1, enc_2))
 
         return predictions
@@ -281,10 +329,13 @@ class ContextualEmbedder(WICModel):
 
     def encode_all(self, uses: list[Use], type: Type[T] = np.ndarray) -> list[T]:
         with self:
-            return [self.encode(use, type=type) for use in tqdm(uses, desc="Encoding uses", leave=False)]
+            return [
+                self.encode(use, type=type)
+                for use in tqdm(uses, desc="Encoding uses", leave=False)
+            ]
 
     def encode(self, use: Use, type: Type[T] = np.ndarray) -> T:
-        embedding = None if self.cache is None else self.cache.retrieve(use)
+        embedding = None if self.embedding_cache is None else self.embedding_cache.retrieve(use)
         if embedding is None:
             log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
             log.info(f"Target character indices: {use.indices}")
@@ -336,8 +387,8 @@ class ContextualEmbedder(WICModel):
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
 
             self._embeddings[use] = embedding
-            if self.cache is not None:
-                self.cache.add_use(use=use, embedding=embedding)
+            if self.embedding_cache is not None:
+                self.embedding_cache.add_use(use=use, embedding=embedding)
 
         embedding = self.aggregate(embedding, layers=self.layers)
         if self.normalization is not None:

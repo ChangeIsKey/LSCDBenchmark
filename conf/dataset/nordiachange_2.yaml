@@ -4,6 +4,7 @@ defaults:
   - _self_
   - preprocessing: ???
   - spelling_normalization: none
+  - split: ???
 exclude_annotators: []
 groupings:
   - "1"
@@ -13,6 +14,5 @@ wic_use_pairs:
   sample: annotated
 path: nor_dia_change/subset2
 type: dev
-split: undefined
 test_on: null
 url: https://github.com/ltgoslo/nor_dia_change.git

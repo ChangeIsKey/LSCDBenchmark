@@ -246,7 +246,6 @@ class Lemma(BaseModel):
     def get_uses(self) -> list[Use]:
         return [Use.from_series(row) for _, row in self.uses_df.iterrows()]
 
-    @validate_arguments
     def use_pairs(self, group: Group, sample: Sample) -> list[tuple[Use, Use]]:
         match (sample, group):
             case ("annotated", p):

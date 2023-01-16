@@ -3,15 +3,16 @@ cleaning: null
 defaults:
   - preprocessing: ???
   - spelling_normalization: ???
+  - split: ???
 exclude_annotators: []
 groupings:
   - "1"
   - "2"
+
 wic_use_pairs:
   group: ALL
   sample: annotated
 path: dwug_de_210
-split: undefined
 standard_split:
   dev:
     - abbauen

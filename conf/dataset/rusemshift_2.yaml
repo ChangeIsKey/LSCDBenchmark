@@ -3,6 +3,7 @@ cleaning: null
 defaults:
   - preprocessing: ???
   - spelling_normalization: none
+  - split: ???
 exclude_annotators: []
 groupings:
   - "1"
@@ -11,7 +12,6 @@ wic_use_pairs:
   group: ALL
   sample: annotated
 path: RuSemShift/rusemshift_2/DWUG
-split: undefined
 standard_split:
   dev:
     - ателье

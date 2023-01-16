@@ -17,6 +17,8 @@ conda/
 .bert/
 .deepmistake/
 venv/
+.wic/
+.use_pairs/
 analysis/
 results/results.csv
 results/results.xlsx

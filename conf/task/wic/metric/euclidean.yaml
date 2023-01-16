@@ -1,0 +1,2 @@
+_target_: src.wrappers.euclidean_similarity
+_partial_: true
