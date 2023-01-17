@@ -7,7 +7,6 @@ cache:
   metadata:
     dataset:
       name: ${dataset.name}
-      version: ${dataset.version}
       preprocessing: ${dataset.preprocessing.name}
       spelling_normalization: ${dataset.spelling_normalization}
     ckpt: ${...ckpt.name}
