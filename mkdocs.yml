@@ -1,0 +1,12 @@
+site_name: LSCDBenchmark
+repo_url: https://github.com/ChangeIsKey/LSCDBenchmark
+docs_dir: docs
+theme: readthedocs
+
+nav:
+- Home: 'index.md'
+- Getting started:
+  - 'Introduction': 'introduction.md'
+  - 'Installation': 'installation.md'
+- Next step:
+  - 'Usage': 'usage.md'
