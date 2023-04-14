@@ -33,12 +33,17 @@ following:
 
 ```bash
 python main.py \
-  dataset=dwug_de \
+  dataset=dwug_de_210 \
+  dataset/split=dev \
+  dataset/spelling_normalization=german \
+  dataset/preprocessing=normalization \
   task=lscd_graded \
   task/lscd_graded@task.model=apd_compare_all \
   task/wic@task.model.wic=contextual_embedder \
+  task/wic/metric@task.model.wic.similarity_metric=cosine \
   task.model.wic.ckpt=bert-base-german-cased \
   task.model.wic.gpu=0 \
+  'dataset.test_on=[abbauen,abdecken,"abgebrüht"]' \
   evaluation=change_graded
 ```
 
