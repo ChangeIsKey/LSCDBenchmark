@@ -11,6 +11,7 @@ outputs/
 multirun/*
 *__pycache__*
 .env
+env
 .vscode/
 conda/
 .conda/
@@ -25,3 +26,5 @@ results/results.xlsx
 src/wic/deepmistake_models
 src/wic/mcl-wic
 /results/results.json
+setup_env.sh
+update-git.sh

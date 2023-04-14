@@ -20,9 +20,9 @@ class TestModels(unittest.TestCase):
     # @hydra.main(version_base=None, config_path="../../conf", config_name="config")
     def test_test_on(self):
         # print(DictConfig)
-        conf = OmegaConf.create()
-        with initialize(version_base=None, config_path="../../conf"):
-            cfg = compose(config_name="config", return_hydra_config=True, overrides=overrides(
+        #conf = OmegaConf.create()
+        initialize(version_base=None, config_path="../../conf")
+        cfg = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "lscd_graded",
                         "task.model.wic.ckpt": "bert-base-german-cased",
@@ -37,8 +37,10 @@ class TestModels(unittest.TestCase):
                         "evaluation/metric": "f1_score",
                     }
                 ))
-            # print(*instantiate(config))
-            HydraConfig.instance().set_config(conf)
+        # print(*instantiate(config))
+        #HydraConfig.instance().set_config(cfg)
+        #print(OmegaConf.to_yaml(cfg))
+        print(cfg['hydra']['runtime'])
         return run(*instantiate(cfg))
 
 

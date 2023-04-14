@@ -3,10 +3,10 @@
 To get started, clone the repository, then create a new environment:
 
 ```sh
-git clone https://github.com/Garrafao/LSCDBenchmark.git
+git clone https://github.com/ChangeIsKey/LSCDBenchmark.git
 
-virtualenv venv
-source venv/bin/activate
+virtualenv env
+source env/bin/activate
 pip install -r requirements.txt --find-links https://download.pytorch.org/whl/torch_stable.html
 ```
 
@@ -66,3 +66,7 @@ python main.py \
   task.model.wic.ckpt=bert-base-german-cased \
   ~evaluation
 ```
+
+
+## Possible issues
+- you may have to adjust the CUDA version specified in requirements.txt to your local requirements for the GPU.

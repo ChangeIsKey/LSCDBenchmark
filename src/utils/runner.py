@@ -30,11 +30,16 @@ def instantiate(
     model = None
     evaluation = None
 
-    hydra_cfg = HydraConfig.get()
-    choices = OmegaConf.to_container(hydra_cfg.runtime.choices)
-    output_dir = Path(hydra_cfg.runtime.output_dir)
-
     if config.get("dataset") is not None:
+       
+        try:
+            hydra_cfg = HydraConfig.get()
+        except ValueError:
+            hydra_cfg = config['hydra']
+        #hydra_cfg['runtime']['output_dir'] = '.'
+        choices = OmegaConf.to_container(hydra_cfg.runtime.choices)
+        output_dir = Path(hydra_cfg.runtime.output_dir)
+
         OmegaConf.set_struct(config, True)
         with open_dict(config):
             config.dataset.name = choices["dataset"].split(".")[0]  # type: ignore
