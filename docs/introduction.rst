@@ -1,4 +1,6 @@
 LSCDBenchmark
 =============
 
-LSCDBenchmark is a ...
+LSCDBenchmark is a new test document.
+
+This is a new line.
