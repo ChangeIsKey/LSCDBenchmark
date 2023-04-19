@@ -18,6 +18,7 @@ conda/
 .bert/
 .deepmistake/
 venv/
+.venv
 .wic/
 .use_pairs/
 analysis/
