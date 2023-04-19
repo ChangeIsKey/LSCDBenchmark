@@ -3,14 +3,14 @@ Installation instructions
 
 To get started, clone the repository:
 
-.. prompt:: bash $
+.. code-block:: console
 
     git clone https://github.com/ChangeIsKey/LSCDBenchmark.git
 
 
 Create and activate virtual environment (env):
 
-.. prompt:: bash $
+.. code-block:: console
 
     python -m venv env
     source env/bin/activate
@@ -18,7 +18,7 @@ Create and activate virtual environment (env):
 
 Install the required packages:
 
-.. prompt:: bash $
+.. code-block:: console
 
     pip install -r requirements.txt --find-links https://download.pytorch.org/whl/torch_stable.html
 
