@@ -8,9 +8,16 @@ Welcome to LSCDBenchmark's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Getting Started:
 
+   /introduction
+   /installation
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Next Step:
+
+   /usage
 
 Indices and tables
 ==================
