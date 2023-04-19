@@ -79,4 +79,4 @@ python main.py \
 ## Documentation
 
 [Latest Released Version](https://lscdbenchmark.readthedocs.io/en/stable/] \
-[Main Branch Version(may include documentation fixes)](https://lscdbenchmark.readthedocs.io/en/latest/)
+[Main Branch Version (may include documentation fixes)](https://lscdbenchmark.readthedocs.io/en/latest/)
