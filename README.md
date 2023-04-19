@@ -72,6 +72,11 @@ python main.py \
   ~evaluation
 ```
 
-
 ## Possible issues
+
 - you may have to adjust the CUDA version specified in requirements.txt to your local requirements for the GPU.
+
+## Documentation
+
+(Latest Released Version)[https://lscdbenchmark.readthedocs.io/en/stable/]
+(Main Branch Version(may include documentation fixes))[https://lscdbenchmark.readthedocs.io/en/latest/]
