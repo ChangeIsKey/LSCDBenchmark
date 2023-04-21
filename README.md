@@ -1,4 +1,13 @@
-# Installation instructions
+# LSCDBenchmark
+
+Lexical Semantic Change Detection (LSCD) is a field of NLP that studies methods automating the analysis of changes in word meanings over time. In recent years, this field has seen much development in terms of models, datasets and tasks [[1]](#1). This has made it hard to keep a good overview of the field. Additionally, with the multitude of possible options for preprocessing, data cleaning, dataset versions, model parameter choice or tuning, clustering algorithms, and change measures a shared testbed with common evaluation setup is needed in order to precisely reproduce experimental results. Hence, we present a benchmark repository implementing evaluation procedures for models on most available LSCD datasets.
+
+## Documentation
+
+[//]: # ([Latest Released Version](https://lscdbenchmark.readthedocs.io/en/stable/] \ )
+[Main Branch Version (may include documentation fixes)](https://lscdbenchmark.readthedocs.io/en/latest/)
+
+## Installation instructions
 
 To get started, clone the repository, then create a new environment:
 
@@ -76,7 +85,8 @@ python main.py \
 
 - you may have to adjust the CUDA version specified in requirements.txt to your local requirements for the GPU.
 
-## Documentation
-
-[Latest Released Version](https://lscdbenchmark.readthedocs.io/en/stable/] \
-[Main Branch Version (may include documentation fixes)](https://lscdbenchmark.readthedocs.io/en/latest/)
+## References
+<a id="1">[1]</a> 
+Schlechtweg, D. (2022). 
+measurement. 
+University of Stuttgart.
