@@ -87,6 +87,4 @@ python main.py \
 
 ## References
 <a id="1">[1]</a> 
-Schlechtweg, D. (2022). 
-measurement. 
-University of Stuttgart.
+Dominik Schlechtweg. 2023. [Human and Computational Measurement of Lexical Semantic Change](http://dx.doi.org/10.18419/opus-12833). PhD thesis. University of Stuttgart.
