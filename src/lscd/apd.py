@@ -12,12 +12,19 @@ class APD(GradedLSCDModel):
     use_pair_options: UsePairOptions = Field(alias="use_pairs")
 
     def predict(self, lemma: Lemma) -> float:
+        """Generates predictions for use pair samples for input lemma.
+
+        :param lemma: lemma a instance from data set
+        :type lemma: Lemma
+        :return: mean of pairwise distances
+        :rtype: float
+        """              
         use_pairs = lemma.use_pairs(
             group=self.use_pair_options.group, 
             sample=self.use_pair_options.sample
         )
         similarities = self.wic.predict(use_pairs)
-        return np.mean(similarities).item()
+        return -np.mean(similarities).item()
 
     def predict_all(self, lemmas: list[Lemma]) -> list[float]:
         use_pairs_nested = [
