@@ -73,10 +73,14 @@ If you don't want to evaluate a model, you can use tilde notation (~) to remove 
 
 ```bash
 python main.py \
-  dataset=dwug_de \
+  dataset=dwug_de_210 \
+  dataset/split=dev \
+  dataset/spelling_normalization=german \
+  dataset/preprocessing=normalization \
   task=lscd_graded \
   task/lscd_graded@task.model=apd_compare_all \
   task/wic@task.model.wic=contextual_embedder \
+  task/wic/metric@task.model.wic.similarity_metric=cosine \
   task.model.wic.ckpt=bert-base-german-cased \
   ~evaluation
 ```
@@ -86,5 +90,6 @@ python main.py \
 - you may have to adjust the CUDA version specified in requirements.txt to your local requirements for the GPU.
 
 ## References
-<a id="1">[1]</a> 
+
+<a id="1">[1]</a>
 Dominik Schlechtweg. 2023. [Human and Computational Measurement of Lexical Semantic Change](http://dx.doi.org/10.18419/opus-12833). PhD thesis. University of Stuttgart.
