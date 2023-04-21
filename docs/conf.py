@@ -15,7 +15,7 @@ author = 'Change is the key!'
 
 import sphinx_rtd_theme
 
-extensions = ['sphinx_rtd_theme']
+extensions = ['sphinx_rtd_theme', "myst_parser"]
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
