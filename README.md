@@ -4,7 +4,7 @@ Lexical Semantic Change Detection (LSCD) is a field of NLP that studies methods 
 
 ## Documentation
 
-[//]: # ([Latest Released Version](https://lscdbenchmark.readthedocs.io/en/stable/] \ )
+[//]: # "[Latest Released Version](https://lscdbenchmark.readthedocs.io/en/stable/] \ "
 [Main Branch Version (may include documentation fixes)](https://lscdbenchmark.readthedocs.io/en/latest/)
 
 ## Installation instructions
