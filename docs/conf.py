@@ -1,7 +1,10 @@
 # Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+
+import sphinx_book_theme
+
+import os
+import sys
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -13,9 +16,6 @@ author = 'Change is the key!'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['myst_parser',
-              'sphinx.ext.autodoc']
-
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
@@ -24,15 +24,45 @@ source_suffix = {
     '.txt': 'markdown',
     '.md': 'markdown',
 }
-master_doc = 'index'
-pygments_style = 'sphinx'
 
+extensions = [
+    'myst_parser',
+    "sphinx.ext.viewcode",
+    "sphinx.ext.todo",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosectionlabel",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    # "sphinxcontrib.autodoc_pydantic",
+    "autoapi.extension"
+]
+
+autoapi_dirs = ["../../src"]
+# autosummary_generate = True
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    "matplotlib": ('https://matplotlib.org/stable/', None),
+    "numpy": ('https://numpy.org/doc/stable/', None),
+    "pandas": ('https://pandas.pydata.org/docs/', None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
+}
+
+autodoc_typehints_format = "fully-qualified"
+
+autodoc_default_options = {
+    'member-order': 'groupwise',
+    'members': True,
+    'undoc-members': True,
+    'show-inheritance': True,
+    'inherited-members': "BaseModel"
+}
+autodoc_typehints = 'signature'
+autoclass_content = 'both'
 
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
-import sphinx_book_theme
 
 html_theme = 'sphinx_book_theme'
 html_theme_path = [sphinx_book_theme.get_html_theme_path()]
@@ -46,7 +76,3 @@ html_theme_options = {
     "use_edit_page_button": True,
     "path_to_docs": "docs",
 }
-
-import os
-import sys
-sys.path.insert(0, os.path.abspath('..'))
