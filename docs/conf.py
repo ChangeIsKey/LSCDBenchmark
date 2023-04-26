@@ -3,9 +3,8 @@ import sphinx_book_theme
 
 import autoapi
 
-import os
 import sys
-sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, ".")
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -18,12 +17,12 @@ author = 'Change is the key!'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-            "sphinx.ext.viewcode",
-            "sphinx.ext.todo",
-            "sphinx.ext.autodoc",
-            "sphinx.ext.autosectionlabel",
-            "sphinx.ext.napoleon",
-            "sphinx.ext.intersphinx",
+            # "sphinx.ext.viewcode",
+            # "sphinx.ext.todo",
+            # "sphinx.ext.autodoc",
+            # "sphinx.ext.autosectionlabel",
+            # "sphinx.ext.napoleon",
+            # "sphinx.ext.intersphinx",
             # "sphinxcontrib.autodoc_pydantic",
             "autoapi.extension"
               ]
