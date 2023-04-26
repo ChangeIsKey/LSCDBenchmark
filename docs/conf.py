@@ -20,7 +20,8 @@ author = 'Change is the key!'
 extensions = [
               'myst_parser',
               'sphinx.ext.autodoc',
-              'autoapi.extension'
+              'sphinx.ext.doctest',
+              'autoapi.extension',
               ]
 
 autoapi_dirs = ['../src']
