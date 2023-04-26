@@ -5,7 +5,7 @@ import autoapi
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../src'))
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -18,13 +18,38 @@ author = 'Change is the key!'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-              'myst_parser',
-              'sphinx.ext.autodoc',
-              'sphinx.ext.doctest',
-              'autoapi.extension',
+            "sphinx.ext.viewcode",
+            "sphinx.ext.todo",
+            "sphinx.ext.autodoc",
+            "sphinx.ext.autosectionlabel",
+            "sphinx.ext.napoleon",
+            "sphinx.ext.intersphinx",
+            # "sphinxcontrib.autodoc_pydantic",
+            "autoapi.extension"
               ]
 
-autoapi_dirs = ['../src']
+autoapi_dirs = ['../../src']
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    "matplotlib": ('https://matplotlib.org/stable/', None),
+    "numpy": ('https://numpy.org/doc/stable/', None),
+    "pandas": ('https://pandas.pydata.org/docs/', None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
+}
+
+autodoc_typehints_format = "fully-qualified"
+
+
+autodoc_default_options = {
+    'member-order': 'groupwise',
+    'members': True,
+    'undoc-members': True,
+    'show-inheritance': True,
+    'inherited-members': "BaseModel"
+}
+autodoc_typehints = 'signature'
+autoclass_content = 'both'
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']

@@ -13,6 +13,7 @@ datasets
 tasks/index
 lscdClass
 lscdModule
+api
 leaderboard
 usage
 glossary
