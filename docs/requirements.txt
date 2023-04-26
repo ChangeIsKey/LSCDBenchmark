@@ -2,4 +2,4 @@ sphinx
 sphinxcontrib-mermaid
 myst-parser
 sphinx-book-theme
-autoapi
+sphinx-autoapi
