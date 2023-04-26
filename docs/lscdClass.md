@@ -6,6 +6,6 @@
 ```
 
 ```{eval-rst}  
-.. autoclass:: lscd.apd.DiaSense
+.. autoclass:: src.lscd.apd.DiaSense
 :members:
 ```

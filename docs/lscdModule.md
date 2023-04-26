@@ -6,16 +6,16 @@
 ```
 
 ```{eval-rst}  
-.. autoclass:: src.lscd
+.. automodule:: src.lscd
 :members:
 ```
 
 ```{eval-rst}  
-.. autoclass:: src.apd
+.. automodule:: src.apd
 :members:
 ```
 
 ```{eval-rst}  
-.. autoclass:: lscd.apd
+.. automodule:: lscd.apd
 :members:
 ```

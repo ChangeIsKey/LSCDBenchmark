@@ -1,9 +1,11 @@
 # Configuration file for the Sphinx documentation builder.
 import sphinx_book_theme
 
+import autoapi
+
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../LSCDBenchmark/src'))
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -15,8 +17,13 @@ author = 'Change is the key!'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['myst_parser',
-              'sphinx.ext.autodoc']
+extensions = [
+              'myst_parser',
+              'sphinx.ext.autodoc',
+              'autoapi.extension'
+              ]
+
+autoapi_dirs = ['../src']
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
