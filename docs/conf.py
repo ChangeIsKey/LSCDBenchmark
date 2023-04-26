@@ -1,6 +1,5 @@
 # Configuration file for the Sphinx documentation builder.
-
-
+import sphinx_book_theme
 
 import os
 import sys
@@ -29,8 +28,6 @@ source_suffix = {
 }
 master_doc = 'index'
 pygments_style = 'sphinx'
-
-
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
