@@ -2,10 +2,10 @@
 
 ```{eval-rst}  
 .. autoclass:: src.lscd.apd.APD
-:members: predict
+:members:
 ```
 
 ```{eval-rst}  
-.. autoclass:: src.apd.DiaSense
-:members: predict
+.. autoclass:: src.lscd.apd.DiaSense
+:members:
 ```
