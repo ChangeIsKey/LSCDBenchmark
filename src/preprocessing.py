@@ -9,7 +9,16 @@ log = getLogger(__name__)
 
 
 class ContextPreprocessor(BaseModel):
-    """Base class for all kinds of context preprocessing strategies"""
+    """Base class for all kinds of context preprocessing strategies
+
+    :param BaseModel: _description_
+    :type BaseModel: _type_
+    :raises ValueError: _description_
+    :raises NotImplementedError: _description_
+    :raises NotImplementedError: _description_
+    :return: _description_
+    :rtype: _type_
+    """
 
     spelling_normalization: dict[str, str] | None = Field(...)
     # """Dictionary of substring replacements to apply on the contexts"""
