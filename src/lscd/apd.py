@@ -14,7 +14,7 @@ class APD(GradedLSCDModel):
     def predict(self, lemma: Lemma) -> float:
         """Generates predictions for use pair samples for input lemma.
 
-        :param lemma: lemma a instance from data set
+        :param lemma: lemma instance from data set
         :type lemma: Lemma
         :return: mean of pairwise distances
         :rtype: float
@@ -44,6 +44,14 @@ class DiaSense(GradedLSCDModel):
     wic: wic.WICModel
 
     def predict(self, lemma: Lemma) -> float:
+        """Generates predictions of difference between two group of use pair samples for input 
+        lemma. The groups of use pair samples are 'compare' and 'campare + earlier + later'.
+
+        :param lemma: lemma instance from data set
+        :type lemma: Lemma
+        :return: difference of means of pairwise distances
+        :rtype: float
+        """        
         use_pairs_0 = lemma.use_pairs(group="COMPARE", sample="all")
         use_pairs_1 = lemma.use_pairs(group="ALL", sample="all")
         similarities_0 = self.wic.predict(use_pairs_0)
