@@ -1,11 +1,11 @@
 # LSCD
 
 ```{eval-rst}  
-.. autoclass:: src.APD
+.. autoclass:: src.lscd.apd.APD
 :members: predict
 ```
 
 ```{eval-rst}  
-.. autoclass:: src.DiaSense
+.. autoclass:: src.apd.DiaSense
 :members: predict
 ```
