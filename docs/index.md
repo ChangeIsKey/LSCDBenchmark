@@ -17,7 +17,7 @@ tasks/index
 leaderboard
 usage
 cache
-documentation
+developer/index
 glossary
 ```
 
