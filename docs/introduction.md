@@ -1,3 +1,0 @@
-# LSCDBenchmark
-
-LSCDBenchmark is a ...
