@@ -3,14 +3,14 @@
 Install Sphinx:
 
 ```sh
-    pip install sphinx
+pip install sphinx
 ```
 
 Create a directory inside the project to hold the docs:
 
 ```sh
-    cd /path/to/project
-    mkdir docs
+cd /path/to/project
+mkdir docs
 ```
 
 Run `sphinx-quickstart` to create the basic configuration in `docs`:
@@ -23,7 +23,7 @@ sphinx-quickstart
 Then, you will have `index.rst`, a `conf.py` and some other files. If you want to use Markdown instead, you have to firstly follow the installation steps in [Installation of Markdown](#markdown) and you can replace `index.rst` with `index.md`. Build the docs into html to see how they look:
 
 ```sh
-    make html
+make html
 ```
 
 The documentation `index.rst` (or `index.md` if you use Markdown) will be built as `index.html` in the output directory `_build/html/index.html`. You can check it by open `index.html` with any web browser.
@@ -33,13 +33,13 @@ The documentation `index.rst` (or `index.md` if you use Markdown) will be built 
 Both Markdown and reStructuredText can be used in the Sphnix project. You can install the Markdown setting by the following steps:
 
 ```sh
-    pip install myst-parser
+pip install myst-parser
 ```
 
 Add it in the `conf.py`:
 
 ```sh
-    extensions = ["myst_parser"]
+extensions = ["myst_parser"]
 ```
 
 You need to identify the Table of Contents Tree in the `docs/index.md`. `toctree` tells that the other pages are the sub-page of the current page. The following `toctree` example is build upon the example sturcture.
