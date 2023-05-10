@@ -8,3 +8,6 @@ WIC
 
 WSI
 : Word-in-Context (WiC)
+
+WUGs
+: Word Usage Graphs (WUGs)

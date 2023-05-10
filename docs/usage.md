@@ -32,6 +32,7 @@ Here, we chose `contextual_embedder` as a word-in-context model. This model requ
 `contextual_embedder` can also accept a `gpu` parameter. This parameter takes an integer, and represents the ID of a certain GPU (there might be multiple on a single machine).
 
 ---
+
 ## test_on
 
 You can either specify the words to test or a number n to test the top n-word in the word list. The following commands are an example of specifying words:
@@ -49,6 +50,7 @@ Words with spacial characters:
 ```
 
 ---
+
 ## Running in inference mode
 
 If you don't want to evaluate a model, you can use tilde notation (~) to remove a certain required parameter. For example, to run the previous command without any evaluation, you can run the following:

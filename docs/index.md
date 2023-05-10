@@ -16,7 +16,7 @@ datasets
 tasks/index
 leaderboard
 usage
-cache
+examples
 developer/index
 glossary
 ```
@@ -43,7 +43,7 @@ autoapi/LSCDBenchmark/src/index.rst
 - {ref}`modindex`
 - {ref}`search`
 
-## References
+### References
 
 <a name="paper">[1]</a>
 Dominik Schlechtweg. 2023. [Human and Computational Measurement of Lexical Semantic Change](http://dx.doi.org/10.18419/opus-12833). PhD thesis. University of Stuttgart.

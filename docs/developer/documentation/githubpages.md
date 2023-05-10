@@ -8,18 +8,16 @@ You need to have the ownership of the repository to be able to create the `Readt
 
 2. Click on `Import a project` on the your account project dashbord. And, select the repository you want to import.
 
-```{note}
-If there is an error for the missing `requirement.txt`, you can create one as `docs/requirements.txt`. And, in the `.readthedocs.yaml`, add the link to the file:
+2.2. If there is an error for the missing `requirement.txt`, you can create one as `docs/requirements.txt` and include packages you have installed while you building the documentation, such as, `sphinx`, `myst-parser`, `sphinx-autoapi`, etc. Then, add the file path in the `.readthedocs.yaml` as following:
 
-    ```
-    python:
-        install: 
-            - requirements: docs/requirements.txt
-    ``` 
+```sh
+python:
+    install: 
+        - requirements: docs/requirements.txt
 ```
 
 3. Click on `View docs` to see how the page is built.
 
-## Reference
-
-- [Import the documents](https://docs.readthedocs.io/en/stable/intro/import-guide.html#building-your-documentation)
+```{seealso}
+See [this](https://docs.readthedocs.io/en/stable/intro/import-guide.html#building-your-documentation) for more information about importing the documents.
+```

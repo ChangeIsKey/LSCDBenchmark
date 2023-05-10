@@ -71,10 +71,7 @@ myproject/
 The `toctree` about other pages in the `tasks` folder should be indicated in the `docs/tasks/index.md`.
 
 ```{seealso}
-See [toctree](https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html) for more infromation.
+See [this](https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html) for more infromation about toctree.
+See [this](https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html#getting-starte-with-sphinx) for more information about importing the documents.
+See [this](https://docs.readthedocs.io/en/stable/intro/) for more information about Getting Started with Sphinx.
 ```
-
-## Reference
-
-- [Getting Started with Sphinx](https://docs.readthedocs.io/en/stable/intro/getting-started-with-sphinx.html#getting-started-with-sphinx)
-- [Using Markdown with Sphnix](https://docs.readthedocs.io/en/stable/intro/)

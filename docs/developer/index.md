@@ -1,10 +1,9 @@
 # Developer's Guide
 
-This is the developer's guide for documentation. Sphnix is used as a documentation generater in Benchmark documentation. And the documentation is written in Markdown.
+This is the developer's guide including several special approaches in developing LSCDBenchmark.
 
 ```{toctree}
-sphnix
-githubpages
-docstrings
-autoapi
+cache
+hydra
+documentation/index
 ```

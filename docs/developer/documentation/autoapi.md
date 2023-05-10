@@ -73,6 +73,4 @@ You can set a `toctree` for the page in the index page. If you don't need it, yo
     ```
 ```
 
-## Reference
-
-- [Autoapi Tutorial](https://sphinx-autoapi.readthedocs.io/en/latest/tutorials.html)
+See [this](https://sphinx-autoapi.readthedocs.io/en/latest/tutorials.html) for more information about autoapi tutorial.
