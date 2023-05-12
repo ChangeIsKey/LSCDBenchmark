@@ -16,7 +16,7 @@ Set the configuration option about `autoapi_dirs`. It tells AutoAPI where to fin
 
 The Benchmark's source code was inside the `src` directory, which is similar to the following example.
 
-```
+```markdown
 mypackage/
 ├── docs
 │   ├── _build
