@@ -44,15 +44,15 @@ extensions = ["myst_parser"]
 
 You need to identify the Table of Contents Tree in the `docs/index.md`. `toctree` tells that the other pages are the sub-page of the current page. The following `toctree` example is build upon the example sturcture.
 
-```markdown
-    ```{toctree}
+````markdown
+```{toctree}
 
-    getting-started
-    tasks/index
-    developer
-    glossary
-    ```
+getting-started
+tasks/index
+developer
+glossary
 ```
+````
 
 The example structure of documents.
 

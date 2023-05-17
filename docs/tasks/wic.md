@@ -4,9 +4,8 @@ The Word-in-Context task is to determine if two words occurring in two text frag
 
 In diachronic LSCD datasets two word uses constituting an example may be extracted from two documents belonging to distant time periods making those uses very different even when the target word has the same meaning. This might be challenging for models trained on traditional WiC datasets, which often contain examples from the same time period. We analyze how sensitive WiC models are to this shift in time period by comparing their performance on pairs of uses extracted from the old, the new or both corpora (EARLIER, LATER, COMPARE pairs).
 
-(1) Von Hassel replied that he had such faith in the **plane** that he had no hesitation about allowing his only son to become a Starfighter pilot.
-
-(2) This point, where the rays pass through the perspective **plane**, is called the seat of their representation.
+1. Von Hassel replied that he had such faith in the **plane** that he had no hesitation about allowing his only son to become a Starfighter pilot.
+2. This point, where the rays pass through the perspective **plane**, is called the seat of their representation.
 
 ### Reference
 

@@ -1,6 +1,12 @@
 # Lexical Semantic Change Detection (LSCD)
 
-Lexical Semantic Change Detection (LSCD) can be seen as the combination of (at least) three lexical semantic tasks [[1]](#paper1): (i) measurement of semantic proximity between word usages, (ii) clustering of the usages based on their semantic proximity, and (iii) estimation of semantic change labels from the obtained clusterings. Task (i) and (ii) corresponds to the lexicographic process of deriving word senses [[2]](#paper2), while task (iii) measures LSC based on the derived word senses. The tasks need to be solved sequentially, in the order given above, as each is dependent on the output of the previous task, e.g., word usages can only be clustered once their semantic proximity has been estimated.
+Lexical Semantic Change Detection (LSCD) can be seen as the combination of (at least) three lexical semantic tasks [[1]](#paper1):
+
+1. measurement of semantic proximity between word usages
+2. clustering of the usages based on their semantic proximity
+3. estimation of semantic change labels from the obtained clusterings 
+
+Task 1. and 2. corresponds to the lexicographic process of deriving word senses [[2]](#paper2), while task 3. measures LSC based on the derived word senses. The tasks need to be solved sequentially, in the order given above, as each is dependent on the output of the previous task, e.g., word usages can only be clustered once their semantic proximity has been estimated.
 
 ### Reference
 

@@ -13,18 +13,18 @@ From the shell, Hydra will ask you to provide values for all these parameters, a
 An example, using the dataset `dwug_de_210`, with model `apd_compare_all` using BERT as a WiC model and evaluating against graded change labels would be the following:
 
 ```sh
-    python main.py \
-        dataset=dwug_de_210 \
-        dataset/split=dev \
-        dataset/spelling_normalization=german \
-        dataset/preprocessing=normalization \
-        task=lscd_graded \
-        task/lscd_graded@task.model=apd_compare_all \
-        task/wic@task.model.wic=contextual_embedder \
-        task/wic/metric@task.model.wic.similarity_metric=cosine \
-        task.model.wic.ckpt=bert-base-german-cased \
-        task.model.wic.gpu=0 \
-        evaluation=change_graded
+python main.py \
+    dataset=dwug_de_210 \
+    dataset/split=dev \
+    dataset/spelling_normalization=german \
+    dataset/preprocessing=normalization \
+    task=lscd_graded \
+    task/lscd_graded@task.model=apd_compare_all \
+    task/wic@task.model.wic=contextual_embedder \
+    task/wic/metric@task.model.wic.similarity_metric=cosine \
+    task.model.wic.ckpt=bert-base-german-cased \
+    task.model.wic.gpu=0 \
+    evaluation=change_graded
 ```
 
 Here, we chose `contextual_embedder` as a word-in-context model. This model requires a `ckpt` parameter, which represents any model stored in [Huggingface Hub](https://huggingface.co/models), like `bert-base-cased`, `bert-base-uncased`, `xlm-roberta-large`, or `dccuchile/bert-base-spanish-wwm-cased`.
@@ -39,14 +39,14 @@ You can either specify the words to test or a number n to test the top n-word in
 
 Regular words:
 
-```sh
-    dataset.test_on=[abbauen,abdecken]
+```yaml
+dataset.test_on=[abbauen,abdecken]
 ```
 
 Words with spacial characters:
 
-```sh
-    'dataset.test_on=[abbauen,abdecken,"abgebrüht"]'
+```yaml
+'dataset.test_on=[abbauen,abdecken,"abgebrüht"]'
 ```
 
 ---
@@ -56,11 +56,15 @@ Words with spacial characters:
 If you don't want to evaluate a model, you can use tilde notation (~) to remove a certain required parameter. For example, to run the previous command without any evaluation, you can run the following:
 
 ```sh
-    python main.py \
-        dataset=dwug_de \
-        task=lscd_graded \
-        task/lscd_graded@task.model=apd_compare_all \
-        task/wic@task.model.wic=contextual_embedder \
-        task.model.wic.ckpt=bert-base-german-cased \
-        ~evaluation
+python main.py \
+    dataset=dwug_de_210 \
+    dataset/split=dev \
+    dataset/spelling_normalization=german \
+    dataset/preprocessing=normalization \
+    task=lscd_graded \
+    task/lscd_graded@task.model=apd_compare_all \
+    task/wic@task.model.wic=contextual_embedder \
+    task.model.wic.ckpt=bert-base-german-cased \
+    task/wic/metric@task.model.wic.similarity_metric=cosine \
+    ~evaluation
 ```

@@ -1,6 +1,7 @@
 # Configuration file for the Sphinx documentation builder.
 import sphinx_book_theme
 
+
 # -- Project information -----------------------------------------------------
 
 project = 'LSCDBenchmark'
@@ -9,7 +10,7 @@ author = 'Change is the key!'
 
 # -- General configuration ---------------------------------------------------
 
-extensions = ['myst_parser', 'autoapi.extension']
+extensions = ['myst_parser', 'autoapi.extension', 'sphinx_tabs.tabs']
 
 autoapi_dirs = ['../src']
 

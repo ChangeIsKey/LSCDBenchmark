@@ -1,7 +1,6 @@
 # Word Sense Induction (WSI)
 
-Word Sense Induction (WSI) task is to infer which senses a given target word has from its occurrences in an unlabeled corpus. It is usually framed as a clustering task where a model shall cluster a given set of occurrences of the same target word probably in different grammatical forms into clusters corresponding to the senses of this word. Unlike the more popular Word Sense Disambiguation task, in WSI no sense inventory is given to the model and the number of senses of the target word is not known as well. Popular WSI datasets include SemEval 2010 Task 14 [[1]](#paper1) and SemEval 2013 Task 13 [[2]](#paper2). The latter dataset contains examples
-with several senses assigned to a single word occurrence, thus, requiring soft clustering approaches.
+Word Sense Induction (WSI) task is to infer which senses a given target word has from its occurrences in an unlabeled corpus. It is usually framed as a clustering task where a model shall cluster a given set of occurrences of the same target word probably in different grammatical forms into clusters corresponding to the senses of this word. Unlike the more popular Word Sense Disambiguation task, in WSI no sense inventory is given to the model and the number of senses of the target word is not known as well. Popular WSI datasets include SemEval 2010 Task 14 [[1]](#paper1) and SemEval 2013 Task 13 [[2]](#paper2). The latter dataset contains examples with several senses assigned to a single word occurrence, thus, requiring soft clustering approaches.
 
 ### Reference
 

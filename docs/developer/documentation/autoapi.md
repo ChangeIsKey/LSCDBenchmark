@@ -52,25 +52,25 @@ The *Indices and tables* is included in the `index.rst` after you run `quick-sta
 
 The AutoAPI then will automatically generate the documentation and build a `toctree` list in the `doc/index.md`. If you don't want the list to be fully expand in the index page, you can set a `toctree` to contain the auto-generated page `autoapi/index.rst` with `:includehidden:`.
 
-```markdown
-    ```{toctree}
-    :includehidden:
+````markdown
+```{toctree}
+:includehidden:
 
-    autoapi/index.rst
-    ```
+autoapi/index.rst
 ```
+````
 
-```{note}
+````{note}
 Autoapi generates several pages automatically. However, we might not be able to link all the pages in our index page. The error can happen as: ".../docs/autoapi/mypackage/src/index.rst: WARNING: document isn't included in any toctree".
 
 You can set a `toctree` for the page in the index page. If you don't need it, you can hide it with `:hidden:` for the better layout of the page. It then won't show up in the index page.
 
-    ```{toctree}
-    :maxdepth: 1
-    :hidden:
+```{toctree}
+:maxdepth: 1
+:hidden:
 
-    autoapi/mypackage/src/index.rst
-    ```
+autoapi/mypackage/src/index.rst
 ```
+````
 
 See [this](https://sphinx-autoapi.readthedocs.io/en/latest/tutorials.html) for more information about autoapi tutorial.
