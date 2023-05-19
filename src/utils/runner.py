@@ -1,3 +1,4 @@
+import os
 import csv
 from pathlib import Path
 from typing import Any, TypeAlias
@@ -38,7 +39,10 @@ def instantiate(
     try:
         hydra_cfg = HydraConfig.get()
     except ValueError: # this should happen only in testing scenarios where hydra's compose is used
+        # for testing don't use hydra config
         hydra_cfg = None
+        # for testing change working directory manually
+        os.chdir('results')
 
     if config.get("dataset") is not None:
 
@@ -54,7 +58,7 @@ def instantiate(
 
             OmegaConf.set_struct(config, True)
             with open_dict(config):
-                config.dataset.name = choices["dataset"].split(".")[0]  # type: ignore
+                config.dataset.name = choices["dataset"].split(".")[0]  # type: ignore, not sure if this is needed anymore
                 with open(
                     file=output_dir / ".hydra" / "config.yaml", 
                     mode="w", 

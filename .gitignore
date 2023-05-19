@@ -1,4 +1,4 @@
-wug/**
+wug/
 conf/dataset/testwug_en.yaml
 
 .idea/
@@ -8,7 +8,6 @@ src/lscd/__pycache__/
 .huggingface/
 
 docs/_build/
-outputs/
 multirun/*
 *__pycache__*
 .vscode/
@@ -18,8 +17,6 @@ conda/
 .bert/
 .deepmistake/
 .devcontainer/
-.helix/
-.ropeproject/
 .use_pairs/
 .wic/
 
@@ -31,11 +28,10 @@ venv/
 
 
 analysis/
-results/results.csv
-results/results.xlsx
+results/
+outputs/
 src/wic/deepmistake_models
 src/wic/mcl-wic
-/results/results.json
 setup_env.sh
 update-git.sh
 archived/

@@ -29,7 +29,7 @@ class TestLSCDModels(unittest.TestCase):
                         "dataset/preprocessing": "normalization",
                         # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.87
                         "dataset.test_on": ["Reichstag", "Presse"],
-                        "evaluation": "change_graded"
+                        "evaluation": "change_graded",
                         "evaluation/plotter": "none",
                     }
                 ))
@@ -89,12 +89,11 @@ class TestLSCDModels(unittest.TestCase):
                         #"dataset/filter_lemmas": "all",
                         #"evaluation": "wic",
                         #"evaluation/metric": "f1_score",
-                        "evaluation": "change_graded"
+                        "evaluation": "change_graded",
                         "evaluation/plotter": "none",
                     }
                 ))
 
-        # to do:  undeerstand why Sppearman is called various times (plotting or permutation test?)
         # to do:  Change output directory for results
         # to do:  run deepmistake    
         # to do:  remove unnecessary files 
