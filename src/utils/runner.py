@@ -146,6 +146,7 @@ def run(
         )
 
         if evaluation is not None:
+            print(evaluation)
             labels = dataset.get_labels(evaluation_task=evaluation.task)
             score = evaluation(labels=labels, predictions=predictions)
     return score

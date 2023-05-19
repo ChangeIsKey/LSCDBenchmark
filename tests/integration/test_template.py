@@ -11,7 +11,7 @@ import pytest
 
 class TestModels(unittest.TestCase):
     
-    def some_test_function(self):
+    def some_test_function(self) -> None:
 
         # Initialize and compose hydra config
         initialize(version_base=None, config_path="../../conf")
@@ -36,7 +36,7 @@ class TestModels(unittest.TestCase):
         # Assert that prediction corresponds to gold
         assert pytest.approx(1.0) == score1
 
-    def some_other_test_function(self):
+    def some_other_test_function(self) -> None:
         pass
 
 if __name__ == '__main__':
