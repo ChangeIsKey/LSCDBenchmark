@@ -1,29 +1,18 @@
 import sys
 sys.path.insert(0, ".")
 
-import functools
 from hydra import initialize, compose, utils
-import hydra
-#from src.utils.runner import instantiate, run as default_run
-from src.utils.runner import run
-import hydra
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig, OmegaConf, open_dict
+from tests.utils import overrides
+from src.utils.runner import instantiate, run
 from scipy import stats
 
 import unittest
 import pytest
 
-#run = functools.partial(default_run, write=False)
-
-def overrides(d: dict[str, str]) -> list[str]:
-    return [f"{key}={value}" for key, value in d.items()]
-
-class TestModels(unittest.TestCase):
-    #@hydra.main(version_base=None, config_path="../../conf", config_name="config")
-    def test_apd_change_graded_german(self):
-        # print(DictConfig)
-        #conf = OmegaConf.create()
+class TestLSCDModels(unittest.TestCase):
+    def test_apd_change_graded_german(self) -> None:
+        
+        # Initialize and compose hydra config
         initialize(version_base=None, config_path="../../conf")
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
@@ -33,7 +22,7 @@ class TestModels(unittest.TestCase):
                         "task/wic@task.model.wic": "contextual_embedder",
                         "task/wic/metric@task.model.wic.similarity_metric": "cosine",
                         #"dataset/_target_": "src.dataset.Dataset",
-                        #"dataset/name": "dwug_de_210",
+                        #"+dataset/name": "dwug_de_210", # is done as default in runner.instantiate()
                         "dataset": "dwug_de_210",                        
                         "dataset/split": "dev",
                         "dataset/spelling_normalization": "german",
@@ -44,50 +33,21 @@ class TestModels(unittest.TestCase):
                         #"evaluation": "wic",
                         #"evaluation/metric": "f1_score",
                         "evaluation": "change_graded"
-
                     }
                 ))
-        # print(*instantiate(config))
-        #HydraConfig.instance().set_config(cfg)
-        #print(OmegaConf.to_yaml(cfg))
-        #print(cfg['hydra']['runtime'])
-        #return run(*instantiate(cfg))
 
-        # to do: integrate this with instantiate function
-        print(config.dataset)
-        with open_dict(config):
-            config.dataset.name = "dwug_de_210"
-        
-        dataset = utils.instantiate(config.dataset, _convert_="all")
-        model = utils.instantiate(config.task.model, _convert_="all")
-        evaluation = utils.instantiate(config.evaluation, _convert_="all")
-
-        # to do:  add logging
-        # to do:  undeerstand why Sppearman is called varioous times (plootting or permutation test?)
+        # to do:  undeerstand why Sppearman is called various times (plootting or permutation test?)
         # to do:  Change output directory for results
 
-        #corr, _ = stats.spearmanr(a=[0.0, 0.9274400622952051], b=[0.22825924649553478, 0.33364990519314275], nan_policy='omit')
-        #print(corr).blah
-        #print(dataset, model, evaluation)
         # Run 1st time
-        score1 = run(dataset, model, evaluation)
-        #print(score)
+        score1 = run(*instantiate(config))
         # Assert that prediction corresponds to gold
         assert pytest.approx(1.0) == score1
         # Run 2nd time
-        score2 = run(dataset, model, evaluation)
+        score2 = run(*instantiate(config))
         # Assert that the result reproduces acrosss runs
         assert score1 == score2
 
-
-    # to do
-    def test_cache(self):
-        pass
-
-                        # "dataset.test_on": "verbauen",
-                        # "dataset.test_on": "vergönnen",
-                        # "dataset.test_on": "voranstellen",
-                        # dataset.test_on=[abbauen, abdecken, abgebrüht]
 
     # def test_graded_apd_compare_all(self) -> None:
     #     with initialize(version_base=None, config_path="../../conf"):

@@ -29,6 +29,7 @@ class Evaluation(BaseModel, ABC):
         if self.plotter is not None:
             self.plotter(predictions=predictions, labels=labels)
 
+        print(predictions)
         results = self.combine_inputs(labels=labels, predictions=predictions)
         results.to_csv("predictions.csv", sep="\t")
         results = results.dropna(how="any")
@@ -36,8 +37,10 @@ class Evaluation(BaseModel, ABC):
         y_true = results.label.tolist()
         y_pred = results.prediction.tolist()
 
+        #print(y_true)
+        #print(y_pred)
         result = {"score": self.metric(y_true, y_pred), "metric": self.metric.func.__name__}
-
+        
         with open(file="result.json", mode="w", encoding="utf8") as f:
             f.write(json.dumps(result, indent=4))
         return result["score"]
