@@ -28,6 +28,7 @@ class TestModels(unittest.TestCase):
                         "dataset/preprocessing": "normalization",
                         "dataset.test_on": ["Ackergerät", "Engpaß"],
                         "evaluation": "change_graded"
+                        "evaluation/plotter": "none",
                     }
                 ))
 
