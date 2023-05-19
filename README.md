@@ -45,7 +45,7 @@ python main.py \
   dataset=dwug_de_210 \
   dataset/split=dev \
   dataset/spelling_normalization=german \
-  dataset/preprocessing=normalization \
+  dataset/preprocessing=raw \
   task=lscd_graded \
   task/lscd_graded@task.model=apd_compare_all \
   task/wic@task.model.wic=contextual_embedder \
@@ -65,7 +65,6 @@ Hub](https://huggingface.co/models), like `bert-base-cased`,
 `contextual_embedder` can also accept a `gpu` parameter. This parameter takes an
 integer, and represents the ID of a certain GPU (there might be multiple on a
 single machine).
-
 
 ## Running in inference mode
 

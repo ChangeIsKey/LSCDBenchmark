@@ -17,7 +17,7 @@ python main.py \
     dataset=dwug_de_210 \
     dataset/split=dev \
     dataset/spelling_normalization=german \
-    dataset/preprocessing=normalization \
+    dataset/preprocessing=raw \
     task=lscd_graded \
     task/lscd_graded@task.model=apd_compare_all \
     task/wic@task.model.wic=contextual_embedder \
@@ -60,7 +60,7 @@ python main.py \
     dataset=dwug_de_210 \
     dataset/split=dev \
     dataset/spelling_normalization=german \
-    dataset/preprocessing=normalization \
+    dataset/preprocessing=raw \
     task=lscd_graded \
     task/lscd_graded@task.model=apd_compare_all \
     task/wic@task.model.wic=contextual_embedder \
