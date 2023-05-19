@@ -77,11 +77,9 @@ class Lemma(BaseModel):
     def uses_df(self) -> DataFrame:
         """Cached property that collects the corresponding uses.csv files,
         as well as preprocesses each use based on the provided configuration.
-        
-        Returns
-        -------
-        DataFrame
-            The preprocessed DataFrame of uses for the corresponding lemma
+
+        :return: The preprocessed DataFrame of uses for the corresponding lemma
+        :rtype: DataFrame
         """
         if self._uses_df is None:
             # load uses
@@ -118,10 +116,8 @@ class Lemma(BaseModel):
         """Property that collects the annotated pairs of the corresponding lemma
         from its judgments.csv file. It performs validation based on :attr:`annotated_pairs_schema`.
 
-        Returns
-        -------
-        DataFrame
-            A DataFrame containing two columns (identifier1, identifier2)
+        :return: A DataFrame containing two columns (identifier1, identifier2)
+        :rtype: DataFrame
         """
         if self._annotated_pairs_df is None:
             path = self.path / "judgments.csv"
@@ -134,10 +130,8 @@ class Lemma(BaseModel):
         """A version of :attr:`annotated_pairs_df` that incorporates grouping information.
         The base :attr:`annotated_pairs_df` is expanded with the groupings oƒ each of the identifiers in each row. 
 
-        Returns
-        -------
-        DataFrame
-            The expanded DataFrame
+        :return: The expanded DataFrame
+        :rtype: DataFrame
         """
         if self._augmented_annotated_pairs is None:
             self._augmented_annotated_pairs = pd.merge(
@@ -164,10 +158,9 @@ class Lemma(BaseModel):
     def annotated_pairs_schema(self) -> DataFrameSchema:
         """Schema for validating that a judgments.csv file contains two columns (identifier1, identifier2)
 
-        Returns
-        -------
-        DataFrameSchema
-            The schema
+
+        :return: The schema
+        :rtype: DataFrameSchema
         """
         return DataFrameSchema(
             {
@@ -179,10 +172,8 @@ class Lemma(BaseModel):
     def useid_to_grouping(self) -> Dict[UseID, str]:
         """Method to generate a dictionary from use identifiers to their corresponding groupings
 
-        Returns
-        -------
-        Dict[UseID, str]
-            A dictionary from use identifiers to use groupings
+        :return: A dictionary from use identifiers to use groupings
+        :rtype: Dict[UseID, str]
         """
         return dict(zip(self.uses_df.identifier, self.uses_df.grouping))
 
@@ -190,10 +181,8 @@ class Lemma(BaseModel):
         """Method to generate a dictionary from use groupings to a 
         list of use identifiers corresponding to that grouping
 
-        Returns
-        -------
-        Dict[UseID, str]
-            A dictionary from groupings to list of use identifier
+        :return: A dictionary from groupings to list of use identifier
+        :rtype: dict[str, list[UseID]]
         """
         grouping_to_useid = defaultdict(list)
         for useid, grouping in self.useid_to_grouping().items():
@@ -216,15 +205,10 @@ class Lemma(BaseModel):
     def split_uses(self, group: Group) -> tuple[list[UseID], list[UseID]]:
         """Splits the uses of a lemma into two separate lists of use identifiers, according to `pairing`
 
-        Parameters
-        ----------
-        pairing : Pairing
-            A pairing strategy
-
-        Returns
-        -------
-        tuple[list[UseID], list[UseID]]
-            _description_
+        :param group: A pairing strategy
+        :type group: Group
+        :return: _description_
+        :rtype: tuple[list[UseID], list[UseID]]
         """
         match group:
             case "COMPARE":
