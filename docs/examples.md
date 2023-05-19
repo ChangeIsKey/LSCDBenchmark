@@ -85,8 +85,9 @@ Here is the command lines for applying the WiC task. You can find more detail ab
     ```
 
     <!-- 
-    /mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/.venv/lib64/python3.10/site-packages/hydra/_internal/callbacks.py:26: UserWarning: Callback ResultCollector.on_multirun_end raised NotADirectoryError: [Errno 20] Not a directory: '/mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/multirun/2023-05-17/11-06-12/multirun.yaml/.hydra/config.yaml'
-        warnings.warn(
+    /mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/.venv/lib64/python3.10/site-packages/hydra/_internal/callbacks.py:26: UserWarning: Callback ResultCollector.on_multirun_end raised NotADirectoryError: [Errno 20] Not a directory: '/mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/multirun/2023-05-19/17-21-55/multirun.yaml/.hydra/config.yaml' 
+      warnings.warn(
+    ** the directory should be '.../hh-mm-ss/0/.hydra/config.yaml'
      -->
 
 2. WiC task work with model `deepmistake` would be the following:
@@ -180,11 +181,6 @@ Here is the command lines for applying the WiC task. You can find more detail ab
         task.model.graded_model.wic.gpu=1
     ```
 
-    <!-- 
-    /mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/.venv/lib64/python3.10/site-packages/hydra/_internal/callbacks.py:26: UserWarning: Callback ResultCollector.on_run_end raised NotImplementedError: 
-    warnings.warn(
-    -->
-
 2. lscd_compare
 
     ```sh
@@ -195,12 +191,11 @@ Here is the command lines for applying the WiC task. You can find more detail ab
         dataset/preprocessing=raw \
         evaluation=none \
         task=lscd_compare \
-        task/lscd_compare@task.model=cluster_jsd \
-        task/wsi@task.model.wsi=cluster_correlation \
-        task/wic@task.model.wsi.wic=contextual_embedder \
-        task/wic/metric@task.model.wsi.wic.similarity_metric=cosine \
-        task.model.wsi.wic.ckpt=bert-base-german-cased \
-        task.model.wsi.wic.gpu=1
+        task/lscd_compare@task.model=cos \
+        task/wic@task.model.wic=contextual_embedder \
+        task/wic/metric@task.model.wic.similarity_metric=cosine \
+        task.model.wic.ckpt=bert-base-german-cased \
+        task.model.wic.gpu=1
     ```
 
     <!-- 
@@ -211,17 +206,19 @@ Here is the command lines for applying the WiC task. You can find more detail ab
     Error locating target 'src.lscd.ApdCompareAll', see chained exception above.
     full_key: task.model
 
-    error with task/lscd_compare@task.model=cos
+    * error with task/lscd_compare@task.model=cos
     /mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/.venv/lib64/python3.10/site-packages/hydra/_internal/callbacks.py:26: UserWarning: Callback ResultCollector.on_run_end raised NotImplementedError: 
     warnings.warn(
+    ** solved by empty the previous output
 
-    error with task/lscd_compare@task.model=cluster_jsd
+    * error with task/lscd_compare@task.model=cluster_jsd
     /mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/.venv/lib64/python3.10/site-packages/hydra/_internal/callbacks.py:26: UserWarning: Callback ResultCollector.on_run_end raised NotImplementedError: 
     warnings.warn(
     Error executing job with overrides: ['dataset=dwug_de_210', 'dataset/split=dev', 'dataset/spelling_normalization=german', 'dataset/preprocessing=raw', 'evaluation=none', 'task=lscd_compare', 'task/lscd_compare@task.model=cluster_jsd', 'task/wsi@task.model.wsi=cluster_correlation', 'task/wic@task.model.wsi.wic=contextual_embedder', 'task/wic/metric@task.model.wsi.wic.similarity_metric=cosine', 'task.model.wsi.wic.ckpt=bert-base-german-cased', 'task.model.wsi.wic.gpu=1']
     Error in call to target 'src.lscd.cluster_jsd.ClusterJSD':
     TypeError("Can't instantiate abstract class ClusterJSD with abstract method predict_all")
     full_key: task.model
+    ** after running this command lines, the warning message starts to show up
     -->
 
 3. lscd_graded
@@ -240,32 +237,3 @@ Here is the command lines for applying the WiC task. You can find more detail ab
         task.model.wic.gpu=1 \
         evaluation=none
     ```
-
-    <!-- 
-    /mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/.venv/lib64/python3.10/site-packages/hydra/_internal/callbacks.py:26: UserWarning: Callback ResultCollector.on_run_end raised NotImplementedError: 
-    warnings.warn(
-    -->
-
-    <!-- 
-    ```sh
-    python main.py \
-        dataset=dwug_de_210 \
-        dataset/split=dev \
-        dataset/spelling_normalization=german \
-        dataset/preprocessing=normalization \
-        task=lscd_graded \
-        task/lscd_graded@task.model=apd_compare_all \
-        task/wic@task.model.wic=contextual_embedder \
-        task/wic/metric@task.model.wic.similarity_metric=cosine \
-        task.model.wic.ckpt=bert-base-german-cased \
-        task.model.wic.gpu=0 \
-        evaluation=change_graded
-    ```
-
-    Traceback (most recent call last):
-    File "/mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/main.py", line 12, in main
-        return run(*instantiate(config))
-    File "/mount/arbeitsdaten20/projekte/cik/users/kuan-yu/LSCDBenchmark/src/utils/runner.py", line 137, in run
-        labels = dataset.get_labels(evaluation_task=evaluation.task)
-    AttributeError: 'Evaluation' object has no attribute 'task'
-    -->
