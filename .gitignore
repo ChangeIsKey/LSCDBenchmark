@@ -1,6 +1,4 @@
 wug/
-conf/dataset/testwug_en.yaml
-
 .idea/
 .mypy_cache/
 src/__pycache__/
@@ -25,7 +23,6 @@ envs/
 env/
 venv/
 .venv/
-
 
 analysis/
 results/
