@@ -1,3 +1,4 @@
+import os
 import csv
 from pathlib import Path
 from typing import Any, TypeAlias
@@ -30,30 +31,45 @@ def instantiate(
     model = None
     evaluation = None
 
-    if config.get("dataset") is not None:
+    # The most simple instantiation would do this:            
+    # dataset = utils.instantiate(config.dataset, _convert_="all")
+    # model = utils.instantiate(config.task.model, _convert_="all")
+    # evaluation = utils.instantiate(config.evaluation, _convert_="all")
        
-        try:
-            hydra_cfg = HydraConfig.get()
-        except ValueError:
-            hydra_cfg = config['hydra']
-        #hydra_cfg['runtime']['output_dir'] = '.'
-        choices = OmegaConf.to_container(hydra_cfg.runtime.choices)
-        output_dir = Path(hydra_cfg.runtime.output_dir)
+    try:
+        hydra_cfg = HydraConfig.get()
+    except ValueError: # this should happen only in testing scenarios where hydra's compose is used
+        # for testing don't use hydra config
+        hydra_cfg = None
+        # for testing change working directory manually
+        os.chdir('results')
 
-        OmegaConf.set_struct(config, True)
+    if config.get("dataset") is not None:
+
+        # Adds the data set name, in the dataset subdictionary, not sure if this is needed in the future
         with open_dict(config):
-            config.dataset.name = choices["dataset"].split(".")[0]  # type: ignore
-            with open(
-                file=output_dir / ".hydra" / "config.yaml", 
-                mode="w", 
-                encoding="utf8"
-            ) as f:
-                yaml.safe_dump(
-                    OmegaConf.to_object(config),
-                    f,
-                    allow_unicode=True,
-                    default_flow_style=False,
-                )
+            config.dataset.name = config.dataset.path
+
+        # I'm unsure what this block is doing, it seems to store the parameters, but this should be handled by Hydra
+        if hydra_cfg is not None:
+
+            choices = OmegaConf.to_container(hydra_cfg.runtime.choices)
+            output_dir = Path(hydra_cfg.runtime.output_dir)
+
+            OmegaConf.set_struct(config, True)
+            with open_dict(config):
+                config.dataset.name = choices["dataset"].split(".")[0]  # type: ignore, not sure if this is needed anymore
+                with open(
+                    file=output_dir / ".hydra" / "config.yaml", 
+                    mode="w", 
+                    encoding="utf8"
+                ) as f:
+                    yaml.safe_dump(
+                        OmegaConf.to_object(config),
+                        f,
+                        allow_unicode=True,
+                        default_flow_style=False,
+                    )
 
         dataset = utils.instantiate(
             config.dataset,
@@ -134,6 +150,7 @@ def run(
         )
 
         if evaluation is not None:
+            print(evaluation)
             labels = dataset.get_labels(evaluation_task=evaluation.task)
             score = evaluation(labels=labels, predictions=predictions)
     return score

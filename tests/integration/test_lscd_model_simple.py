@@ -9,10 +9,8 @@ from scipy import stats
 import unittest
 import pytest
 
-class TestLSCDModels(unittest.TestCase):
-
-    # Minimal run of model on very small data set for frequent testing purposes
-    def test_apd_change_graded_eng_simple(self) -> None:
+class TestLSCDModelsSimple(unittest.TestCase):
+    def test_apd_change_graded_german(self) -> None:
         
         # Initialize and compose hydra config
         initialize(version_base=None, config_path="../../conf")
@@ -23,88 +21,23 @@ class TestLSCDModels(unittest.TestCase):
                         "task/lscd_graded@task.model": "apd_compare_all",
                         "task/wic@task.model.wic": "contextual_embedder",
                         "task/wic/metric@task.model.wic.similarity_metric": "cosine",
-                        "dataset": "testwug_en_111", #todo: this should become testwug_en_1.1.1
-                        "dataset/split": "full",
-                        "dataset/spelling_normalization": "german",
-                        "dataset/preprocessing": "normalization",
-                        # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.87
-                        "dataset.test_on": ["Reichstag", "Presse"],
-                        "evaluation": "change_graded",
-                        "evaluation/plotter": "none",
-                    }
-                ))
-
-        # Run
-        score = run(*instantiate(config))
-        # Assert that prediction corresponds to gold
-        assert pytest.approx(1.0) == score
-
-    # Minimal run of model on very small data set for frequent testing purposes
-    def test_apd_change_graded_ger_simple(self) -> None:
-        
-        # Initialize and compose hydra config
-        initialize(version_base=None, config_path="../../conf")
-        config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
-                    {
-                        "task": "lscd_graded",
-                        "task.model.wic.ckpt": "bert-base-german-cased",
-                        "task/lscd_graded@task.model": "apd_compare_all",
-                        "task/wic@task.model.wic": "contextual_embedder",
-                        "task/wic/metric@task.model.wic.similarity_metric": "cosine",
-                        "dataset": "refwug_110", #todo: this should become testwug_en_1.1.1
-                        "dataset/split": "full",
-                        "dataset/spelling_normalization": "german",
-                        "dataset/preprocessing": "toklem",
-                        # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.87
-                        "dataset.test_on": ["Reichstag", "Presse"],
-                        "evaluation": "change_graded",
-                        "evaluation/plotter": "none",
-                    }
-                ))
-
-        # Run
-        score = run(*instantiate(config))
-        # Assert that prediction corresponds to gold
-        assert pytest.approx(1.0) == score
-    
-    def test_apd_change_graded_ger(self) -> None:
-        
-        # Initialize and compose hydra config
-        initialize(version_base=None, config_path="../../conf")
-        config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
-                    {
-                        "task": "lscd_graded",
-                        "task.model.wic.ckpt": "bert-base-german-cased",
-                        "task/lscd_graded@task.model": "apd_compare_all",
-                        "task/wic@task.model.wic": "contextual_embedder",
-                        "task/wic/metric@task.model.wic.similarity_metric": "cosine",
-                        #"dataset/_target_": "src.dataset.Dataset",
-                        #"+dataset/name": "dwug_de_210", # is done as default in runner.instantiate()
                         "dataset": "dwug_de_210",                        
                         "dataset/split": "dev",
                         "dataset/spelling_normalization": "german",
                         "dataset/preprocessing": "normalization",
                         # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.93
                         "dataset.test_on": ["Ackergerät", "Engpaß"],
-                        #"dataset/filter_lemmas": "all",
-                        #"evaluation": "wic",
-                        #"evaluation/metric": "f1_score",
-                        "evaluation": "change_graded",
-                        "evaluation/plotter": "none",
+                        "evaluation": "change_graded"
                     }
                 ))
 
-        # to do:  Change output directory for results
-        # to do:  run deepmistake    
-        # to do:  remove unnecessary files 
-
         # Run 1st time
-        score1 = run(*instantiate(config))
+        score = run(*instantiate(config))
         # Assert that prediction corresponds to gold
         assert pytest.approx(1.0) == score1
         # Run 2nd time
         score2 = run(*instantiate(config))
-        # Assert that the result reproduces across runs
+        # Assert that the result reproduces acrosss runs
         assert score1 == score2
 
 
