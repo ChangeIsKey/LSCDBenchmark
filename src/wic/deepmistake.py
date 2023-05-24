@@ -286,6 +286,7 @@ class DeepMistake(WICModel):
                     --output_dir {output_dir}", 
                 )
 
+                print(output_dir)
                 scores_path = next(output_dir.glob("*.scores"))
                 with open(file=scores_path, encoding="utf8") as f:
                     dumped_scores: list[Score] = json.load(f)

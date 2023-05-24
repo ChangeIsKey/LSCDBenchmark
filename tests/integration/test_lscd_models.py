@@ -23,7 +23,7 @@ class TestLSCDModels(unittest.TestCase):
                         "task/lscd_graded@task.model": "apd_compare_all",
                         "task/wic@task.model.wic": "contextual_embedder",
                         "task/wic/metric@task.model.wic.similarity_metric": "cosine",
-                        "dataset": "testwug_en", #todo: this should become testwug_en_1.1.1
+                        "dataset": "testwug_en_111", 
                         "dataset/split": "full",
                         "dataset/spelling_normalization": "none",
                         "dataset/preprocessing": "raw",
@@ -48,7 +48,7 @@ class TestLSCDModels(unittest.TestCase):
                         "task/lscd_graded@task.model": "apd_compare_all",
                         "task/wic@task.model.wic": "contextual_embedder",
                         "task/wic/metric@task.model.wic.similarity_metric": "cosine",
-                        "dataset": "testwug_en", #todo: this should become testwug_en_1.1.1
+                        "dataset": "testwug_en_111", #todo: this should become testwug_en_1.1.1
                         "dataset/split": "full",
                         "dataset/spelling_normalization": "none",
                         "dataset/preprocessing": "lemmatization",
