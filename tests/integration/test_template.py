@@ -27,7 +27,7 @@ class TestModels(unittest.TestCase):
                         "dataset/spelling_normalization": "german",
                         "dataset/preprocessing": "normalization",
                         "dataset.test_on": ["Ackergerät", "Engpaß"],
-                        "evaluation": "change_graded"
+                        "evaluation": "change_graded",
                         "evaluation/plotter": "none",
                     }
                 ))
