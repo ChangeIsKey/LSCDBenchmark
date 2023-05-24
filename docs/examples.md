@@ -94,31 +94,17 @@ Here is the command lines for applying the WiC task. You can find more detail ab
 
     ```sh
     python main.py -m \
-        evaluation=none \
-        task=wic \
-        task/wic@task.model=deepmistake \
-        task/wic/dm_ckpt@task.model.ckpt=WIC+RSS+DWUG+XLWSD \
-        dataset=dwug_de_210 \
-        dataset/split=dev \
-        dataset/spelling_normalization=german \
-        dataset/preprocessing=raw
+      dataset=dwug_de_210 \
+      dataset/preprocessing=toklem \
+      dataset/spelling_normalization=german \
+      dataset/split=dev \
+      'dataset.test_on=[abbauen,abdecken,"abgebrüht"]' \
+      task=wic \
+      evaluation=wic \
+      evaluation/metric=spearman \
+      task/wic@task.model=deepmistake \
+      task/wic/dm_ckpt@task.model.ckpt=WIC_DWUG+XLWSD
     ```
-
-    <!-- 
-    task/wic/dm_ckpt@task.model.ckpt=
-    WIC+RSS+DWUG+XLWSD (x)
-    WIC_DWUG+XLWSD (x)
-    WIC_RSS (x)
-    first_concat (x)
-    mean_dist_l1ndotn_CE (x)
-    mean_dist_l1ndotn_MSE (x)
-    -->
-
-    <!-- 
-    Error in call to target 'src.wic.deepmistake.Cache':
-    AttributeError("'Cache' object has no attribute 'metadata'")
-    full_key: task.model.cache
-    -->
 
 ### WSI
 
