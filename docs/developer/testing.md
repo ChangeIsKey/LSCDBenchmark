@@ -64,3 +64,5 @@ sys.path.insert(0, ".")
 ## Integration Test
 
 After building several unit-tests in one module, we set an integration test for testing the whole module or the cooperation between modules. Sometimes modules can work on their own, but there is no guarantee that they can be assembled to work at the same time.
+
+To have a clear concept for testing benchmark, you can use `tests/integration/test_template.py` in our LSCDBenchmark repository to start writing the testing script.
