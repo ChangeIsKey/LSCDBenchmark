@@ -6,4 +6,5 @@ This is the developer's guide including several special approaches in developing
 cache
 hydra
 documentation/index
+testing
 ```
