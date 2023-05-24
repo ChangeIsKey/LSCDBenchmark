@@ -1,0 +1,35 @@
+_target_: src.dataset.Dataset
+cleaning: null
+defaults:
+- preprocessing: ???
+- spelling_normalization: ???
+- split: ???
+exclude_annotators: []
+groupings:
+- '1'
+- '2'
+path: testwug_en_111
+standard_split:
+  dev:
+  - afternoon_nn
+  - arm
+  - target
+  - plane_nn
+  dev1:
+  - target
+  - arm
+  dev2:
+  - afternoon_nn
+  - plane_nn
+  full:
+  - afternoon_nn
+  - arm
+  - target
+  - plane_nn
+  test: []
+test_on: null
+type: dev
+url: https://zenodo.org/record/7946753/files/testwug_en.zip
+wic_use_pairs:
+  group: ALL
+  sample: annotated
