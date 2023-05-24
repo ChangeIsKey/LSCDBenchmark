@@ -222,9 +222,9 @@ class DeepMistake(WICModel):
             output_dir = self.ckpt_dir / "scores"
 
             if output_dir.exists():
-                shutil.rmtree(output_dir)
+                shutil.rmtree(output_dir) # remove all files
             if data_dir.exists():
-                shutil.rmtree(data_dir)
+                shutil.rmtree(data_dir) #  remove all files
 
             output_dir.mkdir(parents=True, exist_ok=True)
             data_dir.mkdir(parents=True, exist_ok=True)
@@ -258,8 +258,9 @@ class DeepMistake(WICModel):
                         non_cached_use_pairs.append(data[pair][1])
 
             if len(non_cached_use_pairs) > 0:
-                hydra_dir = os.getcwd()
-                os.chdir(self.ckpt_dir)
+                hydra_dir = os.getcwd() # get current working directory
+                ckpt_dir = self.ckpt_dir # fix ckpt_dir as call to this changes after doing os.chdir(ckpt_dir)
+                os.chdir(ckpt_dir)
 
                 input_ = [
                     data[(up[0].identifier, up[1].identifier)][0]
@@ -280,13 +281,13 @@ class DeepMistake(WICModel):
                     f"python -u {script} \
                     --max_seq_len=500 \
                     --do_eval \
-                    --ckpt_path {self.ckpt_dir} \
+                    --ckpt_path {ckpt_dir} \
                     --eval_input_dir {data_dir} \
                     --eval_output_dir {output_dir} \
                     --output_dir {output_dir}", 
                 )
 
-                print(output_dir)
+                #print(output_dir)
                 scores_path = next(output_dir.glob("*.scores"))
                 with open(file=scores_path, encoding="utf8") as f:
                     dumped_scores: list[Score] = json.load(f)

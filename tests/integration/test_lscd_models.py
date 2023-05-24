@@ -118,8 +118,6 @@ class TestLSCDModels(unittest.TestCase):
                     }
                 ))
 
-        # to do:  run deepmistake    
-
         # Run 1st time
         score1 = run(*instantiate(config))
         # Assert that prediction corresponds to gold
