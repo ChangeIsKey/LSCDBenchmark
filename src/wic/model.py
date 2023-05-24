@@ -66,13 +66,16 @@ class WICModel(BaseModel, ABC):
         query = self.as_df()
         query = query.loc[query.index.repeat(len(left))]
         query = query.assign(use_0=left, use_1=right)
-        query = query.assign(**{col: None for col in self._cache.columns if col not in query.columns})
-        self._cache = self._cache.assign(**{col: None for col in query.columns if col not in self._cache.columns})
+        query = query.assign(**{col: None for col in self._cache.columns if col not in query.columns}).astype({col:self._cache[col].dtype for col in self._cache.columns if col not in query.columns})
+        self._cache = self._cache.assign(**{col:None for col in query.columns if col not in self._cache.columns}).astype({col:query[col].dtype for col in query.columns if col not in self._cache.columns})
 
-        query["prediction"] = query["prediction"].astype("float32")
-        self._cache["prediction"] = self._cache["prediction"].astype("float32")
+        #query["prediction"] = query["prediction"].astype("float32")
+        #self._cache["prediction"] = self._cache["prediction"].astype("float32")
         
 
+        print(query)
+        print(self._cache)
+        print([col for col in query.columns if not col.startswith("prediction")])
         df = self._cache.merge(query, on=[col for col in query.columns if not col.startswith("prediction")], how="right")
 
 

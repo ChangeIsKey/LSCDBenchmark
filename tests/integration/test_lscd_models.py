@@ -12,7 +12,7 @@ import pytest
 class TestLSCDModels(unittest.TestCase):
 
     # Minimal run of model on very small data set for frequent testing purposes
-    def test_apd_change_graded_eng_simple(self) -> None:
+    def test_apd_change_graded_eng_simple_arm(self) -> None:
         
         # Initialize and compose hydra config
         initialize(version_base=None, config_path="../../conf")
@@ -23,12 +23,37 @@ class TestLSCDModels(unittest.TestCase):
                         "task/lscd_graded@task.model": "apd_compare_all",
                         "task/wic@task.model.wic": "contextual_embedder",
                         "task/wic/metric@task.model.wic.similarity_metric": "cosine",
-                        "dataset": "testwug_en_111", #todo: this should become testwug_en_1.1.1
+                        "dataset": "testwug_en", #todo: this should become testwug_en_1.1.1
                         "dataset/split": "full",
-                        "dataset/spelling_normalization": "german",
-                        "dataset/preprocessing": "normalization",
-                        # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.87
-                        "dataset.test_on": ["Reichstag", "Presse"],
+                        "dataset/spelling_normalization": "none",
+                        "dataset/preprocessing": "raw",
+                        # has very few usages
+                        "dataset.test_on": ["arm"],
+                        "evaluation": "change_graded",
+                        "evaluation/plotter": "none",
+                    }
+                ))
+
+        # Run
+        score = run(*instantiate(config))
+
+    def test_apd_change_graded_eng_simple_plane_afternoon(self) -> None:
+        
+        # Initialize and compose hydra config
+        initialize(version_base=None, config_path="../../conf")
+        config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
+                    {
+                        "task": "lscd_graded",
+                        "task.model.wic.ckpt": "bert-base-german-cased",
+                        "task/lscd_graded@task.model": "apd_compare_all",
+                        "task/wic@task.model.wic": "contextual_embedder",
+                        "task/wic/metric@task.model.wic.similarity_metric": "cosine",
+                        "dataset": "testwug_en", #todo: this should become testwug_en_1.1.1
+                        "dataset/split": "full",
+                        "dataset/spelling_normalization": "none",
+                        "dataset/preprocessing": "lemmatization",
+                        # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.94
+                        "dataset.test_on": ["afternoon_nn", "plane_nn"],
                         "evaluation": "change_graded",
                         "evaluation/plotter": "none",
                     }
@@ -38,7 +63,6 @@ class TestLSCDModels(unittest.TestCase):
         score = run(*instantiate(config))
         # Assert that prediction corresponds to gold
         assert pytest.approx(1.0) == score
-
     # Minimal run of model on very small data set for frequent testing purposes
     def test_apd_change_graded_ger_simple(self) -> None:
         
@@ -94,9 +118,7 @@ class TestLSCDModels(unittest.TestCase):
                     }
                 ))
 
-        # to do:  Change output directory for results
         # to do:  run deepmistake    
-        # to do:  remove unnecessary files 
 
         # Run 1st time
         score1 = run(*instantiate(config))

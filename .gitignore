@@ -4,9 +4,10 @@ wug/
 src/__pycache__/
 src/lscd/__pycache__/
 .huggingface/
+tests/__pycache__/
 
 docs/_build/
-multirun/*
+multirun/
 *__pycache__*
 .vscode/
 .vscode-server/
