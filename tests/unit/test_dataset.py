@@ -60,7 +60,7 @@ class TestDataset(unittest.TestCase):
                     url=url)
             D._Dataset__download_from_git()
 
-    '''(error)
+    '''
     def test__download_from_git(self):
         
         groupings = tuple(['1', '2'])
