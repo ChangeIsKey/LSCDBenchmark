@@ -113,3 +113,19 @@ python main.py -m \
     task/wic/scaler@task.model.scaler=none,minmax \
     task.model.ckpt=first_concat,mean_dist_l1ndotn_CE,mean_dist_l1ndotn_MSE,WIC_DWUG+XLWSD,WIC_RSS,WIC+RSS+DWUG+XLWSD
 popd
+
+
+# Actually working example command (adapt above)
+: '
+           python main.py -m \
+    dataset=dwug_de_210 \
+    dataset/preprocessing=toklem \
+    dataset/spelling_normalization=german \
+    dataset/split=dev \
+    'dataset.test_on=[abbauen,abdecken,"abgebrüht"]' \
+    task=wic \
+    evaluation=wic \
+    evaluation/metric=spearman \
+    task/wic@task.model=deepmistake \
+    task/wic/dm_ckpt@task.model.ckpt=WIC_DWUG+XLWSD
+'
