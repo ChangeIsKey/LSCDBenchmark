@@ -47,8 +47,20 @@ class Evaluation(BaseModel, ABC):
 
     @staticmethod
     def combine_inputs(labels: dict[K, V], predictions: dict[K, V]) -> DataFrame:
+        """Take results as input, combine the instance column and merge all other data. 
+
+        :param labels: the true value
+        :type labels: dict[K, V]
+        :param predictions: the value predicted by model
+        :type predictions: dict[K, V]
+        :return: A dataframe including three columns, instance, prediction, label.
+        :rtype: DataFrame
+        """        
         labels_df = DataFrame(
-            {"instance": list(labels.keys()), "label": list(labels.values())}
+            {
+                "instance": list(labels.keys()), 
+                "label": list(labels.values())
+            }
         )
         predictions_df = DataFrame(
             {

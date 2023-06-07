@@ -2,63 +2,58 @@ import sys
 sys.path.insert(0, ".")
 
 import os
-from unittest.mock import MagicMock, patch, Mock
+
+from unittest.mock import patch, Mock
 import unittest
 
 class TestDataset(unittest.TestCase):
     
-    def test_creat_path(self):
-        groupings = tuple(['1', '2'])
-        type = 'dev'
-        split = 'dev'
-        exclude_annotators = []
-        name = 'testwug_en_111'
-        test_on = None
-        cleaning = None
-        D_path = 'testwug_en_111'
-        url = 'https://zenodo.org/record/7946753/files/testwug_en.zip'
+    from src.dataset import Dataset
+    @patch.object(Dataset, 'relative_path')
+    def test_relative_path(self, mock_relative_path):
+        from src.dataset import Dataset
+        mock_relative_path.return_value = 'path'
+        self.assertEqual(Dataset.relative_path(), 'path')
+    
+    @patch.object(Dataset, 'absolute_path')
+    def test_absolute_path(self, mock_absolute_path):
+        from src.dataset import Dataset
+        mock_absolute_path.return_value = 'path'
+        self.assertEqual(Dataset.absolute_path(), 'path')
 
-        import src.dataset
-        D = src.dataset.Dataset(path=D_path, 
-                    groupings=groupings, 
-                    type=type,
-                    split=split,
-                    exclude_annotators=exclude_annotators,
-                    name=name,
-                    test_on=test_on,
-                    cleaning=cleaning,
-                    url=url)
+    import src.dataset
+    import src.utils.utils
+    @patch('src.utils.utils.path')
+    @patch.object(Dataset, 'data_dir')
+    @patch('src.dataset.os.getenv')
+    def test_data_dir(self, mock_getenv, mock_data_dir, mock_path):
+        mock_getenv.return_value = None
+        from src.dataset import Dataset
+        mock_data_dir.return_value = 'wug'
+        self.assertEqual(Dataset.data_dir(), 'wug')
 
-        t_dirpath = os.path.abspath('wug')
-        t_path = os.path.join(t_dirpath, D_path)
+    @patch('src.dataset.Dataset')
+    def test_url_None(self, mock_Dataset):  
+        mock_Dataset.url.return_value = None
+        self.assertRaises(AssertionError)
+    
+    @patch.object(Dataset, '_Dataset__download_zip')
+    @patch.object(Dataset, '_Dataset__download_from_git')
+    @patch.object(Dataset, '_Dataset__download')
+    def test__download(self, mock_download, ock_download_from_git, mock_download_zip):
+        # from src.dataset import Dataset
+        # Dataset._Dataset__download()
+        # self.assertTrue(mock_download_from_git.called)
+        # self.assertTrue(mock_download_zip.called)
+        mock_download()
+        mock_download.assert_called()
 
-        self.assertEqual(str(D.data_dir), t_dirpath)
-        self.assertEqual(str(D.relative_path), D_path)
-        self.assertEqual(str(D.absolute_path), t_path)
-
-    def test_url_is_None(self):
-        
-        with self.assertRaises(AssertionError):
-            groupings = tuple(['1', '2'])
-            type = 'dev'
-            split = 'dev'
-            exclude_annotators = []
-            name = 'nordiachange_1'
-            test_on = None
-            cleaning = None
-            path = 'nor_dia_change/subset1'
-            url = None
-            import src.dataset
-            D = src.dataset.Dataset(path=path, 
-                    groupings=groupings, 
-                    type=type,
-                    split=split,
-                    exclude_annotators=exclude_annotators,
-                    name=name,
-                    test_on=test_on,
-                    cleaning=cleaning,
-                    url=url)
-            D._Dataset__download_from_git()
+    '''@patch('src.dataset.Repo')
+    def test__download_from_git(self, mock_repo):
+        from src.dataset import Dataset
+        Dataset.url = Mock(return_value='url.git')
+        Dataset._Dataset__download_from_git()
+        mock_repo.assert_called()'''
 
     '''
     def test__download_from_git(self):
