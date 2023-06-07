@@ -6,29 +6,24 @@ import os
 from unittest.mock import patch, Mock
 import unittest
 
+from src.dataset import Dataset
+
 class TestDataset(unittest.TestCase):
-    
-    from src.dataset import Dataset
     @patch.object(Dataset, 'relative_path')
     def test_relative_path(self, mock_relative_path):
-        from src.dataset import Dataset
         mock_relative_path.return_value = 'path'
         self.assertEqual(Dataset.relative_path(), 'path')
     
     @patch.object(Dataset, 'absolute_path')
     def test_absolute_path(self, mock_absolute_path):
-        from src.dataset import Dataset
         mock_absolute_path.return_value = 'path'
         self.assertEqual(Dataset.absolute_path(), 'path')
 
-    import src.dataset
-    import src.utils.utils
     @patch('src.utils.utils.path')
     @patch.object(Dataset, 'data_dir')
     @patch('src.dataset.os.getenv')
     def test_data_dir(self, mock_getenv, mock_data_dir, mock_path):
         mock_getenv.return_value = None
-        from src.dataset import Dataset
         mock_data_dir.return_value = 'wug'
         self.assertEqual(Dataset.data_dir(), 'wug')
 
@@ -41,7 +36,6 @@ class TestDataset(unittest.TestCase):
     @patch.object(Dataset, '_Dataset__download_from_git')
     @patch.object(Dataset, '_Dataset__download')
     def test__download(self, mock_download, ock_download_from_git, mock_download_zip):
-        # from src.dataset import Dataset
         # Dataset._Dataset__download()
         # self.assertTrue(mock_download_from_git.called)
         # self.assertTrue(mock_download_zip.called)
@@ -50,14 +44,12 @@ class TestDataset(unittest.TestCase):
 
     '''@patch('src.dataset.Repo')
     def test__download_from_git(self, mock_repo):
-        from src.dataset import Dataset
         Dataset.url = Mock(return_value='url.git')
         Dataset._Dataset__download_from_git()
         mock_repo.assert_called()'''
 
     '''
     def test__download_from_git(self):
-        
         groupings = tuple(['1', '2'])
         type = 'dev'
         split = 'dev'
@@ -69,8 +61,7 @@ class TestDataset(unittest.TestCase):
         t_path_parts_0 = 'nor_dia_change'
         url = 'https://github.com/ltgoslo/nor_dia_change.git'
 
-        import src.dataset
-        D = src.dataset.Dataset(path=D_path, 
+        D = Dataset(path=D_path, 
                     groupings=groupings, 
                     type=type,
                     split=split,
@@ -110,8 +101,7 @@ class TestDataset(unittest.TestCase):
         path = 'testwug_en_111'
         url = 'https://zenodo.org/record/7946753/files/testwug_en.zip'
 
-        import src.dataset
-        D = src.dataset.Dataset(path=path, 
+        D = Dataset(path=path, 
                     groupings=groupings, 
                     type=type,
                     split=split,
@@ -145,8 +135,7 @@ class TestDataset(unittest.TestCase):
         pass
         # TODO: preprocessing = None
 
-        # import src.dataset
-        # D = src.dataset.Dataset(preprocessing=preprocessing)
+        # D = Dataset(preprocessing=preprocessing)
         
         # self.assertRaises() : TypeError
 
