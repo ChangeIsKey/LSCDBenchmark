@@ -11,6 +11,10 @@ import pytest
 
 class TestWICModels(unittest.TestCase):
 
+    def __init__(self, *args, **kwargs):
+        initialize_tests_hydra(version_base=None, config_path="../conf", working_dir='results')
+        super().__init__(*args, **kwargs)    
+
     def test_wic_ger_ackergeraet_engpass(self) -> None:
         
         # Compose hydra config
@@ -44,5 +48,4 @@ class TestWICModels(unittest.TestCase):
 
 if __name__ == '__main__':
     
-    initialize_tests_hydra(version_base=None, config_path="../conf", working_dir='results')
     unittest.main()

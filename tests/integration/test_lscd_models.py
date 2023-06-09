@@ -10,6 +10,10 @@ import unittest
 import pytest
 
 class TestLSCDModels(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        initialize_tests_hydra(version_base=None, config_path="../conf", working_dir='results')
+        super().__init__(*args, **kwargs)    
     
     # Minimal run of model on very small data set for frequent testing purposes
     def test_apd_change_graded_eng_simple_arm(self) -> None:
@@ -194,5 +198,4 @@ class TestLSCDModels(unittest.TestCase):
 
 if __name__ == '__main__':
     
-    initialize_tests_hydra(version_base=None, config_path="../conf", working_dir='results')
     unittest.main()
