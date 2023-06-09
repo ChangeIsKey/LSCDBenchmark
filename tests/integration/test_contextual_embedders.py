@@ -10,6 +10,10 @@ import unittest
 import pytest
 
 class TestModels(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        initialize_tests_hydra(version_base=None, config_path="../conf", working_dir='results') # initialize hydra parameters on each class instance
+        super().__init__(*args, **kwargs)    
     
     def some_test_function(self) -> None:
 
