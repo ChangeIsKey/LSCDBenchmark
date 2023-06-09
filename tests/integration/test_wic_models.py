@@ -15,7 +15,6 @@ class TestWICModels(unittest.TestCase):
     def test_wic_ger_ackergeraet_engpass(self) -> None:
         
         # Compose hydra config
-        initialize(version_base=None, config_path="../../conf")
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "wic",

@@ -15,7 +15,6 @@ class TestModels(unittest.TestCase):
     def some_test_function(self) -> None:
 
         # Compose hydra config
-        initialize(version_base=None, config_path="../../conf")
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "lscd_graded",
