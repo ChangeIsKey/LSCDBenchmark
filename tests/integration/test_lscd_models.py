@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, ".")
 
+import os
 from hydra import initialize, compose, utils
 from tests.utils import overrides
 from src.utils.runner import instantiate, run
@@ -10,12 +11,11 @@ import unittest
 import pytest
 
 class TestLSCDModels(unittest.TestCase):
-
+    
     # Minimal run of model on very small data set for frequent testing purposes
     def test_apd_change_graded_eng_simple_arm(self) -> None:
         
-        # Initialize and compose hydra config
-        initialize(version_base=None, config_path="../../conf")
+        # Compose hydra config
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "lscd_graded",
@@ -39,8 +39,7 @@ class TestLSCDModels(unittest.TestCase):
 
     def test_apd_change_graded_eng_simple_plane_afternoon(self) -> None:
         
-        # Initialize and compose hydra config
-        initialize(version_base=None, config_path="../../conf")
+        # Compose hydra config
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "lscd_graded",
@@ -66,8 +65,7 @@ class TestLSCDModels(unittest.TestCase):
     # Minimal run of model on very small data set for frequent testing purposes
     def test_apd_change_graded_ger_simple(self) -> None:
         
-        # Initialize and compose hydra config
-        initialize(version_base=None, config_path="../../conf")
+        # Compose hydra config
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "lscd_graded",
@@ -93,8 +91,7 @@ class TestLSCDModels(unittest.TestCase):
     
     def test_apd_change_graded_ger(self) -> None:
         
-        # Initialize and compose hydra config
-        initialize(version_base=None, config_path="../../conf")
+        # Compose hydra config
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "lscd_graded",
@@ -198,4 +195,8 @@ class TestLSCDModels(unittest.TestCase):
 
 if __name__ == '__main__':
     
+    # Initialize hydra config, initialization should be done only once per execution
+    initialize(version_base=None, config_path="../../conf")
+    # for testing change working directory manually
+    os.chdir('results')
     unittest.main()

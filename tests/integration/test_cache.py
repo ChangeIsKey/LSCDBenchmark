@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, ".")
 
+import os
 from hydra import initialize, compose, utils
 from tests.utils import overrides
 from src.utils.runner import instantiate, run
@@ -13,8 +14,7 @@ class TestModels(unittest.TestCase):
     
     def some_test_function(self) -> None:
 
-        # Initialize and compose hydra config
-        initialize(version_base=None, config_path="../../conf")
+        # Compose hydra config
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "lscd_graded",
@@ -41,4 +41,8 @@ class TestModels(unittest.TestCase):
 
 if __name__ == '__main__':
     
+    # Initialize hydra config, initialization should be done only once per execution
+    initialize(version_base=None, config_path="../../conf")
+    # for testing change working directory manually
+    os.chdir('results')
     unittest.main()

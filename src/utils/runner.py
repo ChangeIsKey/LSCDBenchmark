@@ -41,8 +41,6 @@ def instantiate(
     except ValueError: # this should happen only in testing scenarios where hydra's compose is used
         # for testing don't use hydra config
         hydra_cfg = None
-        # for testing change working directory manually
-        os.chdir('results')
 
     if config.get("dataset") is not None:
 

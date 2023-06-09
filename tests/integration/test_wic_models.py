@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, ".")
 
+import os
 from hydra import initialize, compose, utils
 from tests.utils import overrides
 from src.utils.runner import instantiate, run
@@ -13,7 +14,7 @@ class TestWICModels(unittest.TestCase):
 
     def test_wic_ger_ackergeraet_engpass(self) -> None:
         
-        # Initialize and compose hydra config
+        # Compose hydra config
         initialize(version_base=None, config_path="../../conf")
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
@@ -45,4 +46,8 @@ class TestWICModels(unittest.TestCase):
 
 if __name__ == '__main__':
     
+    # Initialize hydra config, initialization should be done only once per execution
+    initialize(version_base=None, config_path="../../conf")
+    # for testing change working directory manually
+    os.chdir('results')
     unittest.main()
