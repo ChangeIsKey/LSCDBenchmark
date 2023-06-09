@@ -1,9 +1,8 @@
 import sys
 sys.path.insert(0, ".")
 
-import os
 from hydra import initialize, compose, utils
-from tests.utils import overrides
+from tests.utils import overrides, initialize_tests_hydra
 from src.utils.runner import instantiate, run
 from scipy import stats
 
@@ -42,8 +41,5 @@ class TestModels(unittest.TestCase):
 
 if __name__ == '__main__':
     
-    # Initialize hydra config, initialization should be done only once per execution
-    initialize(version_base=None, config_path="../../conf")
-    # for testing change working directory manually
-    os.chdir('results')
+    initialize_tests_hydra(version_base=None, config_path="../conf", working_dir='results')
     unittest.main()
