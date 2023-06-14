@@ -23,6 +23,15 @@ class Use(BaseModel):
 
     @classmethod
     def from_series(cls, use: Series) -> "Use":
+        """Return one use from type series with specific columns. The use is the Series includes 
+        the folloing columns: lemma, pos, grouping, identifier, context_prepeocessed,
+        target_index_begin, and target_index_end.
+
+        :param use: use
+        :type use: Series
+        :return: Use object with specific columns.
+        :rtype: Use
+        """        
         return cls(
             identifier=use.identifier,
             grouping=use.grouping,
@@ -33,7 +42,21 @@ class Use(BaseModel):
         )
 
     def __hash__(self) -> int:
+        """Called by built-in function hash() and for operations on members of hashed collections.
+
+        :return: The hash value of identifier of the Use.
+        :rtype: int
+        """        
         return hash(self.identifier)
 
     def __lt__(self, other: "Use") -> bool:
+        """Compare the value of the identifier of self.use and the value of the identifier of 
+        other use.
+
+        :param other: The use to be compared.
+        :type other: Use
+        :return: Return Ture if the value of the identifier of self.use is less than the value of the identifier of 
+        other use.
+        :rtype: bool
+        """        
         return self.identifier < other.identifier
