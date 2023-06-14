@@ -6,13 +6,12 @@ from unittest.mock import patch
 
 from src.use import Use
 from src.wic.contextual_embedder import EmbeddingCache
-import src.wic.contextual_embedder
 import pandas as pd
 import torch
 from pathlib import Path
 
 
-class TestDataset(unittest.TestCase):
+class TestEmbeddingCache(unittest.TestCase):
     mock_data_arm_1 = {'lemma': 'arm', 
                        'pos': 'N', 
                        'grouping': '1', 
