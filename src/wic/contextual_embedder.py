@@ -105,12 +105,27 @@ class EmbeddingCache(BaseModel):
             self._index = self._index.iloc[0:0]
 
     def add_use(self, use: Use, embedding: torch.Tensor) -> None:
+        """Add a use and its embedding to cache.
+
+        :param use: one data in the form of Use
+        :type use: Use
+        :param embedding: the embedding of the data
+        :type embedding: torch.Tensor
+        """
         self._targets_with_new_uses.add(use.target)
         if not use.target in self._cache:
             self._cache[use.target] = {}
         self._cache[use.target][use.identifier] = embedding
 
     def retrieve(self, use: Use) -> torch.Tensor | None:
+        """If the target is not in cache yet, create one in the cache. Then, retrieve the 
+        embedding of the use by the specific identifier.
+
+        :param use: one data in the form of Use
+        :type use: Use
+        :return: the embedding of the use
+        :rtype: torch.Tensor | None
+        """
         if not use.target in self._cache:
             loaded = self.load(use.target)
             if loaded is None:
@@ -119,6 +134,13 @@ class EmbeddingCache(BaseModel):
         return self._cache[use.target].get(use.identifier)  # this can still be None
 
     def load(self, target: str) -> dict[UseID, torch.Tensor] | None:
+        """Load tha data of the target, its identifier and its embedding. 
+
+        :param target: the target term
+        :type target: str
+        :return: the identifier and the embedding
+        :rtype: dict[UseID, torch.Tensor] | None
+        """
         query = pd.json_normalize(self.metadata).assign(target=target)
         missing_cols_in_query = {
             col: None
@@ -146,15 +168,27 @@ class EmbeddingCache(BaseModel):
         return dict(torch.load(path))
 
     def _ids(self) -> set[UseID]:
+        """Retrieve the identifier.
+
+        :return: the identifier
+        :rtype: set[UseID]
+        """
         try:
             return set(self._index.id.tolist())
         except AttributeError:
             return set()
 
     def targets(self) -> set[TargetName]:
+        """Get all the target from cache.
+
+        :return: _description_
+        :rtype: set[TargetName]
+        """
         return set(self._cache.keys())
 
     def clean(self):
+        """Clean the duplicated row in the index dataframe. 
+        """
         self._index.drop_duplicates(
             subset=[col for col in self._index.columns.tolist() if col != "id"],
             inplace=True,
@@ -167,6 +201,11 @@ class EmbeddingCache(BaseModel):
         self._index.to_parquet(path=self._index_path, engine="pyarrow")
 
     def persist(self, target: str) -> None:
+        """Save the embedding of target. And remove the target term from the set of new uses.
+
+        :param target: the target term
+        :type target: str
+        """
         while True:
             identifier = str(uuid.uuid4())
             if identifier not in self._ids():
@@ -193,6 +232,13 @@ class EmbeddingCache(BaseModel):
                 break
 
     def has_new_uses(self, target: str) -> bool:
+        """To check if the target is in the set of new uses
+
+        :param target: the target term
+        :type target: str
+        :return: if the target in the set of new uses
+        :rtype: bool
+        """
         return target in self._targets_with_new_uses
 
 

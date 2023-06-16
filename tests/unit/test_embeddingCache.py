@@ -135,13 +135,27 @@ class TestEmbeddingCache(unittest.TestCase):
         self.assertEqual(list(E._cache['arm'].keys()), ['A', 'D'])
     
     @patch.object(EmbeddingCache, 'load')
-    def test_retrieve(self, mock_load):
+    def test_retrieve_when_load_is_None(self, mock_load):
         mock_load.return_value = None
         use_empty = self.U.from_series(self.mock_series_empty)
         E = EmbeddingCache(metadata=dict())
         retrieve_return = E.retrieve(use=use_empty)
         self.assertEqual(retrieve_return, None)
     
+    @patch.object(EmbeddingCache, 'load')
+    def test_retrieve_target_in__cache(self, mock_load):
+        mock_load.return_value = {'A': torch.tensor([[1, 2, 3], [4, 5, 6]])}
+        use_arm = self.U.from_series(self.mock_series_arm_1)
+        E = EmbeddingCache(metadata=dict())
+        E._cache = {'target': {'D': torch.tensor([[3, 2, 1], [6, 5, 4]])}}
+        self.assertTrue(torch.equal(E.retrieve(use=use_arm), torch.tensor([[1, 2, 3], [4, 5, 6]])))
+
+    def test_retrieve_target_not_in__cache(self):
+        use_arm = self.U.from_series(self.mock_series_arm_2)
+        E = EmbeddingCache(metadata=dict())
+        E._cache = {'arm': {'D': torch.tensor([[3, 2, 1], [6, 5, 4]])}}
+        self.assertTrue(torch.equal(E.retrieve(use=use_arm), torch.tensor([[3, 2, 1], [6, 5, 4]])))
+
     def test_load(self):
         mock_metadata_target = {'dataset.name': 'testwug_en_111',
                     'dataset.preprocessing': 'raw',
@@ -179,9 +193,9 @@ class TestEmbeddingCache(unittest.TestCase):
         E._cache = {'arm': {'A': 0.0}, 'target': {'target-F': 0.0}}
         self.assertEqual(E.targets(), {'arm', 'target'})
 
-    @patch('src.wic.contextual_embedder.pandas.DataFrame.to_parquet')
-    @patch('src.wic.contextual_embedder.pathlib.Path.iterdir')
-    @patch('src.wic.contextual_embedder.pandas.DataFrame.drop_duplicates')
+    @patch('src.wic.contextual_embedder.pd.DataFrame.to_parquet')
+    @patch('src.wic.contextual_embedder.Path.iterdir')
+    @patch('src.wic.contextual_embedder.pd.DataFrame.drop_duplicates')
     def test_clean(self, mock_drop_dup, mock_iterdir, mock_to_parquet):
         E = EmbeddingCache(metadata=dict())
         E.clean()
@@ -237,7 +251,7 @@ class TestEmbeddingCache(unittest.TestCase):
 
     @patch('src.wic.contextual_embedder.torch.save')
     @patch('src.wic.contextual_embedder.open')
-    @patch('src.wic.contextual_embedder.pandas.concat')
+    @patch('src.wic.contextual_embedder.pd.concat')
     def test_persist_concate_and_open_and_save_are_called(self, mock_concate, mock_open, mock_save):
         E = EmbeddingCache(metadata=dict())
         E._targets_with_new_uses = {'arm', 'target'}
