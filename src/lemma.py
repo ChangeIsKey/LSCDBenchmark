@@ -224,7 +224,8 @@ class Lemma(BaseModel):
                 return (
                     compare_0 + earlier_0 + later_0,
                     compare_1 + earlier_1 + later_1
-                )                
+                )
+                
 
     def get_uses(self) -> list[Use]:
         return [Use.from_series(row) for _, row in self.uses_df.iterrows()]
