@@ -150,7 +150,7 @@ class Lemma(BaseModel):
             )
             drop_cols = [col for col in self._augmented_annotated_pairs.columns 
                          if col not in ["identifier1", "identifier2", "grouping_x", "grouping_y"]]
-            self._augmented_annotated_pairs.drop(columns=drop_cols)
+            self._augmented_annotated_pairs.drop(columns=drop_cols, inplace=True)
 
         return self._augmented_annotated_pairs
 
@@ -224,8 +224,7 @@ class Lemma(BaseModel):
                 return (
                     compare_0 + earlier_0 + later_0,
                     compare_1 + earlier_1 + later_1
-                )
-                
+                )                
 
     def get_uses(self) -> list[Use]:
         return [Use.from_series(row) for _, row in self.uses_df.iterrows()]
@@ -280,7 +279,7 @@ class Lemma(BaseModel):
 
             drop_cols = [col for col in self._augmented_predefined_use_pairs_df.columns 
                         if col not in ["identifier1", "identifier2", "grouping_x", "grouping_y"]]
-            self._augmented_predefined_use_pairs_df.drop(columns=drop_cols)
+            self._augmented_predefined_use_pairs_df.drop(columns=drop_cols, inplace=True)
         return self._augmented_predefined_use_pairs_df
         
     def _split_augmented_uses(self, group: Group, augmented_uses: DataFrame) -> tuple[list[UseID], list[UseID]]:
