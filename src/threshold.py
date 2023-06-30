@@ -5,11 +5,13 @@ def mean_std(
 	predictions: list[float],
 	t: float
 ) -> list[int]:
-	"""Find the predictions passing the threshold. The threshold is the mean of predictions add the product of t and std of predictions.
+	"""Return a list of bool showing the positions of the predictions which are grater equal 
+	than the threshold. The threshold equals the mean of predictions plus the product of parameter t 
+	and std of predictions.
 
 	:param predictions: a list of predictions
 	:type predictions: list[float]
-	:param t: _description_
+	:param t: input float
 	:type t: float
 	:return: a list of 0 and 1 showing the posision of the non-passed and passed predictions correspondingly
 	:rtype: list[int]
