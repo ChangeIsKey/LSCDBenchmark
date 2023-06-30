@@ -14,13 +14,25 @@ EvaluationTask: TypeAlias = Literal[
 K = TypeVar("K", str, tuple[str, str])
 V = TypeVar("V", int, float)
 
-
 class DatasetMetadata(TypedDict):
+    """_summary_
+
+    :param TypedDict: _description_
+    :type TypedDict: _type_
+    """    
     name: str
     version: str
 
-
 class Evaluation(BaseModel, ABC):
+    """_summary_
+
+    :param BaseModel: _description_
+    :type BaseModel: _type_
+    :param ABC: _description_
+    :type ABC: _type_
+    :return: _description_
+    :rtype: _type_
+    """    
     task: EvaluationTask
     metric: Callable[[list[float | int], list[float | int]], Any]
     plotter: Plotter | None = Field(...)
@@ -29,7 +41,6 @@ class Evaluation(BaseModel, ABC):
         if self.plotter is not None:
             self.plotter(predictions=predictions, labels=labels)
 
-        print(predictions)
         results = self.combine_inputs(labels=labels, predictions=predictions)
         results.to_csv("predictions.csv", sep="\t")
         results = results.dropna(how="any")
@@ -37,10 +48,8 @@ class Evaluation(BaseModel, ABC):
         y_true = results.label.tolist()
         y_pred = results.prediction.tolist()
 
-        #print(y_true)
-        #print(y_pred)
         result = {"score": self.metric(y_true, y_pred), "metric": self.metric.func.__name__}
-        
+
         with open(file="result.json", mode="w", encoding="utf8") as f:
             f.write(json.dumps(result, indent=4))
         return result["score"]
@@ -53,14 +62,12 @@ class Evaluation(BaseModel, ABC):
         :type labels: dict[K, V]
         :param predictions: the value predicted by model
         :type predictions: dict[K, V]
-        :return: A dataframe including three columns, instance, prediction, label.
+        :return: a dataframe with three columns: instances, predictions, labels
         :rtype: DataFrame
+
         """        
         labels_df = DataFrame(
-            {
-                "instance": list(labels.keys()), 
-                "label": list(labels.values())
-            }
+            {"instance": list(labels.keys()), "label": list(labels.values())}
         )
         predictions_df = DataFrame(
             {

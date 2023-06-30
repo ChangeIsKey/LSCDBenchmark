@@ -24,11 +24,13 @@ log = getLogger(__name__)
 
 
 class Model(BaseModel):
+    """ """
     name: str
     url: HttpUrl = Field(exclude=True)
 
 
 class Cache(BaseModel):
+    """ """
     metadata: dict[str, Any]
     _similarities: DataFrame = PrivateAttr(default=None)
     _similarities_filtered: DataFrame = PrivateAttr(default=None)
@@ -62,6 +64,7 @@ class Cache(BaseModel):
     def retrieve(
         self, use_pairs: list[tuple[Use, Use]]
     ) -> dict[tuple[UseID, UseID], float]:
+        """ """
         lookup_table = DataFrame(
             {
                 "use_0": [up[0].identifier for up in use_pairs],
@@ -73,6 +76,7 @@ class Cache(BaseModel):
         return dict(zip(list(zip(merged["use_0"], merged["use_1"])), merged["similarity"]))
 
     def persist(self) -> None:
+        """ """
         self._similarities = pd.concat([self._similarities, self._similarities_filtered], ignore_index=True)
         self._similarities.drop_duplicates(inplace=True)
         self._similarities.to_csv(self.path, index=False)
@@ -80,12 +84,14 @@ class Cache(BaseModel):
 
     @property
     def path(self) -> Path:
+        """ """
         cache = os.getenv("DEEPMISTAKE")
         if cache is None:
             cache = ".deepmistake"
         return utils.path(cache) / "similarities.csv"
 
     def add_use_pair(self, use_pair: tuple[Use, Use], similarity: float) -> None:
+        """ """
         row = self.__metadata__.assign(
             use_0=use_pair[0].identifier,
             use_1=use_pair[1].identifier,
@@ -96,11 +102,13 @@ class Cache(BaseModel):
 
 
 class Score(TypedDict):
+    """ """
     id: str
     score: tuple[str, str] | str
 
 
 def use_pair_group(use_pair: tuple[Use, Use]) -> str:
+    """ """
     if use_pair[0].grouping != use_pair[1].grouping:
         return "COMPARE"
     else:
@@ -111,6 +119,7 @@ def use_pair_group(use_pair: tuple[Use, Use]) -> str:
 
 
 class Input(TypedDict):
+    """ """
     id: str
     start1: int
     end1: int
@@ -124,6 +133,7 @@ class Input(TypedDict):
 
 
 def to_data_format(use_pair: tuple[Use, Use]) -> Input:
+    """ """
     return {
         "id": f"{use_pair[0].target}.{np.random.randint(low=100000, high=1000000)}",
         "start1": use_pair[0].indices[0],
@@ -139,6 +149,7 @@ def to_data_format(use_pair: tuple[Use, Use]) -> Input:
 
 
 class DeepMistake(WICModel):
+    """ """
     ckpt: Model
     cache: Cache | None = Field(...)
 
@@ -150,15 +161,18 @@ class DeepMistake(WICModel):
             self.cache.persist()
 
     def as_df(self) -> DataFrame:
+        """ """
         df = pd.json_normalize(data=json.loads(self.json(ensure_ascii=False)))
         return df
         
 
     def clone_repo(self) -> None:
+        """ """
         Repo.clone_from(url="https://github.com/ameta13/mcl-wic", to_path=self.repo_dir)
 
     @property
     def path(self) -> Path:
+        """ """
         path = os.getenv("DEEPMISTAKE")
         if path is None:
             path = ".deepmistake"
@@ -166,10 +180,12 @@ class DeepMistake(WICModel):
     
     @property
     def repo_dir(self) -> Path:
+        """ """
         return self.path / "mcl-wic"
 
     @property
     def ckpt_dir(self) -> Path:
+        """ """
         return self.path / "checkpoints" / self.ckpt.name
 
     def __unzip_ckpt(self, zipped: Path) -> None:
@@ -213,6 +229,7 @@ class DeepMistake(WICModel):
         return path
 
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
+        """ """
         with self:
             if not self.ckpt_dir.exists():
                 zipped = self.__download_ckpt()

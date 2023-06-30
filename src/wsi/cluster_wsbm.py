@@ -14,14 +14,12 @@ from src.wsi.model import WSIModel
 
 def _nxgraph_to_graphtoolgraph(graph: nx.Graph):
     """Convert a networkx graph to a graphtool graph.
-    Parameters
-    ----------
-    graph: networkx.Graph
-            The graph to convert
-    Returns
-    -------
-    gt_graph: graphtool.Graph
-            The converted graph
+
+    :param graph: The graph to convert
+    :type graph: nx.Graph
+    :return: The converted graph
+    :rtype: graphtool.Graph
+            
     """
     graph_tool_graph = graph_tool.Graph(directed=False)
 
@@ -52,16 +50,14 @@ def _nxgraph_to_graphtoolgraph(graph: nx.Graph):
 
 def _minimize(graph: graph_tool.Graph, distribution: str) -> BlockState:
     """Minimize the graph using the given distribution as described by graph-tool.
-    Parameters
-    ----------
-    graph: graphtool.Graph
-            The graph to minimize
-    distribution: str
-            The distribution to use for the WSBM algorithm.
-    Returns
-    -------
-    state: BlockState
-            The minimized graph as BlockState object.
+
+    :param graph: The graph to minimize
+    :type graph: graph_tool.Graph
+    :param distribution: The distribution to use for the WSBM algorithm.
+    :type distribution: str
+    :return: The minimized graph as BlockState object.
+    :rtype: BlockState
+            
     """
 
     return minimize_blockmodel_dl(
@@ -79,6 +75,7 @@ def _minimize(graph: graph_tool.Graph, distribution: str) -> BlockState:
 
 
 class ClusterWSBM(WSIModel):
+    """ """
     distribution: Literal[
         "real-exponential",
         "discrete-poisson",
@@ -88,6 +85,7 @@ class ClusterWSBM(WSIModel):
     ]
 
     def predict(self, uses: list[Use]) -> list[int]:
+        """ """        
         use_pairs = list(combinations(uses, r=2))
         similarity_matrix = self.similarity_matrix(use_pairs)
         ids = similarity_matrix.index
