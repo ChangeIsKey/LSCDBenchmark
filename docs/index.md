@@ -30,12 +30,12 @@ glossary
 autoapi/index.rst
 ```
 
-```{toctree}
+<!-- ```{toctree}
 :maxdepth: 1
 :hidden:
 
 autoapi/LSCDBenchmark/src/index.rst
-```
+``` -->
 
 ## Indices and tables
 

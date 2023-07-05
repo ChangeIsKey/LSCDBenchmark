@@ -60,11 +60,12 @@ autoapi/index.rst
 ```
 ````
 
-````{note}
+`````{note}
 Autoapi generates several pages automatically. However, we might not be able to link all the pages in our index page. The error can happen as: ".../docs/autoapi/mypackage/src/index.rst: WARNING: document isn't included in any toctree".
 
 You can set a `toctree` for the page in the index page. If you don't need it, you can hide it with `:hidden:` for the better layout of the page. It then won't show up in the index page.
 
+````markdown
 ```{toctree}
 :maxdepth: 1
 :hidden:
@@ -72,5 +73,6 @@ You can set a `toctree` for the page in the index page. If you don't need it, yo
 autoapi/mypackage/src/index.rst
 ```
 ````
+`````
 
 See [this](https://sphinx-autoapi.readthedocs.io/en/latest/tutorials.html) for more information about autoapi tutorial.
