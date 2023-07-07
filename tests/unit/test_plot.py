@@ -3,12 +3,13 @@ sys.path.insert(0, ".")
 import pandas as pd
 import numpy as np
 from typing import Callable
-# from scipy.stats import spearmanr # not working for replacing Callable
+import os
 
 import unittest
 from unittest.mock import patch
 
 from src.plots import Plotter
+from src.wrappers import spearmanr
 
 class TestPlotter(unittest.TestCase):
     max_alpha = 0.5
@@ -16,17 +17,16 @@ class TestPlotter(unittest.TestCase):
     min_boots_in_one_tail = 2
     mock_y_true = np.array([0.1, 0.2, 0.3])
     mock_y_pred = np.array([0.1, 0.4, 0.3])
-    # TODO: Callable() takes no arguments --> when run 'self.metric(y_true, y_pred)' in self.P.metric_boot_histogram()
-    metric=Callable(mock_y_true, mock_y_pred)
+    mock_labels = {'key_1': 0.1,
+                    'key_2': 0.2,
+                    'key_3': 0.3}
+    mock_preds = {'key_1': 0.1,
+                    'key_2': 0.4,
+                    'key_3': 0.3}
     P = Plotter(max_alpha=max_alpha, 
                 default_alpha=default_alpha, 
                 min_boots_in_one_tail=min_boots_in_one_tail, 
-                metric=metric)
-    # possible solution for Callable, but not working
-    # P = Plotter(max_alpha=max_alpha, 
-    #             default_alpha=default_alpha, 
-    #             min_boots_in_one_tail=min_boots_in_one_tail, 
-    #             metric=spearmanr)
+                metric=spearmanr)
     
     def test_validate_alphas(self):
         # when --> not 0 < default_alpha <= max_alpha
@@ -66,16 +66,10 @@ class TestPlotter(unittest.TestCase):
         self.assertEqual(list(self.P.preprocess_inputs(df)['born']), [pd.Timestamp("1940-04-25")])
 
     def test_combine_inputs(self):
-        mock_labels = {'key_1': 1,
-                       'key_2': 2,
-                       'key_3': 3}
-        mock_preds = {'key_1': 3,
-                      'key_2': 5,
-                      'key_3': 6}
-        merged = self.P.combine_inputs(labels=mock_labels, predictions=mock_preds)
+        merged = self.P.combine_inputs(labels=self.mock_labels, predictions=self.mock_preds)
         self.assertEqual(list(merged['target']), ['key_1', 'key_2', 'key_3'])
-        self.assertEqual(list(merged['prediction']), [3, 5, 6])
-        self.assertEqual(list(merged['label']), [1, 2, 3])
+        self.assertEqual(list(merged['prediction']), [0.1, 0.4, 0.3])
+        self.assertEqual(list(merged['label']), [0.1, 0.2, 0.3])
     
     def test__one_boot_and__boot_generator(self):
         one_boot_y_true, one_boot_y_pred = self.P._one_boot(self.mock_y_true, self.mock_y_pred)
@@ -90,15 +84,29 @@ class TestPlotter(unittest.TestCase):
         self.assertTrue(mock_randint.called)
 
     def test_metric_boot_histogram(self):
-        # self.P.metric_boot_histogram(self.mock_y_true, self.mock_y_pred)
-        # not working 
-        pass
+        self.P.metric_boot_histogram(self.mock_y_true, self.mock_y_pred)
+        self.assertTrue(os.path.exists('./histogram.svg'))
+        self.assertTrue(os.path.exists('./histogram.png'))
+        os.remove('./histogram.svg')
+        os.remove('./histogram.png')
+        self.assertFalse(os.path.exists('./histogram.svg'))
+        self.assertFalse(os.path.exists('./histogram.png'))
+    
+    @patch('src.plots.Plotter.metric_boot_histogram')
+    @patch('src.plots.Plotter.preprocess_inputs')
+    @patch('src.plots.Plotter.combine_inputs')
+    def test_func_in___call__(self, mock_combine_inputs, mock_preprocess_inputs, mock_metric_boot_histogram):
+        self.P(labels=self.mock_y_true, predictions=self.mock_y_pred)
+        self.assertTrue(mock_combine_inputs.called)
+        self.assertTrue(mock_preprocess_inputs.called)
+        self.assertTrue(mock_metric_boot_histogram.called)
+        self.assertTrue(os.path.exists('./histogram.svg'))
+        self.assertTrue(os.path.exists('./histogram.png'))
+        os.remove('./histogram.svg')
+        os.remove('./histogram.png')
+        self.assertFalse(os.path.exists('./histogram.svg'))
+        self.assertFalse(os.path.exists('./histogram.png'))
 
-    def test___call__(self):
-        # also test validate_alphas
-        # also test combine_inputs
-        # also test metric_boot_histogram
-        pass
 
 if __name__ == '__main__':
     unittest.main()

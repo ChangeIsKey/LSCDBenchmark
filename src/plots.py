@@ -40,7 +40,7 @@ class Plotter(BaseModel, ABC):
         :raises ValueError: if default_alpha is not in between 0 and max_alpha
         :return: a dictionary includes validated default_alpha and max_alpha, and their values
         :rtype: dict[str, float]
-        """        
+        """
         default_alpha = v["default_alpha"]
         max_alpha = v["max_alpha"]
         if default_alpha > max_alpha and 0 < (1 - default_alpha) <= max_alpha:
@@ -71,13 +71,12 @@ class Plotter(BaseModel, ABC):
         :type results: DataFrame
         :return: output dataframe
         :rtype: DataFrame
-        """        
+        """
         return results.dropna(how="any")
 
     def __call__(self, predictions: dict[K, V], labels: dict[K, V]):
         combined_results = self.combine_inputs(labels=labels, predictions=predictions)
         preprocessed_results = self.preprocess_inputs(combined_results)
-        print('here')
         if self.metric is not None:
             y_true = preprocessed_results.label.to_numpy()
             y_pred = preprocessed_results.prediction.to_numpy()
@@ -93,7 +92,7 @@ class Plotter(BaseModel, ABC):
         :type predictions: dict[K, V]
         :return: the combined dataframe of input labels and input predictions
         :rtype: DataFrame
-        """        
+        """
         labels_df = DataFrame(
             {"target": list(labels.keys()), "label": list(labels.values())}
         )
@@ -144,7 +143,7 @@ class Plotter(BaseModel, ABC):
         :type y_true: ndarray
         :param y_pred: The predictions.
         :type y_pred: ndarray
-        """        
+        """
         results = pd.Series(
             [
                 self.metric(y_true, y_pred)
