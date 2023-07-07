@@ -32,6 +32,15 @@ class Plotter(BaseModel, ABC):
 
     @root_validator
     def validate_alphas(cls, v: dict[str, float]) -> dict[str, float]:
+        """Validate the alphas when initiate the Plotter object.
+
+        :param v: a dictionary includes default_alpha and max_alpha, and their values
+        :type v: dict[str, float]
+        :raises ValueError: if default_alpha is grater than 0.5
+        :raises ValueError: if default_alpha is not in between 0 and max_alpha
+        :return: a dictionary includes validated default_alpha and max_alpha, and their values
+        :rtype: dict[str, float]
+        """        
         default_alpha = v["default_alpha"]
         max_alpha = v["max_alpha"]
         if default_alpha > max_alpha and 0 < (1 - default_alpha) <= max_alpha:
@@ -56,12 +65,19 @@ class Plotter(BaseModel, ABC):
         self._alpha = max(self.default_alpha, self._min_alpha_from(self._n_boots))
 
     def preprocess_inputs(self, results: DataFrame) -> DataFrame:
+        """Drop the row as long as it contain NA value.
+
+        :param results: input dataframe
+        :type results: DataFrame
+        :return: output dataframe
+        :rtype: DataFrame
+        """        
         return results.dropna(how="any")
 
     def __call__(self, predictions: dict[K, V], labels: dict[K, V]):
         combined_results = self.combine_inputs(labels=labels, predictions=predictions)
         preprocessed_results = self.preprocess_inputs(combined_results)
-
+        print('here')
         if self.metric is not None:
             y_true = preprocessed_results.label.to_numpy()
             y_pred = preprocessed_results.prediction.to_numpy()
@@ -69,6 +85,15 @@ class Plotter(BaseModel, ABC):
 
     @staticmethod
     def combine_inputs(labels: dict[K, V], predictions: dict[K, V]) -> DataFrame:
+        """Combine input labels and input predictions, and return it as dataframe.
+
+        :param labels: input dictionary of labels
+        :type labels: dict[K, V]
+        :param predictions: input dictionary of predictions
+        :type predictions: dict[K, V]
+        :return: the combined dataframe of input labels and input predictions
+        :rtype: DataFrame
+        """        
         labels_df = DataFrame(
             {"target": list(labels.keys()), "label": list(labels.values())}
         )
@@ -113,7 +138,13 @@ class Plotter(BaseModel, ABC):
         return 2 * (self.min_boots_in_one_tail - 1) / (n_boots - 1)
 
     def metric_boot_histogram(self, y_true, y_pred):
-        """Plot histogram w/ lines for 1 observed metric & its confidence interval."""
+        """Plot histogram with lines for 1 observed metric and its confidence interval.
+
+        :param y_true: True labels.
+        :type y_true: ndarray
+        :param y_pred: The predictions.
+        :type y_pred: ndarray
+        """        
         results = pd.Series(
             [
                 self.metric(y_true, y_pred)
