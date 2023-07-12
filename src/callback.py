@@ -20,6 +20,13 @@ class LogJobReturnCallback(Callback):
     def on_job_end(
         self, config: DictConfig, job_return: JobReturn, **kwargs: Any
     ) -> None:
+        """Check the status of job in hydra.
+
+        :param config: DictConfig
+        :type config: DictConfig
+        :param job_return: JobReturn
+        :type job_return: JobReturn
+        """        
         if job_return.status == JobStatus.COMPLETED:
             self.log.info(f"Succeeded with return value: {job_return.return_value}")
         elif job_return.status == JobStatus.FAILED:
@@ -81,6 +88,11 @@ class Experiment(ABC):
 class RunExperiment(Experiment):
     @property
     def timestamp(self) -> datetime.datetime:
+        """Retrive the time stamp from the name of directories.
+
+        :return: date and time in string
+        :rtype: datetime.datetime
+        """
         date = self.path.parent.name
         time = self.path.name
         return self.parse_timestamp(date, time)
@@ -89,6 +101,11 @@ class RunExperiment(Experiment):
 class MultirunExperiment(Experiment):
     @property
     def timestamp(self) -> datetime.datetime:
+        """Retrive the time stamp from the name of directories.
+
+        :return: date and time in string
+        :rtype: datetime.datetime
+        """        
         date = self.path.parent.parent.name
         time = self.path.parent.name
         return self.parse_timestamp(date, time)
@@ -103,6 +120,8 @@ class ResultCollector(Callback):
         self.results: list[dict[str, Any]] = []
 
     def write_results(self) -> None:
+        """ Write results into csv and json files in the results directory.
+        """        
         self.path.parent.mkdir(parents=True, exist_ok=True)
         df = pd.DataFrame(self.results)
         df.to_csv(
@@ -119,7 +138,11 @@ class ResultCollector(Callback):
         )
 
     def on_run_end(self, config: DictConfig, **kwargs: Any) -> None:
-        
+        """Load results from outputs directory and write them to the results directory.
+
+        :param config: DictConfig
+        :type config: DictConfig
+        """        
         for date in self.OUTPUTS_PATH.iterdir():
             for path in date.iterdir():
                 experiment = RunExperiment(path=path)
@@ -128,6 +151,11 @@ class ResultCollector(Callback):
         self.write_results()
 
     def on_multirun_end(self, config: DictConfig, **kwargs: Any) -> None:
+        """Load results from multirun directory and write them to the results directory.
+
+        :param config: DictConfig
+        :type config: DictConfig
+        """        
         for date in self.MULTIRUN_PATH.iterdir():
             for time in date.iterdir():
                 for path in time.iterdir():
