@@ -5,6 +5,7 @@ import os
 import csv
 from omegaconf import DictConfig
 from hydra.core.utils import JobReturn, JobStatus
+import shutil
 
 import unittest
 
@@ -201,28 +202,14 @@ def write_mock_csv(path):
 
 def remove_dirs_and_files():
     # results/
-    if os.path.isfile("mock_results/results.json"):
-        os.remove("mock_results/results.json")
-    if os.path.isfile("mock_results/results.csv"):
-        os.remove("mock_results/results.csv")
     if os.path.exists("mock_results"):
-        os.rmdir("mock_results")
-    
-    # outputs/
-    if os.path.isfile("mock_outputs/2023-06-05/16-00-03/result.json"):
-        os.remove("mock_outputs/2023-06-05/16-00-03/result.json")
-    if os.path.isfile("mock_outputs/2023-06-05/16-00-03/.hydra/config.yaml"):
-        os.remove("mock_outputs/2023-06-05/16-00-03/.hydra/config.yaml") 
-    if os.path.isfile("mock_outputs/2023-06-05/16-00-03/predictions.csv"):
-        os.remove("mock_outputs/2023-06-05/16-00-03/predictions.csv")
-    if os.path.exists("mock_outputs/2023-06-05/16-00-03/.hydra"):
-        os.rmdir("mock_outputs/2023-06-05/16-00-03/.hydra")
-    if os.path.exists("mock_outputs/2023-06-05/16-00-03"):
-        os.rmdir("mock_outputs/2023-06-05/16-00-03")
-    if os.path.exists("mock_outputs/2023-06-05"):
-        os.rmdir("mock_outputs/2023-06-05")
+        shutil.rmtree("mock_results")
+    # multirun/
+    if os.path.exists("mock_multirun"):
+        shutil.rmtree("mock_multirun")
+    # outputs
     if os.path.exists("mock_outputs"):
-        os.rmdir("mock_outputs")
+        shutil.rmtree("mock_outputs")
 
 if __name__ == '__main__':
     unittest.main()
