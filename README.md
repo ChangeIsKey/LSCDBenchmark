@@ -9,12 +9,12 @@ Lexical Semantic Change Detection (LSCD) is a field of NLP that studies methods 
 
 ## Installation instructions
 
-To get started, clone the repository, then create a new environment:
+To get started, make sure that you have **Python `3.10.0`**. After that, clone the repository, then create a new virtual environment:
 
 ```sh
 git clone https://github.com/ChangeIsKey/LSCDBenchmark.git
 
-virtualenv env
+virtualenv env --python="/path/to/python/3.10.0"
 source env/bin/activate
 pip install -r requirements.txt --find-links https://download.pytorch.org/whl/torch_stable.html
 ```
