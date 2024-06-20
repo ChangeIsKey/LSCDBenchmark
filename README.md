@@ -14,8 +14,8 @@ To get started, make sure that you have **Python `3.10.0`**. After that, clone t
 ```sh
 git clone https://github.com/ChangeIsKey/LSCDBenchmark.git
 
-virtualenv env --python="/path/to/python/3.10.0"
-source env/bin/activate
+virtualenv venv --python="/path/to/python/3.10.0"
+source venv/bin/activate
 pip install -r requirements.txt --find-links https://download.pytorch.org/whl/torch_stable.html
 ```
 
