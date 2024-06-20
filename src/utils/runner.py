@@ -12,16 +12,17 @@ from omegaconf import DictConfig, OmegaConf, open_dict
 from src.dataset import Dataset
 from src.evaluation import Evaluation
 from src.wic import WICModel
-from src.lscd import GradedLSCDModel, BinaryThresholdModel
+# from src.lscd import GradedLSCDModel, BinaryThresholdModel
 from src.wic.contextual_embedder import ContextualEmbedder
 from src.wic.model import NumpyEncoder
-from src.wsi import WSIModel
+# from src.wsi import WSIModel
 from src.utils.utils import path as get_path
 
 OUTPUTS = get_path("outputs")
 MULTIRUN = get_path("multirun")
 
-Model: TypeAlias = WICModel | GradedLSCDModel | BinaryThresholdModel | WSIModel
+# Model: TypeAlias = WICModel | GradedLSCDModel | BinaryThresholdModel | WSIModel
+Model: TypeAlias = WICModel
 
 
 def instantiate(
