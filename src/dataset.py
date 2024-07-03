@@ -251,7 +251,7 @@ class Dataset(BaseModel):
         judgments.replace(to_replace=0, value=np.nan, inplace=True)
         # pandas.core.groupby.GroupBy.median ignores missing values -> no need for nanmedian
         judgments = (
-            judgments.groupby(by=["identifier1", "identifier2"])["judgment"]
+            judgments.groupby(by=["identifier1", "identifier2"])["judgment"] # possible bug
             .median()
             .reset_index()
         )
@@ -280,7 +280,8 @@ class Dataset(BaseModel):
             index = pd.DataFrame(columns=["dataset", "split", "id", "group", "sample"])
 
         query = pd.DataFrame([{"dataset": self.name, "split": self.split, "group": group, "sample": sample}])
-        df = index.merge(query) 
+        df = index.merge(query)
+        # print("Query", query)
 
 
         if df.empty or self.test_on is not None:
@@ -433,12 +434,14 @@ class Dataset(BaseModel):
         elif utils.is_int(self.test_on):
             keep = set([lemma.name for lemma in lemmas[: self.test_on]])
         else:
-            keep = set(self.get_split())
-            if self.cleaning is not None and len(self.cleaning.stats) > 0:
-                # remove "data=full" row
-                agreements = self.stats_agreement_df.iloc[1:, :].copy()
-                agreements = self.cleaning(agreements)
-                keep = keep.intersection(agreements.data.unique().tolist())
+            # keep all lemma names
+            keep = set([lemma.name for lemma in self.lemmas])
+            # keep = set(self.get_split())
+            # if self.cleaning is not None and len(self.cleaning.stats) > 0:
+            #     # remove "data=full" row
+            #     agreements = self.stats_agreement_df.iloc[1:, :].copy()
+            #     agreements = self.cleaning(agreements)
+            #     keep = keep.intersection(agreements.data.unique().tolist())
 
         return [lemma for lemma in lemmas if lemma.name in keep]
 

@@ -21,17 +21,19 @@ class TestWICModels(unittest.TestCase):
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
                     {
                         "task": "wic",
-                        "task/wic/dm_ckpt@task.model.ckpt": "WIC_DWUG+XLWSD",
-                        "task/wic@task.model": "deepmistake",
-                        "dataset": "dwug_de_210",                        
+                        # "task/wic/dm_ckpt@task.model.ckpt": "WIC_DWUG+XLWSD",
+                        "task/wic@task.model": "contextual_embedder",
+                        "task.model.ckpt": "bert-base-cased",
+                        "dataset": "testwug_en_111",
+                        "task/wic/metric@task.model.similarity_metric": "cosine",                 
                         "dataset/split": "dev",
-                        "dataset/spelling_normalization": "german",
-                        "dataset/preprocessing": "normalization",
+                        "dataset/spelling_normalization": "english",
+                        "dataset/preprocessing": "raw",
                         # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.93
-                        "dataset.test_on": ["Ackergerät", "Engpaß"],
+                        # "dataset.test_on": ["Ackergerät", "Engpaß"],
                         "evaluation": "wic",
                         "evaluation/metric": "spearman",
-                        "evaluation/plotter": "none",
+                        # "evaluation/plotter": "none",
                     }
                 ))
 

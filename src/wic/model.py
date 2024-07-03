@@ -61,36 +61,31 @@ class WICModel(BaseModel, ABC):
         ...
 
     def predict_all(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
-        #print(len(use_pairs)).blah
         left = [use_0.identifier for use_0, _ in use_pairs]
         right = [use_1.identifier for _, use_1 in use_pairs]
         query = self.as_df()
         query = query.loc[query.index.repeat(len(left))]
         query = query.assign(use_0=left, use_1=right)
-        #print(len(query)).blah
         query = query.assign(**{col: None for col in self._cache.columns if col not in query.columns}).astype({col:self._cache[col].dtype for col in self._cache.columns if col not in query.columns})
         self._cache = self._cache.assign(**{col:None for col in query.columns if col not in self._cache.columns}).astype({col:query[col].dtype for col in query.columns if col not in self._cache.columns})
-
-        #query["prediction"] = query["prediction"].astype("float32")
-        #self._cache["prediction"] = self._cache["prediction"].astype("float32")
         
-
-        print(query)
-        #print(self._cache).blah
-        print([col for col in query.columns if not col.startswith("prediction")])
         df = self._cache.merge(query, on=[col for col in query.columns if not col.startswith("prediction")], how="right") # todo: check if merging leads to duplicate use pairs, this seems to result in more use pairs than the query has, why?
-        #print(df).blah
 
 
-        non_cached = df[df["prediction_x"].isna()].copy(deep=True).reset_index(drop=True) # to do: contains duplicate use pairs
-        print(non_cached)
+        non_cached = df[df["prediction_x"].isna()].copy(deep=True).reset_index(drop=True)
+        duplicates = non_cached.duplicated(subset=["use_0", "use_1"])
+        has_duplicates = duplicates.any()
+        if has_duplicates:
+            print("df has duplicate use pairs.")
+        else:
+            print("df does not have duplicate use pairs.")
+        print("len(non_cached):", len(non_cached))
         
         new_left = list(non_cached["use_0"])
         new_right = list(non_cached["use_1"])
         new_use_pairs = [(use_0, use_1) for use_0, use_1 in use_pairs if use_0.identifier in new_left and use_1.identifier in new_right]
         
         new_predictions = self.predict(use_pairs=new_use_pairs)
-        print(len(non_cached),len(new_use_pairs),len(new_predictions))
         
         if self.scaler is not None:
             new_predictions = np.array(new_predictions).reshape(-1, 1)
