@@ -141,9 +141,9 @@ class WICModel(BaseModel, ABC):
 
     def _combine_predictions(self, non_cached: pd.DataFrame, new_predictions: list[float], merged_df: pd.DataFrame) -> dict:
         new_use_pair_ids = list(zip(list(non_cached["use_0"]), list(non_cached["use_1"])))
-        cached = merged_df[~merged_df["prediction_x"].isna()].copy(deep=True).reset_index()
+        cached = merged_df[~merged_df["prediction"].isna()].copy(deep=True).reset_index()
         old_use_pair_ids = list(zip(list(cached["use_0"]), list(cached["use_1"])))
 
         full_predictions = dict(zip(new_use_pair_ids, new_predictions))
-        full_predictions.update(dict(zip(old_use_pair_ids, cached.prediction_x)))
+        full_predictions.update(dict(zip(old_use_pair_ids, cached.prediction)))
         return full_predictions
