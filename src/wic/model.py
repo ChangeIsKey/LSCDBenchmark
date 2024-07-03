@@ -116,13 +116,6 @@ class WICModel(BaseModel, ABC):
 
     def _get_non_cached(self, df: pd.DataFrame) -> pd.DataFrame:
         non_cached = df[df["prediction"].isna()].copy(deep=True).reset_index(drop=True)
-        duplicates = non_cached.duplicated(subset=["use_0", "use_1"])
-        has_duplicates = duplicates.any()
-        # if has_duplicates:
-        #     print("df has duplicate use pairs.")
-        # else:
-        #     print("df does not have duplicate use pairs.")
-        # print("len(non_cached):", len(non_cached))
         return non_cached
 
     def _filter_new_use_pairs(self, use_pairs: list[tuple[Use, Use]], non_cached: pd.DataFrame) -> list[tuple[Use, Use]]:
