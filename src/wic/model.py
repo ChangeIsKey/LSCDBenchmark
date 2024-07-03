@@ -60,60 +60,6 @@ class WICModel(BaseModel, ABC):
     def predict(self, use_pairs: Iterable[tuple[Use, Use]], **kwargs) -> list[float]:
         ...
 
-    # def predict_all(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
-    #     left = [use_0.identifier for use_0, _ in use_pairs]
-    #     right = [use_1.identifier for _, use_1 in use_pairs]
-    #     query = self.as_df()
-    #     query = query.loc[query.index.repeat(len(left))]
-    #     query = query.assign(use_0=left, use_1=right)
-    #     query = query.assign(**{col: None for col in self._cache.columns if col not in query.columns}).astype({col:self._cache[col].dtype for col in self._cache.columns if col not in query.columns})
-    #     self._cache = self._cache.assign(**{col:None for col in query.columns if col not in self._cache.columns}).astype({col:query[col].dtype for col in query.columns if col not in self._cache.columns})
-        
-    #     df = self._cache.merge(query, on=[col for col in query.columns if not col.startswith("prediction")], how="right") # todo: check if merging leads to duplicate use pairs, this seems to result in more use pairs than the query has, why?
-
-
-    #     non_cached = df[df["prediction_x"].isna()].copy(deep=True).reset_index(drop=True)
-    #     duplicates = non_cached.duplicated(subset=["use_0", "use_1"])
-    #     has_duplicates = duplicates.any()
-    #     if has_duplicates:
-    #         print("df has duplicate use pairs.")
-    #     else:
-    #         print("df does not have duplicate use pairs.")
-    #     print("len(non_cached):", len(non_cached))
-        
-    #     new_left = list(non_cached["use_0"])
-    #     new_right = list(non_cached["use_1"])
-    #     new_use_pairs = [(use_0, use_1) for use_0, use_1 in use_pairs if use_0.identifier in new_left and use_1.identifier in new_right]
-        
-    #     new_predictions = self.predict(use_pairs=new_use_pairs)
-        
-    #     if self.scaler is not None:
-    #         new_predictions = np.array(new_predictions).reshape(-1, 1)
-    #         new_predictions = self.scaler.fit_transform(new_predictions).flatten().tolist()
-
-    #         with Path("scaler_parameters.json").open(mode="w", encoding="utf8") as f:
-    #             as_json = json.dumps(self.scaler.__dict__, cls=NumpyEncoder, indent=4)
-    #             f.write(as_json)
-           
-    #     new_use_pair_ids = list(zip(new_left, new_right))
-    #     cached = df[~df["prediction_x"].isna()].copy(deep=True).reset_index()
-    #     old_use_pair_ids = list(zip(list(cached["use_0"]), list(cached["use_1"])))
-
-    #     full_predictions = dict(zip(new_use_pair_ids, new_predictions))
-    #     full_predictions.update(dict(zip(old_use_pair_ids, cached.prediction_x)))
-        
-    #     for i, _ in non_cached.iterrows():
-    #         non_cached.at[i, "prediction"] = new_predictions[i]  # type: ignore
-        
-    #     non_cached.drop(columns=["prediction_x", "prediction_y"], inplace=True)
-    #     self._cache = pd.concat([self._cache, non_cached], ignore_index=True)
-    #     main_cols = ["use_0", "use_1", "prediction"]
-    #     extra_cols = [col for col in self._cache.columns if col not in main_cols]
-    #     self._cache = self._cache[["use_0", "use_1", "prediction", *extra_cols]]
-    #     self._cache_path.parent.mkdir(parents=True, exist_ok=True)
-    #     self._cache.to_parquet(self._cache_path, index=False)
-        
-    #     return list(full_predictions.values())
     def predict_all(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         left, right = self._prepare_use_identifiers(use_pairs)
         query = self._prepare_query(left, right)
