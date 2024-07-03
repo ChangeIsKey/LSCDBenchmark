@@ -305,8 +305,8 @@ class ContextualEmbedder(WICModel):
     def device(self) -> torch.device:
         if self._device is None:
             self._device = torch.device(
-                f"cuda:{self.gpu}"
-                if self.gpu is not None and torch.cuda.is_available()
+                "cuda"
+                if torch.cuda.is_available()
                 else "cpu"
             )
         return self._device
@@ -390,7 +390,7 @@ class ContextualEmbedder(WICModel):
             )
 
             encoding = self.tokenize(use)
-            input_ids = encoding["input_ids"].to(self.device)  # type: ignore
+            input_ids = encoding["input_ids"].to(self.device)
             tokens = encoding.tokens()
             subword_spans = [encoding.token_to_chars(i) for i in range(len(tokens))]
 

@@ -111,7 +111,6 @@ def run(
 
             use_pairs = dataset.use_pairs(group=group, sample=sample)
             id_pairs = [(use_0.identifier, use_1.identifier) for use_0, use_1 in use_pairs]
-            #print(len(id_pairs))
             predictions.update(dict(zip(id_pairs, model.predict_all(use_pairs))))
 
         elif isinstance(model, GradedLSCDModel):
