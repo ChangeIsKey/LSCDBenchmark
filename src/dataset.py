@@ -249,14 +249,18 @@ class Dataset(BaseModel):
             ~self.judgments_df["annotator"].isin(self.exclude_annotators)
         ].copy(deep=True)
         judgments.replace(to_replace=0, value=np.nan, inplace=True)
-        # pandas.core.groupby.GroupBy.median ignores missing values -> no need for nanmedian
+        judgments['i1_i2_pair'] = judgments.apply(lambda row: tuple(sorted([row['identifier1'], row['identifier2']])), axis=1)
         judgments = (
-            judgments.groupby(by=["identifier1", "identifier2"])["judgment"] # possible bug
+            judgments.groupby(by=['i1_i2_pair'])["judgment"]
             .median()
             .reset_index()
         )
-        annotated_pairs = zip(judgments.identifier1, judgments.identifier2)
-        return dict(zip(list(annotated_pairs), judgments.judgment))
+        
+        duplicates = judgments.duplicated(subset=['i1_i2_pair'], keep=False)
+        return {
+            (row['i1_i2_pair'][0], row['i1_i2_pair'][1]): row['judgment']
+            for row in judgments.to_dict('records')
+        }
 
     @property
     def binary_wic_labels(self) -> dict[tuple[UseID, UseID], float]:
@@ -281,7 +285,6 @@ class Dataset(BaseModel):
 
         query = pd.DataFrame([{"dataset": self.name, "split": self.split, "group": group, "sample": sample}])
         df = index.merge(query)
-        # print("Query", query)
 
 
         if df.empty or self.test_on is not None:
