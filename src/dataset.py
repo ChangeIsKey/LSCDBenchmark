@@ -438,13 +438,13 @@ class Dataset(BaseModel):
             keep = set([lemma.name for lemma in lemmas[: self.test_on]])
         else:
             # keep all lemma names
-            keep = set([lemma.name for lemma in self.lemmas])
-            # keep = set(self.get_split())
-            # if self.cleaning is not None and len(self.cleaning.stats) > 0:
-            #     # remove "data=full" row
-            #     agreements = self.stats_agreement_df.iloc[1:, :].copy()
-            #     agreements = self.cleaning(agreements)
-            #     keep = keep.intersection(agreements.data.unique().tolist())
+            # keep = set([lemma.name for lemma in self.lemmas])
+            keep = set(self.get_split())
+            if self.cleaning is not None and len(self.cleaning.stats) > 0:
+                # remove "data=full" row
+                agreements = self.stats_agreement_df.iloc[1:, :].copy()
+                agreements = self.cleaning(agreements)
+                keep = keep.intersection(agreements.data.unique().tolist())
 
         return [lemma for lemma in lemmas if lemma.name in keep]
 
