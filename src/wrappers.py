@@ -20,5 +20,8 @@ def l1(v: torch.Tensor) -> torch.Tensor:
 def l2(v: torch.Tensor) -> torch.Tensor:
     return torch.nn.functional.normalize(input=v, p=2, dim=0)
 
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    return 1 - scipy.spatial.distance.cosine(a, b)
+
 def euclidean_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return -scipy.spatial.distance.euclidean(a, b)

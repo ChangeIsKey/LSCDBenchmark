@@ -1,2 +1,2 @@
-_target_: scipy.spatial.distance.cosine
+_target_: src.wrappers.cosine_similarity
 _partial_: true
