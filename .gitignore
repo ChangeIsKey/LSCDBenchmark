@@ -34,6 +34,8 @@ setup_env.sh
 update-git.sh
 archived/
 
+./xl-test/
+
 # Created by https://www.toptal.com/developers/gitignore/api/python,macos,vs,jupyternotebooks
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,macos,vs,jupyternotebooks
 
