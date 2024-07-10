@@ -320,7 +320,7 @@ class Dataset(BaseModel):
             id = df.id.iloc[0]
             with open(file=index_path.parent / f"{id}.pkl", mode="rb") as f:
                 use_pairs = pickle.load(f)
-
+        use_pairs = list(set(use_pairs))
         return use_pairs
 
 
