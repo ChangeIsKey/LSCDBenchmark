@@ -21,6 +21,9 @@ from transformers import (
     PreTrainedTokenizerBase,
 )
 from transformers import logging as trans_logging
+from sentence_transformers import SentenceTransformer
+
+
 
 from src.use import Use, UseID
 from src.utils import utils
@@ -240,27 +243,6 @@ class EmbeddingCache(BaseModel):
         :rtype: bool
         """
         return target in self._targets_with_new_uses
-
-
-# class PredictionCache(BaseModel):
-#     metadata: dict[str, Any]
-#     _index: pd.DataFrame = PrivateAttr(default=None)
-    
-#     def __init__(self, **data: Any) -> None:
-#         super().__init__(**data)
-#         try:
-#             path = utils.path(".bert") / "predictions.csv"
-#             self._index = pd.read_csv(path)
-#         except FileNotFoundError:
-#             self._index = pd.json_normalize(self.metadata).assign(use_0=None, use_1=None)
-#             # self._index = self._index.iloc[0:0]
-#             print(self._index)
-    
-#     def retrieve(self, use_0: UseID, use_1: UseID):
-#         pass
-    
-#     def log(self, prediction: float, use_0: UseID, use_1: UseID) -> None:
-#         pass
     
 
 class ContextualEmbedder(WICModel):
@@ -322,10 +304,13 @@ class ContextualEmbedder(WICModel):
     @property
     def model(self) -> PreTrainedModel:
         if self._model is None:
-            self._model = AutoModel.from_pretrained(
-                self.ckpt, output_hidden_states=True
-            ).to(self.device)
-            self._model.eval()
+            if self.ckpt == "pierluigic/xl-lexeme":
+                self._model = SentenceTransformer(self.ckpt).to(self.device)
+            else:
+                self._model = AutoModel.from_pretrained(
+                    self.ckpt, output_hidden_states=True
+                ).to(self.device)
+                self._model.eval()
         return self._model
 
     def truncation_indices(self, target_subword_indices: list[bool]) -> tuple[int, int]:
@@ -357,9 +342,9 @@ class ContextualEmbedder(WICModel):
                     # processed in predict_all
                     predictions.append(self.predictions[id_pair])
                     continue
-                enc_1 = self.encode(use_pair[0], type=np.ndarray)
-                enc_2 = self.encode(use_pair[1], type=np.ndarray)
-                predictions.append(-self.similarity_metric(enc_1, enc_2))
+                enc_1 = self.encode(use_pair[0], d_type=np.ndarray)
+                enc_2 = self.encode(use_pair[1], d_type=np.ndarray)
+                predictions.append(self.similarity_metric(enc_1, enc_2))
 
         return predictions
 
@@ -379,48 +364,73 @@ class ContextualEmbedder(WICModel):
                 self.encode(use, type=type)
                 for use in tqdm(uses, desc="Encoding uses", leave=False)
             ]
+        
 
-    def encode(self, use: Use, type: Type[T] = np.ndarray) -> T:
+    def xl_lexeme(self, use: Use, type: Type[T] = np.ndarray) -> T:
+        left, target, right = use.context[:use.indices[0]], use.context[use.indices[0]:use.indices[1]], use.context[use.indices[1]:]
+        new_context = left + '<t>' + target + '</t>' + right
+        embedding = self.model.encode(new_context, convert_to_tensor=True)
+
+        self._embeddings[use] = embedding
+
+        if self.embedding_cache is not None:
+            self.embedding_cache.add_use(use=use, embedding=embedding)
+
+        if self.normalization is not None:
+            embedding = self.normalization(embedding)
+
+        if type == np.ndarray:
+            return embedding.cpu().numpy()
+        else:
+            return embedding  # type: ignore
+        
+    
+
+    def encode(self, use: Use, d_type: Type[T] = np.ndarray) -> T:
         embedding = None if self.embedding_cache is None else self.embedding_cache.retrieve(use)
+        
         if embedding is None:
-            log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
-            log.info(f"Target character indices: {use.indices}")
-            log.info(
-                f"Context slice corresponding to target indices: {use.context[use.indices[0]:use.indices[1]+1]}"
-            )
+            if self.ckpt == "pierluigic/xl-lexeme":
+                return self.xl_lexeme(use, type=d_type)
+            else:
+                log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
+                log.info(f"Target character indices: {use.indices}")
+                log.info(
+                    f"Context slice corresponding to target indices: {use.context[use.indices[0]:use.indices[1]+1]}"
+                )
 
-            encoding = self.tokenize(use)
-            input_ids = encoding["input_ids"].to(self.device)
-            tokens = encoding.tokens()
-            subword_spans = [encoding.token_to_chars(i) for i in range(len(tokens))]
+                encoding = self.tokenize(use)
+                input_ids = encoding["input_ids"].to(self.device)
+                tokens = encoding.tokens()
+                subword_spans = [encoding.token_to_chars(i) for i in range(len(tokens))]
 
-            log.info(f"Extracted {len(tokens)} tokens: {tokens}")
+                log.info(f"Extracted {len(tokens)} tokens: {tokens}")
 
-            subwords_bool_mask = [
-                span.start >= use.indices[0] and span.end <= (use.indices[1] + 1)
-                if span is not None
-                else False
-                for span in subword_spans
-            ]
+                subwords_bool_mask = [
+                    span.start >= use.indices[0] and span.end <= (use.indices[1] + 1)
+                    if span is not None
+                    else False
+                    for span in subword_spans
+                ]
 
-            # truncate input if the model cannot handle it
-            if len(tokens) > 512:
-                lindex, rindex = self.truncation_indices(subwords_bool_mask)
-                tokens = tokens[lindex:rindex]
-                input_ids = input_ids[:, lindex:rindex]
-                subwords_bool_mask = subwords_bool_mask[lindex:rindex]
+                # truncate input if the model cannot handle it
+                if len(input_ids) > 512:
+                    lindex, rindex = self.truncation_indices(subwords_bool_mask)
+                    tokens = tokens[lindex:rindex]
+                    input_ids = input_ids[:, lindex:rindex]
+                    subwords_bool_mask = subwords_bool_mask[lindex:rindex]
 
-                log.info(f"Truncated input")
-                log.info(f"New tokens: {tokens}")
+                    log.info(f"Truncated input")
+                    log.info(f"New tokens: {tokens}")
 
-            extracted_subwords = [
-                tokens[i] for i, value in enumerate(subwords_bool_mask) if value
-            ]
-            log.info(f"Selected subwords: {extracted_subwords}")
-            log.info(f"Size of input_ids: {input_ids.size()}")
+                extracted_subwords = [
+                    tokens[i] for i, value in enumerate(subwords_bool_mask) if value
+                ]
+                log.info(f"Selected subwords: {extracted_subwords}")
+                log.info(f"Size of input_ids: {input_ids.size()}")
 
             with torch.no_grad():
-                outputs = self.model(input_ids, torch.ones_like(input_ids))  # type: ignore
+                outputs = self.model(input_ids, torch.ones_like(input_ids))  # d_type: ignore
 
             embedding = (
                 torch.stack(outputs[2], dim=0)  # (layer, batch, subword, embedding)
@@ -430,17 +440,19 @@ class ContextualEmbedder(WICModel):
                 ]
             )
 
+            
+
             log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
 
             self._embeddings[use] = embedding
             if self.embedding_cache is not None:
                 self.embedding_cache.add_use(use=use, embedding=embedding)
-
-        embedding = self.aggregate(embedding, layers=self.layers)
+        if len(embedding.shape) == 3:
+            embedding = self.aggregate(embedding, layers=self.layers)
         if self.normalization is not None:
             embedding = self.normalization(embedding)
 
-        if type == np.ndarray:
+        if d_type == np.ndarray:
             return embedding.cpu().numpy()
         else:
             return embedding  # type: ignore
