@@ -257,6 +257,7 @@ class ContextualEmbedder(WICModel):
     layer_aggregator: LayerAggregator = Field(alias="layer_aggregation")
     subword_aggregator: SubwordAggregator = Field(alias="subword_aggregation")
     encode_only: bool = Field(exclude=True)
+    embedding_scope: Literal["subword", "sentence"] = Field(alias="embedding_scope")
 
     _embeddings: dict[Use, torch.Tensor] = PrivateAttr(default_factory=dict)
     _device: torch.device = PrivateAttr(default=None)
@@ -304,13 +305,10 @@ class ContextualEmbedder(WICModel):
     @property
     def model(self) -> PreTrainedModel:
         if self._model is None:
-            if self.ckpt == "pierluigic/xl-lexeme":
-                self._model = SentenceTransformer(self.ckpt).to(self.device)
-            else:
-                self._model = AutoModel.from_pretrained(
-                    self.ckpt, output_hidden_states=True
-                ).to(self.device)
-                self._model.eval()
+            self._model = AutoModel.from_pretrained(
+                self.ckpt, output_hidden_states=True
+            ).to(self.device)
+            self._model.eval()
         return self._model
 
     def truncation_indices(self, target_subword_indices: list[bool]) -> tuple[int, int]:
@@ -366,23 +364,10 @@ class ContextualEmbedder(WICModel):
             ]
         
 
-    def xl_lexeme(self, use: Use, type: Type[T] = np.ndarray) -> T:
+    def xl_lexeme_preprocess(self, use: Use, type: Type[T] = np.ndarray) -> T:
         left, target, right = use.context[:use.indices[0]], use.context[use.indices[0]:use.indices[1]], use.context[use.indices[1]:]
         new_context = left + '<t>' + target + '</t>' + right
-        embedding = self.model.encode(new_context, convert_to_tensor=True)
-
-        self._embeddings[use] = embedding
-
-        if self.embedding_cache is not None:
-            self.embedding_cache.add_use(use=use, embedding=embedding)
-
-        if self.normalization is not None:
-            embedding = self.normalization(embedding)
-
-        if type == np.ndarray:
-            return embedding.cpu().numpy()
-        else:
-            return embedding  # type: ignore
+        return new_context
         
     
 
@@ -391,7 +376,14 @@ class ContextualEmbedder(WICModel):
         
         if embedding is None:
             if self.ckpt == "pierluigic/xl-lexeme":
-                return self.xl_lexeme(use, type=d_type)
+                new_context = self.xl_lexeme_preprocess(use)
+                use.context = new_context
+                encoding = self.tokenize(use)
+                input_ids = encoding["input_ids"].to(self.device)
+                with torch.no_grad():
+                    outputs = self.model(input_ids, torch.ones_like(input_ids))  # d_type: ignore
+                if self.embedding_scope == "sentence":
+                    embedding = outputs['last_hidden_state'].squeeze(dim=0).mean(dim=0)
             else:
                 log.info(f"PROCESSING USE `{use.identifier}`: {use.context}")
                 log.info(f"Target character indices: {use.indices}")
@@ -429,20 +421,22 @@ class ContextualEmbedder(WICModel):
                 log.info(f"Selected subwords: {extracted_subwords}")
                 log.info(f"Size of input_ids: {input_ids.size()}")
 
-            with torch.no_grad():
-                outputs = self.model(input_ids, torch.ones_like(input_ids))  # d_type: ignore
-
-            embedding = (
-                torch.stack(outputs[2], dim=0)  # (layer, batch, subword, embedding)
-                .squeeze(dim=1)  # (layer, subword, embedding)
-                .permute(1, 0, 2)[  # (subword, layer, embedding)
-                    torch.tensor(subwords_bool_mask), :, :
-                ]
-            )
+                with torch.no_grad():
+                    outputs = self.model(input_ids, torch.ones_like(input_ids))  # d_type: ignore
+                if self.embedding_scope == "sentence":
+                    embedding = outputs['last_hidden_state'].squeeze(dim=0).mean(dim=0)
+                else:
+                    embedding = (
+                        torch.stack(outputs[2], dim=0)  # (layer, batch, subword, embedding)
+                        .squeeze(dim=1)  # (layer, subword, embedding)
+                        .permute(1, 0, 2)[  # (subword, layer, embedding)
+                            torch.tensor(subwords_bool_mask), :, :
+                        ]
+                    )
 
             
 
-            log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
+                log.info(f"Size of pre-subword-agregated tensor: {embedding.shape}")
 
             self._embeddings[use] = embedding
             if self.embedding_cache is not None:

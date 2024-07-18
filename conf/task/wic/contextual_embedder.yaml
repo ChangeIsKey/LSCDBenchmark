@@ -9,6 +9,7 @@ layer_aggregation: average
 subword_aggregation: average
 truncation_tokens_before_target: 0.5
 encode_only: false
+embedding_scope: sentence
 
 gpu: null
 ckpt: ???
@@ -40,3 +41,5 @@ embedding_cache:
     contextual_embedder:
       pre_target_tokens: ${....truncation_tokens_before_target}
       ckpt: ${....ckpt}
+
+
