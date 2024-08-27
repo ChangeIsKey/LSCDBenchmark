@@ -371,6 +371,8 @@ class Dataset(BaseModel):
                     path, delimiter="\t", encoding="utf8", quoting=csv.QUOTE_NONE
                 )
                 judgments["judgment"] = judgments["judgment"].astype(float)
+                ## drop rows with NaN values
+                judgments.dropna(subset=["judgment"], inplace=True)
                 judgments = self.judgments_schema.validate(judgments)
                 tables.append(judgments)
             self._judgments = pd.concat(tables)
