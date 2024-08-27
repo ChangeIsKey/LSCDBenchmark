@@ -6,8 +6,8 @@ defaults:
   - split: ???
 exclude_annotators: []
 groupings:
-  - "1"
-  - "2"
+  - "1700-1916"
+  - "1918-1990"
 wic_use_pairs:
   group: ALL
   sample: annotated
