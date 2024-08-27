@@ -7,7 +7,7 @@ import shutil
 
 import unittest
 from unittest.mock import patch
-from src.wic.deepmistake import Cache, use_pair_group, to_data_format, DeepMistake, Model
+from src.wic.DM import Cache, use_pair_group, to_data_format, DeepMistake, Model
 from src.use import Use
 from src.utils import utils
 

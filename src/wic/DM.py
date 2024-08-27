@@ -19,6 +19,7 @@ from src.use import Use, UseID
 from src.utils import utils
 from src.wic.model import WICModel
 from logging import getLogger
+from src.deepmistake.models.deepmistake import DeepMistake as DM
 
 log = getLogger(__name__)
 
@@ -130,21 +131,23 @@ class Input(TypedDict):
     lemma: str
     pos: str
     grp: str
+    label: str
 
 
 def to_data_format(use_pair: tuple[Use, Use]) -> Input:
     """ """
     return {
         "id": f"{use_pair[0].target}.{np.random.randint(low=100000, high=1000000)}",
-        "start1": use_pair[0].indices[0],
-        "end1": use_pair[0].indices[1],
-        "sentence1": use_pair[0].context,
-        "start2": use_pair[1].indices[0],
-        "end2": use_pair[1].indices[1],
-        "sentence2": use_pair[1].context,
+        "start_1": use_pair[0].indices[0],
+        "end_1": use_pair[0].indices[1],
+        "text_1": use_pair[0].context,
+        "start_2": use_pair[1].indices[0],
+        "end_2": use_pair[1].indices[1],
+        "text_2": use_pair[1].context,
         "lemma": use_pair[0].target,
         "pos": "NOUN" if use_pair[0].pos == "NN" else use_pair[0].pos,
         "grp": use_pair_group(use_pair),
+        "label": "F"
     }
 
 
@@ -168,7 +171,7 @@ class DeepMistake(WICModel):
 
     def clone_repo(self) -> None:
         """ """
-        Repo.clone_from(url="https://github.com/ameta13/mcl-wic", to_path=self.repo_dir)
+        Repo.clone_from(url="https://github.com/nvanva/deepmistake", to_path=self.repo_dir)
 
     @property
     def path(self) -> Path:
@@ -230,106 +233,12 @@ class DeepMistake(WICModel):
 
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         """ """
-        with self:
-            if not self.ckpt_dir.exists():
-                zipped = self.__download_ckpt()
-                self.__unzip_ckpt(zipped)
-
-            data_dir = self.ckpt_dir / "data"
-            output_dir = self.ckpt_dir / "scores"
-
-            if output_dir.exists():
-                shutil.rmtree(output_dir) # remove all files
-            if data_dir.exists():
-                shutil.rmtree(data_dir) #  remove all files
-
-            output_dir.mkdir(parents=True, exist_ok=True)
-            data_dir.mkdir(parents=True, exist_ok=True)
-
-
-            inputs = [to_data_format(use_pair) for use_pair in use_pairs]
-            # list of pairs of use ids to index, deepmistake-formatted input, similarity, and original data
-            data: dict[tuple[UseID, UseID], tuple[Input, tuple[Use, Use]],] = {
-                (use_pair[0].identifier, use_pair[1].identifier): (
-                    inputs[i],
-                    use_pair,
-                )
-                for i, use_pair in enumerate(use_pairs)
-            }
-
-            input_id_to_use_pair_ids = {
-                inputs[i]["id"]: (use_pair[0].identifier, use_pair[1].identifier)
-                for i, use_pair in enumerate(use_pairs)
-            }
-
-            scores: dict[tuple[UseID, UseID], float | None] = {
-                (use_pair[0].identifier, use_pair[1].identifier): None
-                for use_pair in use_pairs
-            }
-            non_cached_use_pairs: list[tuple[Use, Use]] = []
-
+        model = DM(ckpt_dir=self.ckpt_dir, device="cuda")
+        use_pairs_formatted = [to_data_format(up) for up in use_pairs]
+        scores, preds = model.predict(use_pairs_formatted)
+        try:
+            return scores
+        except KeyError:
             if self.cache is not None:
-                scores.update(self.cache.retrieve(use_pairs))
-                for pair, similarity in scores.items():
-                    if similarity is None:
-                        non_cached_use_pairs.append(data[pair][1])
-
-            if len(non_cached_use_pairs) > 0:
-                hydra_dir = os.getcwd() # get current working directory
-                ckpt_dir = self.ckpt_dir # fix ckpt_dir as call to this changes after doing os.chdir(ckpt_dir)
-                os.chdir(ckpt_dir)
-
-                input_ = [
-                    data[(up[0].identifier, up[1].identifier)][0]
-                    for up in non_cached_use_pairs
-                ]
-
-                path = data_dir / "use_pairs.data"
-                with open(path, mode="w", encoding="utf8") as f:
-                    json.dump(input_, f)
-
-                if not self.repo_dir.exists():
-                    self.clone_repo()
-
-                script = self.repo_dir / "run_model.py"
-
-                # run run_model.py and capture output (don't print it)
-                os.system(
-                    f"python -u {script} \
-                    --max_seq_len=500 \
-                    --do_eval \
-                    --ckpt_path {ckpt_dir} \
-                    --eval_input_dir {data_dir} \
-                    --eval_output_dir {output_dir} \
-                    --output_dir {output_dir}", 
-                )
-
-                #print(output_dir)
-                scores_path = next(output_dir.glob("*.scores"))
-                with open(file=scores_path, encoding="utf8") as f:
-                    dumped_scores: list[Score] = json.load(f)
-                    for x in dumped_scores:
-                        id_ = x["id"]
-                        if len(x["score"]) == 2:
-                            score_0 = float(x["score"][0])
-                            score_1 = float(x["score"][1])
-                            similarity = np.mean([score_0, score_1]).item()
-                        else:
-                            similarity = float(x["score"][0])
-
-                        use_pair = input_id_to_use_pair_ids[id_]
-                        scores[use_pair] = similarity
-                        if self.cache is not None:
-                            self.cache.add_use_pair(
-                                use_pair=data[use_pair][1], similarity=similarity
-                            )
-
-                os.chdir(hydra_dir)
-
-
-            try:
-                return [scores[(up[0].identifier, up[1].identifier)] for up in use_pairs] 
-            except KeyError:
-                if self.cache is not None:
-                    self.cache.persist()
-                return self.predict(use_pairs)
+                self.cache.persist()
+            return self.predict(use_pairs)

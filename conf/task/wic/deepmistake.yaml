@@ -1,9 +1,9 @@
 defaults:
   - dm_ckpt@ckpt: ???
   
-_target_: src.wic.DeepMistake
+_target_: src.wic.DM.DeepMistake
 cache:
-  _target_: src.wic.deepmistake.Cache
+  _target_: src.wic.DM.Cache
   metadata:
     dataset:
       name: ${dataset.name}
