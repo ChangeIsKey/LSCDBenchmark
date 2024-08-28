@@ -1,5 +1,5 @@
-__all__ = ["ContextualEmbedder", "DeepMistake", "WICModel"]
+__all__ = ["ContextualEmbedder", "DMWrapperClass", "WICModel"]
 
 from .contextual_embedder import ContextualEmbedder
-from .DM import DeepMistake
+from .DM import DMWrapperClass
 from .model import WICModel

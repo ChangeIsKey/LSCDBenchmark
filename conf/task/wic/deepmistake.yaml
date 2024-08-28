@@ -1,7 +1,7 @@
 defaults:
   - dm_ckpt@ckpt: ???
   
-_target_: src.wic.DM.DeepMistake
+_target_: src.wic.DM.DMWrapperClass
 cache:
   _target_: src.wic.DM.Cache
   metadata:

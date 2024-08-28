@@ -19,7 +19,8 @@ from src.use import Use, UseID
 from src.utils import utils
 from src.wic.model import WICModel
 from logging import getLogger
-from src.deepmistake.models.deepmistake import DeepMistake as DM
+from deepmistake.deepmistake import DeepMistake
+from deepmistake.utils import Example, DataProcessor
 
 log = getLogger(__name__)
 
@@ -136,8 +137,8 @@ class Input(TypedDict):
 
 def to_data_format(use_pair: tuple[Use, Use]) -> Input:
     """ """
-    return {
-        "id": f"{use_pair[0].target}.{np.random.randint(low=100000, high=1000000)}",
+    return Example(**{
+        "docId": f"{use_pair[0].target}.{np.random.randint(low=100000, high=1000000)}",
         "start_1": use_pair[0].indices[0],
         "end_1": use_pair[0].indices[1],
         "text_1": use_pair[0].context,
@@ -147,14 +148,22 @@ def to_data_format(use_pair: tuple[Use, Use]) -> Input:
         "lemma": use_pair[0].target,
         "pos": "NOUN" if use_pair[0].pos == "NN" else use_pair[0].pos,
         "grp": use_pair_group(use_pair),
-        "label": "F"
-    }
+        "label": "F",
+        "score": -1.0
+    })
 
 
-class DeepMistake(WICModel):
+class DMWrapperClass(WICModel):
     """ """
     ckpt: Model
     cache: Cache | None = Field(...)
+    
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        if self.cache is None:
+            self.cache = Cache()
+            # self.ckpt = 
+            
 
     def __enter__(self) -> None:
         pass
@@ -233,9 +242,10 @@ class DeepMistake(WICModel):
 
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         """ """
-        model = DM(ckpt_dir=self.ckpt_dir, device="cuda")
+
+        dm_model = DeepMistake(self.ckpt_dir, device="cuda")
         use_pairs_formatted = [to_data_format(up) for up in use_pairs]
-        scores, preds = model.predict(use_pairs_formatted)
+        scores, preds, _ = dm_model.predict_examples(use_pairs_formatted, log)
         try:
             return scores
         except KeyError:
