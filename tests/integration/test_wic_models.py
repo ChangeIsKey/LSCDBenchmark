@@ -30,7 +30,7 @@ class TestWICModels(unittest.TestCase):
                         "dataset/spelling_normalization": "english",
                         "dataset/preprocessing": "raw",
                         # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.93
-                        # "dataset.test_on": ["Ackergerät", "Engpaß"],
+                        "dataset.test_on": ["Ackergerät", "Engpaß"],
                         "evaluation": "wic",
                         "evaluation/metric": "spearman",
                         # "evaluation/plotter": "none",
