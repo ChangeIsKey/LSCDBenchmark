@@ -146,6 +146,5 @@ urllib3==2.2.2
 wcwidth==0.2.13
 webencodings==0.5.1
 Werkzeug==3.0.3
-WordTransformer @ file:///mount/arbeitsdaten20/projekte/cik/users/arshan/LSCD/LSCDBenchmark/xl-test/xl-lexeme
 wrapt==1.16.0
 yarg==0.1.9
