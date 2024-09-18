@@ -40,6 +40,30 @@ class TestLSCDModels(unittest.TestCase):
         # Run
         score = run(*instantiate(config))
 
+    def test_apd_sampled_change_graded_eng_simple_arm(self) -> None:
+        
+        # Compose hydra config
+        config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
+                    {
+                        "task": "lscd_graded",
+                        "task.model.wic.ckpt": "bert-base-german-cased",
+                        "task/lscd_graded@task.model": "apd_compare_sampled",
+                        "task/wic@task.model.wic": "contextual_embedder",
+                        "task/wic/metric@task.model.wic.similarity_metric": "cosine",
+                        "dataset": "testwug_en_111", 
+                        "dataset/split": "full",
+                        "dataset/spelling_normalization": "none",
+                        "dataset/preprocessing": "raw",
+                        # has very few usages
+                        "dataset.test_on": ["arm"],
+                        "evaluation": "change_graded",
+                        "evaluation/plotter": "none",
+                    }
+                ))
+
+        # Run
+        score = run(*instantiate(config))
+
     def test_apd_change_graded_eng_simple_plane_afternoon(self) -> None:
         
         # Compose hydra config
@@ -127,6 +151,29 @@ class TestLSCDModels(unittest.TestCase):
         # Assert that the result reproduces across runs
         assert score1 == score2
 
+    def test_diasense_change_graded_eng_simple_arm(self) -> None:
+        
+        # Compose hydra config
+        config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
+                    {
+                        "task": "lscd_graded",
+                        "task.model.wic.ckpt": "bert-base-german-cased",
+                        "task/lscd_graded@task.model": "diasense_all",
+                        "task/wic@task.model.wic": "contextual_embedder",
+                        "task/wic/metric@task.model.wic.similarity_metric": "cosine",
+                        "dataset": "testwug_en_111", 
+                        "dataset/split": "full",
+                        "dataset/spelling_normalization": "none",
+                        "dataset/preprocessing": "raw",
+                        # has very few usages
+                        "dataset.test_on": ["arm"],
+                        "evaluation": "change_graded",
+                        "evaluation/plotter": "none",
+                    }
+                ))
+
+        # Run
+        score = run(*instantiate(config))
 
     # def test_graded_apd_compare_all(self) -> None:
     #     with initialize(version_base=None, config_path="../../conf"):

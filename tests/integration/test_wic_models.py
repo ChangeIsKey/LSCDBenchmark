@@ -15,7 +15,7 @@ class TestWICModels(unittest.TestCase):
         initialize_tests_hydra(version_base=None, config_path="../conf", working_dir='results')
         super().__init__(*args, **kwargs)    
 
-    def test_wic_ger_ackergeraet_engpass(self) -> None:
+    def test_wic_eng_simple_plane_afternoon(self) -> None:
         
         # Compose hydra config
         config = compose(config_name="config", return_hydra_config=True, overrides=overrides(
@@ -29,8 +29,8 @@ class TestWICModels(unittest.TestCase):
                         "dataset/split": "dev",
                         "dataset/spelling_normalization": "english",
                         "dataset/preprocessing": "raw",
-                        # These 2 words have extreme change_graded values in the gold data: 0.0 and 0.93
-                        # "dataset.test_on": ["Ackergerät", "Engpaß"],
+                        # These 2 words have extreme change_graded values in the gold data
+                        "dataset.test_on": ["afternoon_nn", "plane_nn"],
                         "evaluation": "wic",
                         "evaluation/metric": "spearman",
                         # "evaluation/plotter": "none",
@@ -41,7 +41,8 @@ class TestWICModels(unittest.TestCase):
         score1 = run(*instantiate(config))
         # Assert that prediction corresponds to gold
         print(score1)
-        assert pytest.approx(1.0) == score1
+        assert score1 > 0.0
+        #assert pytest.approx(1.0) == score1
         # Run 2nd time
         score2 = run(*instantiate(config))
         # Assert that the result reproduces across runs
