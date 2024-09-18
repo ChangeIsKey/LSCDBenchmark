@@ -19,7 +19,7 @@ from src.use import Use, UseID
 from src.utils import utils
 from src.wic.model import WICModel
 from logging import getLogger
-from deepmistake.deepmistake import DeepMistake
+from deepmistake.deepmistake import DeepMistakeWiC
 from deepmistake.utils import Example, DataProcessor
 
 log = getLogger(__name__)
@@ -243,9 +243,9 @@ class DMWrapperClass(WICModel):
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         """ """
 
-        dm_model = DeepMistake(self.ckpt_dir, device="cuda")
+        dm_model = DeepMistakeWiC(self.ckpt_dir, device="cuda")
         use_pairs_formatted = [to_data_format(up) for up in use_pairs]
-        scores, preds, _ = dm_model.predict_examples(use_pairs_formatted, log)
+        scores, preds, = dm_model.predict_examples(use_pairs_formatted, log)
         try:
             return scores
         except KeyError:
