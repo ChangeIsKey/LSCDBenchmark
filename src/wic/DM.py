@@ -120,22 +120,7 @@ def use_pair_group(use_pair: tuple[Use, Use]) -> str:
             return "LATER"
 
 
-class Input(TypedDict):
-    """ """
-    id: str
-    start1: int
-    end1: int
-    sentence1: str
-    start2: int
-    end2: int
-    sentence2: str
-    lemma: str
-    pos: str
-    grp: str
-    label: str
-
-
-def to_data_format(use_pair: tuple[Use, Use]) -> Input:
+def to_data_format(use_pair: tuple[Use, Use]) -> Example:
     """ """
     return Example(**{
         "docId": f"{use_pair[0].target}.{np.random.randint(low=100000, high=1000000)}",
@@ -162,7 +147,6 @@ class DMWrapperClass(WICModel):
         super().__init__(**data)
         if self.cache is None:
             self.cache = Cache()
-            # self.ckpt = 
             
 
     def __enter__(self) -> None:
