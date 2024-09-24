@@ -23,7 +23,7 @@ class APD(GradedLSCDModel):
             group=self.use_pair_options.group, 
             sample=self.use_pair_options.sample
         )
-        similarities = self.wic.predict(use_pairs)
+        similarities = self.wic.predict_all(use_pairs)
         return -np.mean(similarities).item()
 
     def predict_all(self, lemmas: list[Lemma]) -> list[float]:
