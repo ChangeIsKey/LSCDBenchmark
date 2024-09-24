@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from src.plots import Plotter
 
 EvaluationTask: TypeAlias = Literal[
-    "wic", "binary_wic", "change_graded", "change_binary", "COMPARE", "wsi"
+    "wic", "binary_wic", "change_graded", "change_binary", "compare", "wsi"
 ]
 K = TypeVar("K", str, tuple[str, str])
 V = TypeVar("V", int, float)
@@ -47,6 +47,7 @@ class Evaluation(BaseModel, ABC):
 
         y_true = results.label.tolist()
         y_pred = results.prediction.tolist()
+        
 
         result = {"score": self.metric(y_true, y_pred), "metric": self.metric.func.__name__}
 

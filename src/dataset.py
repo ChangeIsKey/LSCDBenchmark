@@ -335,7 +335,7 @@ class Dataset(BaseModel):
                 return self.graded_change_labels
             case "change_binary":
                 return self.binary_change_labels
-            case "COMPARE":
+            case "compare":
                 return self.compare_labels
             case "wic":
                 return self.wic_labels
