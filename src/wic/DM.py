@@ -226,7 +226,8 @@ class DMWrapperClass(WICModel):
 
     def predict(self, use_pairs: list[tuple[Use, Use]]) -> list[float]:
         """ """
-
+        if len(use_pairs) == 0:
+            return []
         dm_model = DeepMistakeWiC(self.ckpt_dir, device="cuda")
         use_pairs_formatted = [to_data_format(up) for up in use_pairs]
         scores, preds, = dm_model.predict_examples(use_pairs_formatted, log)
