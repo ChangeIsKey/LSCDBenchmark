@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Literal, TypedDict
 import numpy as np
 from git import Repo
+import gdown
 
 import pandas as pd
 import pandera as pa
@@ -113,26 +114,33 @@ class Dataset(BaseModel):
 
     def __download_zip(self) -> None:
         assert self.url is not None
-
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        zipped = self.absolute_path.with_suffix(".zip")
-        r = requests.get(self.url, stream=True)
-        with open(file=zipped, mode="wb") as f:
-            pbar = tqdm(
-                desc=f"Downloading dataset '{self.name}'",
-                unit="B",
-                unit_scale=True,
-                unit_divisor=1024,
-                total=int(r.headers["Content-Length"]),
-                leave=False,
-            )
-            pbar.clear()  # clear 0% info
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk:  # filter out keep-alive new chunks
-                    pbar.update(len(chunk))
-                    f.write(chunk)
-            pbar.close()
-        self.__unzip(zip_file=zipped)
+        
+        if self.url.startswith("https://drive.google.com"):
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            zipped = self.absolute_path.with_suffix(".zip")
+            gdown.download(self.url, str(zipped), quiet=False, fuzzy=True)
+            shutil.unpack_archive(str(zipped), self.absolute_path)
+            
+        else:
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            zipped = self.absolute_path.with_suffix(".zip")
+            r = requests.get(self.url, stream=True)
+            with open(file=zipped, mode="wb") as f:
+                pbar = tqdm(
+                    desc=f"Downloading dataset '{self.name}'",
+                    unit="B",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    total=int(r.headers["Content-Length"]),
+                    leave=False,
+                )
+                pbar.clear()  # clear 0% info
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk:  # filter out keep-alive new chunks
+                        pbar.update(len(chunk))
+                        f.write(chunk)
+                pbar.close()
+            self.__unzip(zip_file=zipped)
 
     def __download(self) -> None:
         assert self.url is not None, f"Could not find a download URL for dataset `{self.name}`"
