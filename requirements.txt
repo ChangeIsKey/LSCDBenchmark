@@ -15,7 +15,7 @@ click==8.1.7
 contourpy==1.2.1
 cycler==0.12.1
 decorator==5.1.1
--e git+https://github.com/arshandalili/deepmistake.git@b7e91ab2797d4e2a537672d3a1716bbae425a79c#egg=deepmistake
+-e git+https://github.com/arshandalili/deepmistake.git@91d362fbd3c1393c22cdeaadb9e502c6bfc5c897#egg=deepmistake
 defusedxml==0.7.1
 dill==0.3.8
 docopt==0.6.2
@@ -26,6 +26,7 @@ filelock==3.15.3
 fire==0.6.0
 fonttools==4.53.0
 fsspec==2024.6.0
+gdown==5.2.0
 gitdb==4.0.11
 GitPython==3.1.31
 google-auth==2.30.0
@@ -102,6 +103,7 @@ pydantic==1.10.2
 Pygments==2.18.0
 pylint==2.15.4
 pyparsing==3.1.2
+PySocks==1.7.1
 pytest==7.3.1
 python-dateutil==2.9.0.post0
 python-dotenv==0.21.0
