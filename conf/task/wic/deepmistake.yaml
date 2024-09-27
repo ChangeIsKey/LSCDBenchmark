@@ -2,11 +2,3 @@ defaults:
   - dm_ckpt@ckpt: ???
   
 _target_: src.wic.DM.DMWrapperClass
-cache:
-  _target_: src.wic.DM.Cache
-  metadata:
-    dataset:
-      name: ${dataset.name}
-      preprocessing: ${dataset.preprocessing.name}
-      spelling_normalization: ${dataset.spelling_normalization}
-    ckpt: ${...ckpt.name}
