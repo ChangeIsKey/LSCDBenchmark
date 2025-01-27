@@ -57,8 +57,14 @@ class Experiment(ABC):
         return score
 
     def get_config(self) -> dict[str, Any]:
-        stream = (self.path / ".hydra" / "config.yaml").read_text(encoding="utf8")
-        return yaml.safe_load(stream)
+        config_path = self.path / ".hydra" / "config.yaml"
+        if not config_path.exists():
+            parent_config_path = self.path.parent / ".hydra" / "config.yaml"
+            if parent_config_path.exists():
+                stream = parent_config_path.read_text(encoding="utf8")
+                return yaml.safe_load(stream)
+        return {}
+
 
     def get_n_targets(self) -> int | None:
         path = self.path / "predictions.csv"

@@ -17,7 +17,24 @@ python main.py -m \
     task.model.encode_only=true \
     task.model.ckpt=deepset/gbert-large,xlm-roberta-large \
     task.model.gpu=0 \
-    task/wic/dist_fn@task.model.similarity_metric=dot \
+    task/wic/metric@task.model.similarity_metric=dot \
+    task.model.subword_aggregation=first \
+    task.model.layers=[2] \
+    task.model.layer_aggregation=sum
+
+
+    python main.py -m \
+    dataset=dwug_de_210 \
+    dataset/preprocessing=toklem,raw,tokenization,normalization,lemmatization \
+    dataset/spelling_normalization=german,none \
+    dataset/split=full \
+    task=wic \
+    evaluation=none \
+    task/wic@task.model=contextual_embedder \
+    task.model.encode_only=true \
+    task.model.ckpt=deepset/gbert-large,xlm-roberta-large \
+    task.model.gpu=0 \
+    task/wic/metric@task.model.similarity_metric=cosine \
     task.model.subword_aggregation=first \
     task.model.layers=[2] \
     task.model.layer_aggregation=sum
@@ -33,7 +50,7 @@ python main.py -m \
 #     task.model.encode_only=true \
 #     task.model.ckpt=bert-large-uncased,xlm-roberta-large \
 #     task.model.gpu=0 \
-#     task/wic/dist_fn@task.model.similarity_metric=dot \
+#     task/wic/metric@task.model.similarity_metric=dot \
 #     task.model.subword_aggregation=first \
 #     task.model.layers=[12] \
 #     task.model.layer_aggregation=sum \
@@ -51,30 +68,27 @@ python main.py -m \
 #     task.model.encode_only=true \
 #     task.model.ckpt=KB/bert-base-swedish-cased,xlm-roberta-large \
 #     task.model.gpu=0 \
-#     task/wic/dist_fn@task.model.similarity_metric=dot \
+#     task/wic/metric@task.model.similarity_metric=dot \
 #     task.model.subword_aggregation=first \
 #     task.model.layers=[12] \
 #     task.model.layer_aggregation=sum \
 #     task/wic/normalization@task.model.normalization=none \
 #     task/wic/scaler@task.model.scaler=none
 
-# python main.py -m \
-#     dataset=dwug_es_400 \
-#     dataset/preprocessing=toklem,raw,tokenization,normalization,lemmatization \
-#     dataset/spelling_normalization=none \
-#     ++dataset.split=full \
-#     task=wic \
-#     evaluation=none \
-#     task/wic@task.model=contextual_embedder \
-#     task.model.encode_only=true \
-#     task.model.ckpt=dccuchile/bert-base-spanish-wwm-uncased,xlm-roberta-large \
-#     task.model.gpu=0 \
-#     task/wic/dist_fn@task.model.similarity_metric=dot \
-#     task.model.subword_aggregation=first \
-#     task.model.layers=[12] \
-#     task.model.layer_aggregation=sum \
-#     task/wic/normalization@task.model.normalization=none \
-#     task/wic/scaler@task.model.scaler=none
-
-popd
-
+python main.py -m \
+    dataset=dwug_es_400 \
+    dataset/preprocessing=toklem,raw,tokenization,normalization,lemmatization \
+    dataset/spelling_normalization=none \
+    ++dataset.split=full \
+    task=wic \
+    evaluation=none \
+    task/wic@task.model=contextual_embedder \
+    task.model.encode_only=true \
+    task.model.ckpt=dccuchile/bert-base-spanish-wwm-uncased,xlm-roberta-large \
+    task.model.gpu=0 \
+    task/wic/metric@task.model.similarity_metric=dot \
+    task.model.subword_aggregation=first \
+    task.model.layers=[12] \
+    task.model.layer_aggregation=sum \
+    task/wic/normalization@task.model.normalization=none \
+    task/wic/scaler@task.model.scaler=none

@@ -1,0 +1,84 @@
+_target_: src.dataset.Dataset
+cleaning: null
+defaults:
+  - preprocessing: ???
+  - spelling_normalization: ???
+  - split: ???
+exclude_annotators: []
+groupings:
+  - "1"
+  - "2"
+
+wic_use_pairs:
+  group: ALL
+  sample: annotated
+path: dwug_de_resampled
+standard_split:
+  dev:
+    - Abgesang
+    - Frechheit
+    - Kubikmeter
+    - Manschette
+    - Mulatte
+    - Naturschönheit
+    - Ohrwurm
+    - Rezeption
+    - Schmiere
+    - Unentschlossenheit
+    - verbauen
+    - vergönnen
+    - vorweisen
+    - weitgreifend
+    - überspannen
+  dev1:
+   - Abgesang
+    - Frechheit
+    - Kubikmeter
+    - Manschette
+    - Mulatte
+    - Naturschönheit
+    - Ohrwurm
+    - Rezeption
+    - Schmiere
+    - Unentschlossenheit
+    - verbauen
+    - vergönnen
+    - vorweisen
+    - weitgreifend
+    - überspannen
+  dev2:
+    - Abgesang
+    - Frechheit
+    - Kubikmeter
+    - Manschette
+    - Mulatte
+    - Naturschönheit
+    - Ohrwurm
+    - Rezeption
+    - Schmiere
+    - Unentschlossenheit
+    - verbauen
+    - vergönnen
+    - vorweisen
+    - weitgreifend
+    - überspannen
+  full:
+    - Abgesang
+    - Frechheit
+    - Kubikmeter
+    - Manschette
+    - Mulatte
+    - Naturschönheit
+    - Ohrwurm
+    - Rezeption
+    - Schmiere
+    - Unentschlossenheit
+    - verbauen
+    - vergönnen
+    - vorweisen
+    - weitgreifend
+    - überspannen
+  test: []
+test_on: null
+type: dev
+url: https://zenodo.org/records/12670698/files/dwug_de_resampled.zip

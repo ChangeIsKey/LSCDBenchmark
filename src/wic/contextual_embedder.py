@@ -312,7 +312,6 @@ class ContextualEmbedder(WICModel):
         return self._model
 
     def truncation_indices(self, target_subword_indices: list[bool]) -> tuple[int, int]:
-
         max_tokens = 512
         n_target_subtokens = target_subword_indices.count(True)
         tokens_before = int(
@@ -359,16 +358,43 @@ class ContextualEmbedder(WICModel):
     def encode_all(self, uses: list[Use], type: Type[T] = np.ndarray) -> list[T]:
         with self:
             return [
-                self.encode(use, type=type)
+                self.encode(use, d_type=type)
                 for use in tqdm(uses, desc="Encoding uses", leave=False)
             ]
         
+    def get_max_seq_length(self):
+        """
+        Returns the maximal sequence length for input the model accepts. 
+        Longer inputs will be truncated.
+        """
+        if hasattr(self.model.config, 'max_position_embeddings'):
+            return self.model.config.max_position_embeddings
+        return None
 
     def xl_lexeme_preprocess(self, use: Use, type: Type[T] = np.ndarray) -> T:
+        max_seq_len = self.get_max_seq_length()
         left, target, right = use.context[:use.indices[0]], use.context[use.indices[0]:use.indices[1]], use.context[use.indices[1]:]
+
+        overflow_left = len(left) - int((max_seq_len - len(use.context[use.indices[0]:use.indices[1]])) / 2)
+        overflow_right = len(right) - int((max_seq_len - len(use.context[use.indices[0]:use.indices[1]])) / 2)
+
+        if overflow_left > 0 and overflow_right > 0:
+            left = left[overflow_left:]
+            right = right[:len(right)-overflow_right]
+
+        elif overflow_left > 0 and overflow_right <= 0:
+            left = left[overflow_left:]
+
+        else:
+            right = right[:len(right)-overflow_right]
+
         new_context = left + '<t>' + target + '</t>' + right
         return new_context
-        
+        #return coleft + input_ids[positions[0]:positions[1]] + right
+
+        #left, target, right = use.context[:use.indices[0]], use.context[use.indices[0]:use.indices[1]], use.context[use.indices[1]:]
+        #new_context = left + '<t>' + target + '</t>' + right
+        #return new_context
     
 
     def encode(self, use: Use, d_type: Type[T] = np.ndarray) -> T:
@@ -404,9 +430,8 @@ class ContextualEmbedder(WICModel):
                     else False
                     for span in subword_spans
                 ]
-
                 # truncate input if the model cannot handle it
-                if len(input_ids) > 512:
+                if len(input_ids[0]) > 512:
                     lindex, rindex = self.truncation_indices(subwords_bool_mask)
                     tokens = tokens[lindex:rindex]
                     input_ids = input_ids[:, lindex:rindex]

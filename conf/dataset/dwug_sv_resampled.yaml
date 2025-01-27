@@ -1,0 +1,54 @@
+_target_: src.dataset.Dataset
+cleaning: null
+defaults:
+  - _self_
+  - preprocessing: ???
+  - spelling_normalization: ???
+  - split: ???
+exclude_annotators: []
+groupings:
+  - "1"
+  - "2"
+wic_use_pairs:
+  group: ALL
+  sample: annotated
+path: dwug_sv_resampled
+standard_split:
+  dev: []
+  dev1: []
+  dev2: []
+  full:
+    - aktiv
+    - antyda
+    - bearbeta
+    - bedömande
+    - blockera
+    - färg
+    - granskare
+    - kemisk
+    - konduktör
+    - krita
+    - ledning
+    - medium
+    - motiv
+    - uppfattning
+    - vegetation
+  test:
+   - aktiv
+    - antyda
+    - bearbeta
+    - bedömande
+    - blockera
+    - färg
+    - granskare
+    - kemisk
+    - konduktör
+    - krita
+    - ledning
+    - medium
+    - motiv
+    - uppfattning
+    - vegetation
+test_on: null
+type: test
+url: https://zenodo.org/records/14026615/files/dwug_sv_resampled.zip
