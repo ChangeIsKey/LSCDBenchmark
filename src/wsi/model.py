@@ -19,6 +19,12 @@ class WSIModel(BaseModel, ABC):
         self, use_pairs: list[tuple[Use, Use]]
     ) -> npt.NDArray[np.float64]:
         predictions = self.wic.predict(use_pairs)
+        if len(predictions) != len(use_pairs):
+            raise ValueError(
+                f"Number of predictions ({len(predictions)}) does not match "
+                f"the number of use pairs ({len(use_pairs)})."
+            )
+        
         pairs_to_similarities = dict(zip(use_pairs, predictions))
 
         # get a sorted list of unique uses
@@ -29,8 +35,12 @@ class WSIModel(BaseModel, ABC):
         n_ids = len(ids)
 
         similarity_matrix = np.zeros((n_ids, n_ids))
+      
         for i, use_1 in enumerate(uses):
             for j, use_2 in enumerate(uses):
+                if i==j:
+                    similarity_matrix[i, j] = 0
+                    continue
                 try:
                     similarity_matrix[i, j] = pairs_to_similarities[(use_1, use_2)]
                 except KeyError:

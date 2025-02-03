@@ -20,10 +20,11 @@ class ClusterCorrelation(WSIModel):
     def predict(self, uses: list[Use]) -> list[int]:
         use_pairs = list(combinations(uses, r=2))
         similarity_matrix = self.similarity_matrix(use_pairs)
-        graph = nx.Graph()
-        for i in similarity_matrix:
-            for j in similarity_matrix:
-                graph.add_edge(i, j, weight=similarity_matrix[i, j])
+        #graph = nx.Graph()
+        graph=nx.from_numpy_matrix(similarity_matrix)
+        # for i in similarity_matrix:
+        #     for j in similarity_matrix:
+        #         graph.add_edge(i, j, weight=similarity_matrix[i, j])
 
         if utils._check_nan_weights_exits(graph):
             raise ValueError(
