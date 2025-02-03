@@ -17,6 +17,7 @@ from src.wic.contextual_embedder import ContextualEmbedder
 from src.wic.model import NumpyEncoder
 from src.utils.utils import path as get_path
 from src.wsi import WSIModel
+import numpy as np
 
 OUTPUTS = get_path("outputs")
 MULTIRUN = get_path("multirun")
@@ -152,4 +153,8 @@ def run(
             print(evaluation)
             labels = dataset.get_labels(evaluation_task=evaluation.task)
             score = evaluation(labels=labels, predictions=predictions)
+
+        if score is None:
+             score = np.nan
+        
     return score
